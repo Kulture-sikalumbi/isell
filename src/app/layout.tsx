@@ -16,6 +16,10 @@ export const metadata: Metadata = {
   title: "iSell Unlocking — Instant Tool Activation",
   description:
     "Automated middleware platform for digital tool activations. Download free, pay once, activate instantly.",
+  icons: {
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/apple-icon.svg", type: "image/svg+xml" }],
+  },
 };
 
 export default function RootLayout({
