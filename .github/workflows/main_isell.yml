@@ -34,12 +34,19 @@ jobs:
         run: |
           npm ci
           npm run build
+          test -f .next/BUILD_ID
 
-      - name: Upload standalone artifact
+      - name: Prepare deploy package
+        run: |
+          mkdir deploy
+          cp package.json package-lock.json next.config.ts deploy/
+          cp -r .next public node_modules deploy/
+
+      - name: Upload deploy artifact
         uses: actions/upload-artifact@v4
         with:
           name: node-app
-          path: .next/standalone
+          path: deploy
 
   deploy:
     runs-on: ubuntu-latest
