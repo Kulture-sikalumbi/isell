@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Azure zip deploy often skips dot-folders like ".next"
+  distDir: "build",
   images: {
     remotePatterns: [
       {

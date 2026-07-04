@@ -34,23 +34,30 @@ jobs:
         run: |
           npm ci
           npm run build
-          test -f .next/BUILD_ID
+          test -f build/BUILD_ID
 
       - name: Prepare deploy package
         run: |
           mkdir deploy
-          cp package.json package-lock.json next.config.ts deploy/
-          cp -r .next public deploy/
+          cp package.json package-lock.json next.config.ts .deployment deploy/
+          cp -r build public deploy/
           cd deploy
           npm ci --omit=dev
+          test -f build/BUILD_ID
           test -f node_modules/next/dist/bin/next
-          test -f .next/BUILD_ID
+          ls -la build/BUILD_ID
+
+      - name: Create deployment zip
+        run: |
+          cd deploy
+          zip -r ../deploy.zip .
+          unzip -l ../deploy.zip | grep "build/BUILD_ID"
 
       - name: Upload deploy artifact
         uses: actions/upload-artifact@v4
         with:
           name: node-app
-          path: deploy
+          path: deploy.zip
 
   deploy:
     runs-on: ubuntu-latest
@@ -78,4 +85,4 @@ jobs:
         with:
           app-name: isell
           slot-name: Production
-          package: .
+          package: deploy.zip
