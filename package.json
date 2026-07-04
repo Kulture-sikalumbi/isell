@@ -1,11 +1,14 @@
 {
   "name": "web",
   "version": "0.1.0",
-  "private": true,
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "postbuild": "node scripts/prepare-standalone.js",
+    "start": "node .next/standalone/server.js",
     "lint": "eslint"
   },
   "dependencies": {
