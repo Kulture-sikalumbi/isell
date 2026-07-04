@@ -40,7 +40,11 @@ jobs:
         run: |
           mkdir deploy
           cp package.json package-lock.json next.config.ts deploy/
-          cp -r .next public node_modules deploy/
+          cp -r .next public deploy/
+          cd deploy
+          npm ci --omit=dev
+          test -f node_modules/next/dist/bin/next
+          test -f .next/BUILD_ID
 
       - name: Upload deploy artifact
         uses: actions/upload-artifact@v4
