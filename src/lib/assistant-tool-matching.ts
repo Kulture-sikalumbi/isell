@@ -1,5 +1,6 @@
 import type { Tool } from "@/types/database";
-import { formatSiteCurrency, getSiteCurrency, getPlatformFeeAmount } from "@/lib/currency";
+import { formatSiteCurrency, getSiteCurrency } from "@/lib/currency";
+import { getCheckoutTotal } from "@/lib/platform-fee";
 
 const STOP_WORDS = new Set([
   "a", "an", "the", "for", "to", "my", "me", "i", "need", "want", "get", "find",
@@ -113,15 +114,14 @@ export function analyzeToolQuery(
 
 export function buildToolMatchReply(tool: Tool, isLoggedIn: boolean) {
   const currency = getSiteCurrency();
-  const fee = getPlatformFeeAmount();
-  const total = Number(tool.retail_price) + fee;
+  const total = getCheckoutTotal(tool);
   const loginNote = isLoggedIn
     ? ""
     : "\n\nSign in first at [/auth/login](/auth/login), then add wallet funds at [/dashboard?tab=wallet](/dashboard?tab=wallet).";
 
   return (
     `Found it: **[${tool.name}](/tools/${tool.slug})**\n\n` +
-    `Price: ${formatSiteCurrency(tool.retail_price, currency)} + ${formatSiteCurrency(fee, currency)} service fee = **${formatSiteCurrency(total, currency)}** from wallet.\n\n` +
+    `Price: **${formatSiteCurrency(total, currency)}** from wallet.\n\n` +
     `1. Open the tool page\n` +
     `2. Enter your device ID (IMEI etc.)\n` +
     `3. Pay from wallet\n` +

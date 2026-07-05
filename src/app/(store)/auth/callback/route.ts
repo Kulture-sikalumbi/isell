@@ -1,11 +1,16 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { resolvePostLoginPath, sanitizeNextPath } from "@/lib/post-login";
+
+function profileIsAdmin(role: string | null | undefined) {
+  return role === "admin";
+}
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/dashboard";
-  const safeNext = next.startsWith("/") ? next : "/dashboard";
+  const next = searchParams.get("next") ?? "/tools";
+  const safeNext = sanitizeNextPath(next);
 
   const oauthError = searchParams.get("error");
   const oauthErrorDescription = searchParams.get("error_description");
@@ -26,7 +31,8 @@ export async function GET(request: NextRequest) {
   }
 
   const redirectUrl = `${origin}${safeNext}`;
-  let response = NextResponse.redirect(redirectUrl);
+  let redirectTarget = redirectUrl;
+  let response = NextResponse.redirect(redirectTarget);
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -46,7 +52,7 @@ export async function GET(request: NextRequest) {
         cookiesToSet.forEach(({ name, value }) => {
           request.cookies.set(name, value);
         });
-        response = NextResponse.redirect(redirectUrl);
+        response = NextResponse.redirect(redirectTarget);
         cookiesToSet.forEach(({ name, value, options }) => {
           response.cookies.set(name, value, options);
         });
@@ -61,6 +67,29 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(
       `${origin}/auth/login?error=auth&reason=${encodeURIComponent(error.message)}`
     );
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let destination = safeNext;
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+    destination = resolvePostLoginPath(safeNext, profileIsAdmin(profile?.role));
+  }
+
+  if (destination !== safeNext) {
+    redirectTarget = `${origin}${destination}`;
+    const redirected = NextResponse.redirect(redirectTarget);
+    response.cookies.getAll().forEach(({ name, value }) => {
+      redirected.cookies.set(name, value);
+    });
+    response = redirected;
   }
 
   return response;

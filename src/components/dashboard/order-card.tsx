@@ -1,9 +1,18 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { Check, Copy, KeyRound, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ReceiptDownloadButton } from "@/components/dashboard/receipt-download-button";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import type { Payment } from "@/types/database";
+import { getSiteCurrency } from "@/lib/currency";
+import type { Activation, Payment } from "@/types/database";
 
 interface OrderCardProps {
   payment: Payment;
+  activation?: Activation | null;
 }
 
 function orderStatus(payment: Payment): {
@@ -23,19 +32,29 @@ function orderStatus(payment: Payment): {
     return { label: "Processing", variant: "info" };
   }
   if (payment.fulfillment_status === "fulfilled") {
-    return { label: "Completed", variant: "success" };
+    return { label: "Activation ready", variant: "success" };
   }
   return { label: "Paid", variant: "success" };
 }
 
-export function OrderCard({ payment }: OrderCardProps) {
+export function OrderCard({ payment, activation }: OrderCardProps) {
+  const [copied, setCopied] = useState(false);
   const status = orderStatus(payment);
   const isWallet = payment.provider === "wallet";
-  const platformFee = Number(payment.platform_fee ?? 0);
-  const totalCharged = Number(payment.amount) + platformFee;
+  const totalPaid = Number(payment.amount) + Number(payment.platform_fee ?? 0);
+  const displayCurrency = getSiteCurrency();
+  const isAwaiting = payment.fulfillment_status === "awaiting";
+  const hasKey = Boolean(activation?.activation_code);
+
+  function copyCode() {
+    if (!activation?.activation_code) return;
+    navigator.clipboard.writeText(activation.activation_code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
 
   return (
-    <div className="glass rounded-2xl p-6">
+    <div className="glass rounded-2xl p-6 border border-white/10">
       <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
         <div>
           <h3 className="font-semibold text-white">
@@ -60,36 +79,88 @@ export function OrderCard({ payment }: OrderCardProps) {
         </div>
         <div className="rounded-xl bg-black/30 border border-white/5 px-4 py-3">
           <p className="text-xs text-zinc-500 mb-1">Amount paid</p>
-          {isWallet && platformFee > 0 ? (
-            <div className="space-y-0.5">
-              <p className="text-zinc-400 text-xs">
-                Activation {formatCurrency(payment.amount, payment.currency)}
-              </p>
-              <p className="text-zinc-400 text-xs">
-                Service fee {formatCurrency(platformFee, payment.currency)}
-              </p>
-              <p className="font-semibold text-white">
-                Total {formatCurrency(totalCharged, payment.currency)}
-              </p>
-            </div>
-          ) : (
-            <p className="font-semibold text-white">
-              {formatCurrency(payment.amount, payment.currency)}
-            </p>
-          )}
+          <p className="font-semibold text-white">
+            {formatCurrency(isWallet ? totalPaid : payment.amount, displayCurrency)}
+          </p>
         </div>
       </div>
 
-      {payment.fulfillment_status === "awaiting" && (
-        <p className="mt-4 text-xs text-cyan-400/90">
-          Your payment was received. We&apos;re processing your activation — check back here or under Activations soon.
-        </p>
+      {hasKey && activation && (
+        <div className="mt-4 rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <KeyRound className="h-4 w-4 text-emerald-400" />
+            <p className="text-sm font-medium text-emerald-200">Your activation key</p>
+          </div>
+          {activation.activation_code === "DEVICE_REGISTERED" ? (
+            <p className="text-sm text-emerald-100/90">
+              Device registered — check the tool for access.
+            </p>
+          ) : (
+            <div className="relative">
+              <div className="code-block rounded-lg bg-black/40 border border-white/10 px-4 py-3 pr-12 font-mono text-base font-bold text-white tracking-wide break-all">
+                {activation.activation_code}
+              </div>
+              <button
+                type="button"
+                onClick={copyCode}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-2 text-zinc-400 hover:text-white hover:bg-white/10"
+                title="Copy activation key"
+              >
+                {copied ? (
+                  <Check className="h-4 w-4 text-emerald-400" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {isAwaiting && !hasKey && (
+        <div className="mt-4 rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-4 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <Loader2 className="h-5 w-5 text-cyan-400 animate-spin shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm text-cyan-100 font-medium">Waiting for activation</p>
+              <p className="text-xs text-zinc-500 mt-0.5">
+                Payment received — admin is preparing your key. It will appear here automatically.
+              </p>
+            </div>
+          </div>
+          <Link href={`/dashboard?tab=activations&wait=${payment.id}`}>
+            <Button size="sm" variant="secondary" className="w-full sm:w-auto shrink-0">
+              Track live
+            </Button>
+          </Link>
+        </div>
+      )}
+
+      {payment.status === "completed" && (
+        <div className="mt-4 pt-4 border-t border-white/5">
+          <ReceiptDownloadButton
+            paymentId={payment.id}
+            receiptNumber={payment.provider_reference ?? payment.id.slice(0, 8)}
+          />
+        </div>
       )}
 
       <p className="text-xs text-zinc-500 mt-4">
         Ordered {formatDate(payment.created_at)}
         {payment.completed_at && payment.status === "completed" && (
           <span> · Paid {formatDate(payment.completed_at)}</span>
+        )}
+        {hasKey && (
+          <span>
+            {" "}
+            ·{" "}
+            <Link
+              href="/dashboard?tab=activations"
+              className="text-cyan-400 hover:text-cyan-300"
+            >
+              All activations
+            </Link>
+          </span>
         )}
       </p>
     </div>

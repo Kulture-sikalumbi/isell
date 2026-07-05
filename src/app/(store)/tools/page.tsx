@@ -1,13 +1,14 @@
 import { ToolsCatalog } from "@/components/tools/tools-catalog";
 import { getCurrentProfile } from "@/lib/auth";
 import { getTools } from "@/lib/data";
+import { toStorefrontTools } from "@/lib/storefront-tool";
 
 export const metadata = {
   title: "Tools — iSell Unlocks",
 };
 
 export default async function ToolsPage() {
-  const tools = await getTools();
+  const tools = toStorefrontTools(await getTools());
   const profile = await getCurrentProfile();
   const isAdmin = profile?.role === "admin";
 

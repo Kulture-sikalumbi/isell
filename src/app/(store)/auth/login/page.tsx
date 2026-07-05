@@ -8,7 +8,7 @@ import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 
 function LoginContent() {
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") || "/dashboard";
+  const next = searchParams.get("next") || "/tools";
   const error = searchParams.get("error");
   const reason = searchParams.get("reason");
 

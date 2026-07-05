@@ -1,3 +1,5 @@
+import { getSiteCurrency } from "@/lib/currency";
+import { calculatePlatformFee } from "@/lib/platform-fee";
 import { createServiceClient } from "@/lib/supabase/server";
 import { notifyAdminNewDeposit } from "@/lib/wallet-notifications";
 import type {
@@ -8,12 +10,6 @@ import type {
   WalletTransaction,
   UserWallet,
 } from "@/types/database";
-
-import { getPlatformFeeAmount, getSiteCurrency } from "@/lib/currency";
-
-export function getPlatformFee(): number {
-  return getPlatformFeeAmount();
-}
 
 export function getMerchantDetails() {
   const currency = getSiteCurrency();
@@ -65,17 +61,79 @@ export async function getWalletTransactions(
   userId: string,
   limit = 20
 ): Promise<WalletTransaction[]> {
-  const supabase = createServiceClient();
-  if (!supabase) return [];
+  const { transactions } = await getWalletTransactionsPage(userId, { limit });
+  return transactions;
+}
 
-  const { data } = await supabase
+export async function getWalletTransactionsPage(
+  userId: string,
+  options: { limit?: number; before?: string | null } = {}
+): Promise<{ transactions: WalletTransaction[]; nextCursor: string | null }> {
+  const limit = options.limit ?? 15;
+  const supabase = createServiceClient();
+  if (!supabase) return { transactions: [], nextCursor: null };
+
+  let query = supabase
     .from("wallet_transactions")
     .select("*")
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
+    .limit(limit + 1);
+
+  if (options.before) {
+    query = query.lt("created_at", options.before);
+  }
+
+  const { data } = await query;
+  const rows = data ?? [];
+  const hasMore = rows.length > limit;
+  const transactions = (hasMore ? rows.slice(0, limit) : rows) as WalletTransaction[];
+  const nextCursor =
+    hasMore && transactions.length > 0
+      ? transactions[transactions.length - 1].created_at
+      : null;
+
+  return { transactions, nextCursor };
+}
+
+export async function getPendingWalletDeposits(userId: string): Promise<WalletDeposit[]> {
+  const supabase = createServiceClient();
+  if (!supabase) return [];
+
+  const { data } = await supabase
+    .from("wallet_deposits")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("status", "pending")
+    .not("transaction_id", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  return (data ?? []) as WalletDeposit[];
+}
+
+/** Rejected deposits — shown in history only, never as pending. */
+export async function getRejectedWalletDeposits(
+  userId: string,
+  limit = 20
+): Promise<WalletDeposit[]> {
+  const supabase = createServiceClient();
+  if (!supabase) return [];
+
+  const { data } = await supabase
+    .from("wallet_deposits")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("status", "rejected")
+    .order("created_at", { ascending: false })
     .limit(limit);
 
-  return data ?? [];
+  return (data ?? []) as WalletDeposit[];
+}
+
+/** @deprecated Use getPendingWalletDeposits — kept for compatibility */
+export async function getOpenWalletDeposits(userId: string): Promise<WalletDeposit[]> {
+  return getPendingWalletDeposits(userId);
 }
 
 export async function getUserDeposits(userId: string): Promise<WalletDeposit[]> {
@@ -97,6 +155,8 @@ export async function createDepositRequest(input: {
   amount: number;
   method: DepositMethod;
   transactionId: string;
+  senderPhone?: string;
+  senderName?: string;
   userEmail?: string;
   userName?: string;
 }) {
@@ -109,6 +169,9 @@ export async function createDepositRequest(input: {
   const trimmedTxn = input.transactionId.trim();
   if (!trimmedTxn) return null;
 
+  const senderPhone = input.senderPhone?.trim() || null;
+  const senderName = input.senderName?.trim() || null;
+
   const reference = `DEP-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
   const merchants = getMerchantDetails();
 
@@ -120,6 +183,8 @@ export async function createDepositRequest(input: {
       currency: merchants.currency,
       method: input.method,
       transaction_id: trimmedTxn,
+      sender_phone: senderPhone,
+      sender_name: senderName,
       reference,
       status: "pending",
     })
@@ -137,6 +202,8 @@ export async function createDepositRequest(input: {
     method: input.method,
     reference,
     transactionId: trimmedTxn,
+    senderPhone,
+    senderName,
   });
 
   return data;
@@ -215,7 +282,7 @@ export async function purchaseWithWallet(input: {
   const supabase = createServiceClient();
   if (!supabase) return { ok: false, error: "Database not configured" };
 
-  const platformFee = getPlatformFee();
+  const platformFee = calculatePlatformFee(input.tool.retail_price, input.tool);
   const price = Number(input.tool.retail_price);
 
   const { data, error } = await supabase.rpc("wallet_purchase", {

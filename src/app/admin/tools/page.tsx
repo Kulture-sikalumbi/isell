@@ -36,6 +36,7 @@ export default async function AdminToolsPage() {
               <th className="px-4 sm:px-6 py-4 font-medium">Name</th>
               <th className="px-4 sm:px-6 py-4 font-medium">Mode</th>
               <th className="px-4 sm:px-6 py-4 font-medium">Retail</th>
+              <th className="px-4 sm:px-6 py-4 font-medium">Platform cut</th>
               <th className="px-4 sm:px-6 py-4 font-medium">Margin</th>
               <th className="px-4 sm:px-6 py-4 font-medium">Status</th>
               <th className="px-4 sm:px-6 py-4 font-medium">Actions</th>
@@ -57,6 +58,11 @@ export default async function AdminToolsPage() {
                     </Badge>
                   </td>
                   <td className="px-4 sm:px-6 py-4 text-white">{formatCurrency(tool.retail_price)}</td>
+                  <td className="px-4 sm:px-6 py-4 text-cyan-400">
+                    {tool.platform_fee_percent != null
+                      ? `${tool.platform_fee_percent}%`
+                      : "—"}
+                  </td>
                   <td className="px-4 sm:px-6 py-4 text-emerald-400">
                     {formatCurrency(margin)} ({marginPct}%)
                   </td>

@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { ArrowRight, Cpu } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import type { StorefrontTool } from "@/lib/storefront-tool";
 import { formatCurrency } from "@/lib/utils";
-import type { Tool } from "@/types/database";
 
 interface ToolCardProps {
-  tool: Tool;
+  tool: StorefrontTool;
   highlight?: string;
 }
 
@@ -65,7 +65,7 @@ export function ToolCard({ tool, highlight }: ToolCardProps) {
         <div className="flex items-center justify-between pt-4 border-t border-white/5">
           <div>
             <span className="text-xl font-bold text-white">
-              {formatCurrency(tool.retail_price)}
+              {formatCurrency(tool.checkout_price)}
             </span>
             <span className="text-xs text-zinc-500 ml-2">one-time</span>
           </div>

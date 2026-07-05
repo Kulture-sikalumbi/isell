@@ -10,6 +10,8 @@ import {
   buildDirectApiFormState,
   buildDirectApiPayload,
 } from "@/components/admin/tool-form-direct-api";
+import { getCurrencyLabel } from "@/lib/currency";
+import { getSuggestedPlatformFeePercent, isValidPlatformFeePercent } from "@/lib/platform-fee";
 import { slugify } from "@/lib/utils";
 import type { Tool, ToolFulfillmentMode } from "@/types/database";
 
@@ -29,6 +31,10 @@ export function ToolForm({ tool, onSubmit }: ToolFormProps) {
     external_service_id: tool?.external_service_id ?? "",
     retail_price: tool?.retail_price?.toString() ?? "",
     wholesale_cost: tool?.wholesale_cost?.toString() ?? "",
+    platform_fee_percent:
+      tool?.platform_fee_percent != null
+        ? String(tool.platform_fee_percent)
+        : String(getSuggestedPlatformFeePercent()),
     identifier_label: tool?.identifier_label ?? "IMEI",
     identifier_instructions: tool?.identifier_instructions ?? "",
     identifier_placeholder: tool?.identifier_placeholder ?? "",
@@ -63,6 +69,11 @@ export function ToolForm({ tool, onSubmit }: ToolFormProps) {
     setError("");
 
     try {
+      const feePercent = parseFloat(form.platform_fee_percent);
+      if (!isValidPlatformFeePercent(feePercent)) {
+        throw new Error("Activation service fee must be between 0% and 100%");
+      }
+
       const base = {
         fulfillment_mode: form.fulfillment_mode,
         name: form.name,
@@ -73,6 +84,7 @@ export function ToolForm({ tool, onSubmit }: ToolFormProps) {
         external_service_id: form.external_service_id || null,
         retail_price: parseFloat(form.retail_price),
         wholesale_cost: parseFloat(form.wholesale_cost),
+        platform_fee_percent: feePercent,
         identifier_label: form.identifier_label,
         identifier_instructions: form.identifier_instructions,
         identifier_placeholder: form.identifier_placeholder,
@@ -254,7 +266,7 @@ export function ToolForm({ tool, onSubmit }: ToolFormProps) {
         <h3 className="text-sm font-medium text-zinc-300 mb-4">Pricing</h3>
         <div className="grid md:grid-cols-2 gap-4">
           <Input
-            label="Retail price ($)"
+            label={`Retail price (${getCurrencyLabel()})`}
             type="number"
             step="0.01"
             value={form.retail_price}
@@ -263,13 +275,24 @@ export function ToolForm({ tool, onSubmit }: ToolFormProps) {
             hint="What your customer pays"
           />
           <Input
-            label="Wholesale cost ($)"
+            label={`Wholesale cost (${getCurrencyLabel()})`}
             type="number"
             step="0.01"
             value={form.wholesale_cost}
             onChange={(e) => update("wholesale_cost", e.target.value)}
             required
             hint="What you pay on khulnaunlockr — for profit tracking"
+          />
+          <Input
+            label="Platform cut %"
+            type="number"
+            step="0.01"
+            min="0"
+            max="100"
+            value={form.platform_fee_percent}
+            onChange={(e) => update("platform_fee_percent", e.target.value)}
+            required
+            hint="Your % on activation purchases only — hidden from customers; visible in admin dashboard"
           />
         </div>
       </div>

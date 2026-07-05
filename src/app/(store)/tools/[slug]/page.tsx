@@ -5,8 +5,9 @@ import { getCurrentUser } from "@/lib/auth";
 import { CheckoutForm } from "@/components/tools/checkout-form";
 import { SignInGate } from "@/components/tools/sign-in-gate";
 import { Badge } from "@/components/ui/badge";
+import { toStorefrontTool } from "@/lib/storefront-tool";
 import { getToolBySlug } from "@/lib/data";
-import { getPlatformFee, getWalletBalance } from "@/lib/wallet";
+import { getWalletBalance } from "@/lib/wallet";
 import { getSiteCurrency } from "@/lib/currency";
 import { formatCurrency } from "@/lib/utils";
 
@@ -29,7 +30,7 @@ export default async function ToolDetailPage({ params }: ToolDetailPageProps) {
 
   const userEmail = user?.email ?? "";
   const walletBalance = user ? await getWalletBalance(user.id) : 0;
-  const platformFee = getPlatformFee();
+  const storefrontTool = toStorefrontTool(tool);
   const currency = getSiteCurrency();
 
   return (
@@ -55,7 +56,7 @@ export default async function ToolDetailPage({ params }: ToolDetailPageProps) {
               <div className="flex items-center justify-between">
                 <span className="text-sm text-zinc-400">Activation Price</span>
                 <span className="text-2xl font-bold text-white">
-                  {formatCurrency(tool.retail_price, currency)}
+                  {formatCurrency(storefrontTool.checkout_price, currency)}
                 </span>
               </div>
               <div className="glow-line" />
@@ -106,10 +107,10 @@ export default async function ToolDetailPage({ params }: ToolDetailPageProps) {
             <p className="text-sm text-zinc-500 mb-6">Pay from your prepaid wallet — MTN & Airtel funded</p>
             {user && userEmail ? (
               <CheckoutForm
-                tool={tool}
+                tool={storefrontTool}
                 userEmail={userEmail}
                 walletBalance={walletBalance}
-                platformFee={platformFee}
+                checkoutTotal={storefrontTool.checkout_price}
                 currency={currency}
               />
             ) : (

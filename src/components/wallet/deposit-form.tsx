@@ -1,8 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { CheckCircle2, Copy, ChevronRight, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import { CheckCircle2, Copy, ChevronRight, Loader2, Smartphone, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -34,7 +35,7 @@ interface MethodOption {
 
 const methods: MethodOption[] = [
   { id: "mtn", label: "MTN MoMo", icon: "mtn", ussd: "*115#" },
-  { id: "airtel", label: "Airtel Money", icon: "airtel", ussd: "*778#" },
+  { id: "airtel", label: "Airtel Money", icon: "airtel", ussd: "*115#" },
 ];
 
 const AMOUNT_PRESETS = [10, 50, 100, 200, 350] as const;
@@ -49,6 +50,179 @@ function methodLabel(method: DepositMethod) {
   if (method === "airtel") return "Airtel Money";
   if (method === "binance") return "Binance Pay";
   return "MTN MoMo";
+}
+
+const METHOD_PREPARE_MS = 750;
+
+function DepositSuccessModal({
+  open,
+  deposit,
+  onClose,
+  onMakeAnother,
+}: {
+  open: boolean;
+  deposit: WalletDeposit;
+  onClose: () => void;
+  onMakeAnother: () => void;
+}) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [open]);
+
+  if (!open || !mounted) return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[250] overflow-y-auto overscroll-contain"
+      role="presentation"
+    >
+      <div className="flex min-h-[100dvh] min-h-full items-center justify-center p-4 sm:p-6">
+        <button
+          type="button"
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm"
+          aria-label="Close dialog"
+          onClick={onClose}
+        />
+
+        <div
+          className="relative z-10 w-full max-w-md max-h-[min(90dvh,calc(100dvh-2rem))] overflow-y-auto panel-solid rounded-2xl border border-emerald-500/25 p-6 sm:p-8 shadow-2xl mx-auto text-center space-y-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="deposit-success-title"
+        >
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute right-3 top-3 sm:right-4 sm:top-4 rounded-lg p-1.5 text-zinc-500 hover:text-white hover:bg-white/5"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
+
+          <CheckCircle2 className="h-14 w-14 text-emerald-400 mx-auto" />
+          <h3 id="deposit-success-title" className="text-lg sm:text-xl font-semibold text-white">
+            Deposit submitted
+          </h3>
+          <Badge variant="warning">Awaiting admin verification</Badge>
+          <p className="text-sm text-zinc-400">
+            Reference{" "}
+            <span className="font-mono text-white">{deposit.reference}</span>
+          </p>
+          <p className="text-sm text-zinc-500 leading-relaxed">
+            Admin will verify your payment and credit your wallet. You&apos;ll get an inbox
+            notification when it&apos;s confirmed.
+          </p>
+          <Button type="button" variant="secondary" className="w-full" onClick={onMakeAnother}>
+            Make another deposit
+          </Button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+function DepositConfirmModal({
+  open,
+  amount,
+  currency,
+  merchantNumber,
+  methodLabel: label,
+  onYes,
+  onNo,
+  onClose,
+}: {
+  open: boolean;
+  amount: number;
+  currency: string;
+  merchantNumber: string;
+  methodLabel: string;
+  onYes: () => void;
+  onNo: () => void;
+  onClose: () => void;
+}) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [open]);
+
+  if (!open || !mounted) return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[250] overflow-y-auto overscroll-contain"
+      role="presentation"
+    >
+      <div className="flex min-h-[100dvh] min-h-full items-center justify-center p-4 sm:p-6">
+        <button
+          type="button"
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm"
+          aria-label="Close dialog"
+          onClick={onClose}
+        />
+
+        <div
+          className="relative z-10 w-full max-w-md max-h-[min(90dvh,calc(100dvh-2rem))] overflow-y-auto panel-solid rounded-2xl border border-white/10 p-5 sm:p-6 shadow-2xl mx-auto"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="deposit-confirm-title"
+        >
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute right-3 top-3 sm:right-4 sm:top-4 rounded-lg p-1.5 text-zinc-500 hover:text-white hover:bg-white/5"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
+          <h3
+            id="deposit-confirm-title"
+            className="text-base sm:text-lg font-semibold text-white pr-10 leading-snug"
+          >
+            Confirm your payment
+          </h3>
+          <p className="mt-3 text-sm text-zinc-400 leading-relaxed break-words">
+            Have you already sent{" "}
+            <strong className="text-white">{formatCurrency(amount, currency)}</strong> to merchant
+            number{" "}
+            <strong className="font-mono text-cyan-300 break-all">{merchantNumber}</strong> via{" "}
+            <strong className="text-white">{label}</strong>?
+          </p>
+          <div className="mt-5 sm:mt-6 flex flex-col-reverse sm:flex-row gap-3">
+            <Button type="button" variant="secondary" className="w-full sm:flex-1" onClick={onNo}>
+              No, not yet
+            </Button>
+            <Button type="button" className="w-full sm:flex-1" onClick={onYes}>
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              Yes, I&apos;ve paid
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
 }
 
 function InstructionStep({
@@ -80,23 +254,19 @@ export function DepositForm({ merchants, currency }: DepositFormProps) {
   const [loading, setLoading] = useState(false);
   const [loadingMethod, setLoadingMethod] = useState<DepositMethod | null>(null);
   const [error, setError] = useState("");
-  const [activeDeposit, setActiveDeposit] = useState<WalletDeposit | null>(null);
-  const [copiedRef, setCopiedRef] = useState(false);
+  const [submittedDeposit, setSubmittedDeposit] = useState<WalletDeposit | null>(null);
   const [copiedMerchant, setCopiedMerchant] = useState(false);
-  const [showDetails, setShowDetails] = useState(false);
+  const [paymentConfirmed, setPaymentConfirmed] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [paymentReminder, setPaymentReminder] = useState(false);
 
+  const parsedAmount = Number(amount);
   const merchantNumber = method ? merchantFor(method, merchants) : "";
   const methodMeta = methods.find((m) => m.id === method);
 
-  async function startDeposit(selected: DepositMethod) {
-    const parsed = Number(amount);
-    if (!amount || parsed < 1) {
+  async function selectMethod(selected: DepositMethod) {
+    if (!amount || parsedAmount < 1) {
       setError("Enter how much you want to deposit first");
-      return;
-    }
-
-    if (connectivity && !connectivity.isOnline) {
-      setError("You're offline. Reconnect to start a deposit — you're still signed in.");
       return;
     }
 
@@ -106,52 +276,52 @@ export function DepositForm({ merchants, currency }: DepositFormProps) {
       return;
     }
 
-    setMethod(selected);
-    setLoading(true);
+    if (connectivity && !connectivity.isOnline) {
+      setError("You're offline. Reconnect to start a deposit — you're still signed in.");
+      return;
+    }
+
     setLoadingMethod(selected);
     setError("");
+    setPaymentReminder(false);
 
-    try {
-      const res = await offlineAwareFetch("/api/wallet/deposit/intent", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: parsed, method: selected }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to start deposit");
+    await new Promise((resolve) => setTimeout(resolve, METHOD_PREPARE_MS));
 
-      setActiveDeposit(data.deposit);
-      setShowDetails(false);
-      setStep("pay");
-    } catch (err) {
-      setError(offlineMessage(err));
-      setMethod(null);
-    } finally {
-      setLoading(false);
-      setLoadingMethod(null);
-    }
+    setMethod(selected);
+    setPaymentConfirmed(false);
+    setShowConfirmModal(false);
+    setStep("pay");
+    setLoadingMethod(null);
   }
 
-  async function handleSubmitDetails(e: React.FormEvent) {
+  async function handleSubmitDeposit(e: React.FormEvent) {
     e.preventDefault();
-    if (!activeDeposit) return;
+    if (!method) return;
+
+    if (connectivity && !connectivity.isOnline) {
+      setError("You're offline. Reconnect to submit — you're still signed in.");
+      return;
+    }
 
     setLoading(true);
     setError("");
 
     try {
-      const res = await offlineAwareFetch(`/api/wallet/deposit/${activeDeposit.id}`, {
-        method: "PATCH",
+      const res = await offlineAwareFetch("/api/wallet/deposit", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          amount: parsedAmount,
+          method,
           transaction_id: transactionId,
           sender_phone: senderPhone,
           sender_name: senderName,
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to submit");
+      if (!res.ok) throw new Error(data.error || "Failed to submit deposit");
 
+      setSubmittedDeposit(data.deposit);
       setStep("done");
       router.refresh();
     } catch (err) {
@@ -161,170 +331,128 @@ export function DepositForm({ merchants, currency }: DepositFormProps) {
     }
   }
 
-  function copyText(text: string, which: "ref" | "merchant") {
-    navigator.clipboard.writeText(text);
-    if (which === "ref") {
-      setCopiedRef(true);
-      setTimeout(() => setCopiedRef(false), 2000);
-    } else {
-      setCopiedMerchant(true);
-      setTimeout(() => setCopiedMerchant(false), 2000);
-    }
+  function copyMerchant() {
+    if (!merchantNumber) return;
+    navigator.clipboard.writeText(merchantNumber);
+    setCopiedMerchant(true);
+    setTimeout(() => setCopiedMerchant(false), 2000);
   }
 
   function resetForm() {
     setStep("pick");
     setMethod(null);
-    setActiveDeposit(null);
+    setSubmittedDeposit(null);
     setAmount("");
     setTransactionId("");
     setSenderPhone("");
     setSenderName("");
-    setShowDetails(false);
+    setPaymentConfirmed(false);
+    setShowConfirmModal(false);
+    setPaymentReminder(false);
     setError("");
   }
 
-  if (step === "done") {
+  if (step === "done" && submittedDeposit) {
     return (
-      <div className="glass rounded-2xl p-8 text-center space-y-4">
-        <CheckCircle2 className="h-12 w-12 text-emerald-400 mx-auto" />
-        <p className="text-lg font-semibold text-white">Deposit submitted</p>
-        <Badge variant="warning">Awaiting admin verification</Badge>
-        <p className="text-sm text-zinc-400">
-          Reference{" "}
-          <span className="font-mono text-white">{activeDeposit?.reference}</span>
-        </p>
-        <p className="text-sm text-zinc-500 max-w-md mx-auto">
-          Admin will verify your payment and credit your wallet. You&apos;ll get an inbox
-          notification when it&apos;s confirmed.
-        </p>
-        <Button type="button" variant="secondary" onClick={resetForm}>
-          Make another deposit
-        </Button>
-      </div>
+      <DepositSuccessModal
+        open
+        deposit={submittedDeposit}
+        onClose={resetForm}
+        onMakeAnother={resetForm}
+      />
     );
   }
 
-  if (step === "pay" && activeDeposit && method) {
+  if (step === "pay" && method) {
     const label = methodLabel(method);
     const ussd = methodMeta?.ussd;
 
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-3">
-          {methodMeta?.icon === "mtn" && <MtnMoMoIcon className="h-10 w-10 text-[10px]" />}
-          {methodMeta?.icon === "airtel" && <AirtelMoneyIcon className="h-10 w-10 text-[8px]" />}
-          <div>
-            <h3 className="font-semibold text-white">Deposit with {label}</h3>
-            <p className="text-sm text-zinc-500">
-              Send {formatCurrency(activeDeposit.amount, currency)} then finish below
-            </p>
-          </div>
-        </div>
+    if (!paymentConfirmed) {
+      return (
+        <>
+          <DepositConfirmModal
+            open={showConfirmModal}
+            amount={parsedAmount}
+            currency={currency}
+            merchantNumber={merchantNumber}
+            methodLabel={label}
+            onClose={() => setShowConfirmModal(false)}
+            onNo={() => {
+              setShowConfirmModal(false);
+              setPaymentReminder(true);
+            }}
+            onYes={() => {
+              setShowConfirmModal(false);
+              setPaymentConfirmed(true);
+              setPaymentReminder(false);
+              setError("");
+            }}
+          />
 
-        <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/5 p-5 space-y-4">
-          <p className="text-sm font-medium text-cyan-200">Follow these steps on your phone</p>
-
-          <ol className="space-y-4">
-            {ussd && (
-              <InstructionStep n={1}>
-                Dial <strong className="font-mono text-white">{ussd}</strong>
-              </InstructionStep>
-            )}
-            <InstructionStep n={ussd ? 2 : 1}>
-              Select <strong className="text-white">Send Money</strong>
-            </InstructionStep>
-            <InstructionStep n={ussd ? 3 : 2}>
-              Send{" "}
-              <strong className="text-white">
-                {formatCurrency(activeDeposit.amount, currency)}
-              </strong>{" "}
-              to merchant number{" "}
-              <strong className="font-mono text-white">{merchantNumber}</strong>
-              <button
-                type="button"
-                onClick={() => copyText(merchantNumber, "merchant")}
-                className="ml-2 text-xs text-cyan-400 hover:text-cyan-300 inline-flex items-center gap-1"
-              >
-                <Copy className="h-3 w-3" />
-                {copiedMerchant ? "Copied" : "Copy"}
-              </button>
-            </InstructionStep>
-            <InstructionStep n={ussd ? 4 : 3}>
-              Wait for the confirmation message from{" "}
-              <strong className="text-white">{label}</strong> — keep the SMS, you need the
-              transaction ID
-            </InstructionStep>
-            <InstructionStep n={ussd ? 5 : 4}>
-              Come back here, tap <strong className="text-white">Finish deposit</strong> below,
-              and enter your details plus the transaction ID (Txn ID)
-            </InstructionStep>
-          </ol>
-
-          <div className="rounded-lg bg-black/30 border border-white/10 p-3 text-xs text-zinc-500">
-            Reference (optional in payment note):{" "}
-            <span className="font-mono text-zinc-300">{activeDeposit.reference}</span>
-            <button
-              type="button"
-              onClick={() => copyText(activeDeposit.reference, "ref")}
-              className="ml-2 text-cyan-400 hover:text-cyan-300 inline-flex items-center gap-1"
-            >
-              <Copy className="h-3 w-3" />
-              {copiedRef ? "Copied" : "Copy"}
-            </button>
-          </div>
-        </div>
-
-        {!showDetails ? (
-          <div className="space-y-3">
-            <Button
-              type="button"
-              size="lg"
-              className="w-full"
-              onClick={() => setShowDetails(true)}
-              disabled={!merchantNumber}
-            >
-              Finish deposit
-            </Button>
-            <Button type="button" variant="secondary" className="w-full" onClick={resetForm}>
-              Cancel — choose another method
-            </Button>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmitDetails} className="space-y-5">
-            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-5 space-y-4">
+          <div className="space-y-6">
+            <div className="flex items-center gap-3">
+              {methodMeta?.icon === "mtn" && <MtnMoMoIcon className="h-10 w-10 text-[10px]" />}
+              {methodMeta?.icon === "airtel" && <AirtelMoneyIcon className="h-10 w-10 text-[8px]" />}
               <div>
-                <p className="font-medium text-white text-sm">Enter your payment details</p>
-                <p className="text-xs text-zinc-500 mt-1">
-                  Copy these from the {label} confirmation SMS you received after sending
+                <h3 className="font-semibold text-white">Deposit with {label}</h3>
+                <p className="text-sm text-zinc-500">
+                  Pay on your phone first — then tap <strong className="text-zinc-300">Confirm deposit</strong>
                 </p>
               </div>
+            </div>
 
-              <Input
-                label="Transaction ID (Txn ID from SMS)"
-                placeholder="The long number in your payment confirmation text"
-                value={transactionId}
-                onChange={(e) => setTransactionId(e.target.value)}
-                required
-                autoFocus
-                hint="Required — proves you really sent the money"
-              />
+            {paymentReminder && (
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+                Please finish the payment on your phone first. Send{" "}
+                <strong className="text-white">{formatCurrency(parsedAmount, currency)}</strong> to{" "}
+                <strong className="font-mono">{merchantNumber}</strong>, then tap Confirm deposit.
+              </div>
+            )}
 
-              <Input
-                label="Phone number you sent from"
-                placeholder="e.g. 0970105334"
-                value={senderPhone}
-                onChange={(e) => setSenderPhone(e.target.value)}
-                hint="Your MTN or Airtel number that made the payment"
-              />
+            <div className="rounded-xl border border-amber-500/25 bg-amber-500/5 px-4 py-3 text-sm text-amber-200/90">
+              <strong className="text-amber-100">Important:</strong> Only tap{" "}
+              <strong className="text-white">Confirm deposit</strong> after {label} confirms your
+              transfer and you receive the SMS.
+            </div>
 
-              <Input
-                label="Your name on the MoMo account"
-                placeholder="e.g. John Banda"
-                value={senderName}
-                onChange={(e) => setSenderName(e.target.value)}
-                hint="Exactly as it appears on your mobile money account"
-              />
+            <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/5 p-5 space-y-4">
+              <p className="text-sm font-medium text-cyan-200 flex items-center gap-2">
+                <Smartphone className="h-4 w-4" />
+                Pay on your phone
+              </p>
+
+              <ol className="space-y-4">
+                {ussd && (
+                  <InstructionStep n={1}>
+                    Dial <strong className="font-mono text-white">{ussd}</strong>
+                  </InstructionStep>
+                )}
+                <InstructionStep n={ussd ? 2 : 1}>
+                  Select <strong className="text-white">Send Money</strong>
+                </InstructionStep>
+                <InstructionStep n={ussd ? 3 : 2}>
+                  Send{" "}
+                  <strong className="text-white">{formatCurrency(parsedAmount, currency)}</strong>{" "}
+                  to{" "}
+                  <strong className="font-mono text-white">{merchantNumber}</strong>
+                  <button
+                    type="button"
+                    onClick={copyMerchant}
+                    className="ml-2 text-xs text-cyan-400 hover:text-cyan-300 inline-flex items-center gap-1"
+                  >
+                    <Copy className="h-3 w-3" />
+                    {copiedMerchant ? "Copied" : "Copy"}
+                  </button>
+                </InstructionStep>
+                <InstructionStep n={ussd ? 4 : 3}>
+                  Wait until payment <strong className="text-white">succeeds</strong> — keep the
+                  confirmation SMS from <strong className="text-white">{label}</strong>
+                </InstructionStep>
+                <InstructionStep n={ussd ? 5 : 4}>
+                  Tap <strong className="text-white">Confirm deposit</strong> below and enter your
+                  transaction ID
+                </InstructionStep>
+              </ol>
             </div>
 
             {error && (
@@ -333,23 +461,109 @@ export function DepositForm({ merchants, currency }: DepositFormProps) {
               </div>
             )}
 
-            <div className="flex gap-3">
-              <Button type="button" variant="secondary" onClick={() => setShowDetails(false)}>
-                Back
-              </Button>
+            <div className="space-y-3">
               <Button
-                type="submit"
+                type="button"
                 size="lg"
-                className="flex-1"
-                loading={loading}
-                disabled={!transactionId.trim()}
+                className="w-full"
+                onClick={() => setShowConfirmModal(true)}
               >
-                Submit deposit
+                <CheckCircle2 className="h-4 w-4" />
+                Confirm deposit
+              </Button>
+              <Button type="button" variant="secondary" className="w-full" onClick={resetForm}>
+                Back — change amount or method
               </Button>
             </div>
-          </form>
+          </div>
+        </>
+      );
+    }
+
+    return (
+      <form onSubmit={handleSubmitDeposit} className="space-y-6">
+        <div className="flex items-center gap-3">
+          {methodMeta?.icon === "mtn" && <MtnMoMoIcon className="h-10 w-10 text-[10px]" />}
+          {methodMeta?.icon === "airtel" && <AirtelMoneyIcon className="h-10 w-10 text-[8px]" />}
+          <div>
+            <h3 className="font-semibold text-white">Finish your deposit</h3>
+            <p className="text-sm text-zinc-500">
+              {formatCurrency(parsedAmount, currency)} via {label}
+            </p>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/5 px-4 py-3 text-sm text-emerald-200/90">
+          <strong className="text-emerald-100">Great!</strong> Enter the details from your payment
+          SMS to finish your deposit.
+        </div>
+
+        <div className="rounded-xl border-2 border-cyan-500/30 bg-black/50 p-5 sm:p-6 space-y-5 shadow-lg shadow-black/20">
+          <div>
+            <p className="font-semibold text-white text-sm">Payment details</p>
+            <p className="text-xs text-zinc-400 mt-1">
+              These must match the payment you just made on your phone
+            </p>
+          </div>
+
+          <Input
+            variant="emphasized"
+            label="Transaction ID (Txn ID from SMS)"
+            placeholder="The long number in your payment confirmation text"
+            value={transactionId}
+            onChange={(e) => setTransactionId(e.target.value)}
+            required
+            autoFocus
+            hint="Required — only available after a successful payment"
+          />
+
+          <Input
+            variant="emphasized"
+            label="Phone number you sent from"
+            placeholder="e.g. 0970105334"
+            value={senderPhone}
+            onChange={(e) => setSenderPhone(e.target.value)}
+            hint="Your MTN or Airtel number that made the payment"
+          />
+
+          <Input
+            variant="emphasized"
+            label="Your name on the MoMo account"
+            placeholder="e.g. John Banda"
+            value={senderName}
+            onChange={(e) => setSenderName(e.target.value)}
+            hint="Exactly as it appears on your mobile money account"
+          />
+        </div>
+
+        {error && (
+          <div className="rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-3 text-sm text-red-400">
+            {error}
+          </div>
         )}
-      </div>
+
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              setPaymentConfirmed(false);
+              setError("");
+            }}
+          >
+            Back — I haven&apos;t paid yet
+          </Button>
+          <Button
+            type="submit"
+            size="lg"
+            className="flex-1"
+            loading={loading}
+            disabled={!transactionId.trim()}
+          >
+            Submit deposit
+          </Button>
+        </div>
+      </form>
     );
   }
 
@@ -372,7 +586,6 @@ export function DepositForm({ merchants, currency }: DepositFormProps) {
                   setAmount(String(preset));
                   setError("");
                 }}
-                disabled={Boolean(loadingMethod)}
                 className={cn(
                   "rounded-xl border-2 px-4 py-2.5 text-sm font-medium transition-colors",
                   selected
@@ -400,7 +613,7 @@ export function DepositForm({ merchants, currency }: DepositFormProps) {
       </div>
 
       <div>
-        <p className="text-sm text-zinc-400 mb-3">Deposit with</p>
+        <p className="text-sm text-zinc-400 mb-3">Then choose how you&apos;ll pay</p>
         <div className="space-y-2">
           {methods.map((m) => {
             const number = merchantFor(m.id, merchants);
@@ -411,7 +624,7 @@ export function DepositForm({ merchants, currency }: DepositFormProps) {
               <button
                 key={m.id}
                 type="button"
-                onClick={() => startDeposit(m.id)}
+                onClick={() => selectMethod(m.id)}
                 disabled={disabled}
                 className={cn(
                   "w-full rounded-xl border px-4 py-4 text-left transition-colors flex items-center gap-4",
@@ -427,17 +640,17 @@ export function DepositForm({ merchants, currency }: DepositFormProps) {
                   <AirtelMoneyIcon className="h-10 w-10 shrink-0 text-[8px]" />
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium">Deposit with {m.label}</p>
+                  <p className="font-medium">Pay with {m.label}</p>
                   {isLoading ? (
                     <p className="text-xs text-cyan-300/90 mt-0.5 flex items-center gap-1.5">
                       <Loader2 className="h-3 w-3 animate-spin" />
-                      Preparing your deposit…
+                      Loading payment instructions…
                     </p>
                   ) : !number ? (
                     <p className="text-xs text-amber-400/80 mt-0.5">Not available — contact admin</p>
                   ) : (
                     <p className="text-xs text-zinc-500 mt-0.5">
-                      Tap to see how to pay, then finish your deposit
+                      Pay on your phone, then confirm deposit
                     </p>
                   )}
                 </div>

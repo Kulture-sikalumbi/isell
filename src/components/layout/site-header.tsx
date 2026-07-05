@@ -1,12 +1,10 @@
 import Link from "next/link";
 import { getCurrentProfile, getCurrentUser } from "@/lib/auth";
 import { getMerchantAccountingSummary } from "@/lib/ledger";
-import { getOrCreateWallet } from "@/lib/wallet";
 import { getSiteCurrency } from "@/lib/currency";
 import { getUnreadUserNotificationCount } from "@/lib/user-notifications";
+import { getAdminAttentionCounts, getOrCreateWallet } from "@/lib/wallet";
 import { BrandWordmark } from "@/components/brand/brand-wordmark";
-import { LiveMerchantHeaderChip } from "@/components/layout/live-merchant-header-chip";
-import { LiveWalletHeaderChip } from "@/components/layout/live-wallet-header-chip";
 import { SiteNav, type SiteNavUser } from "@/components/layout/site-nav";
 
 export async function SiteHeader() {
@@ -31,12 +29,20 @@ export async function SiteHeader() {
     };
 
     if (isAdmin) {
-      const accounting = await getMerchantAccountingSummary();
+      const [accounting, attention] = await Promise.all([
+        getMerchantAccountingSummary(),
+        getAdminAttentionCounts(),
+      ]);
       navUser = {
         ...base,
         merchantBalance: accounting.processedSalesVolume,
         platformFees: accounting.platformFeesEarned,
         merchantCurrency: accounting.currency,
+        adminAttention: attention.totalAttention,
+        pendingDeposits: attention.pendingDeposits,
+        awaitingOrders: attention.awaitingOrders,
+        adminInboxUnread: attention.unreadNotifications,
+        adminMessagesUnread: attention.unreadMessages,
       };
     } else {
       const [wallet, inboxUnread] = await Promise.all([
@@ -55,7 +61,10 @@ export async function SiteHeader() {
   return (
     <header className="fixed top-0 z-50 w-full border-b border-white/10 bg-[#0a0b10]/95 backdrop-blur-md shadow-lg shadow-black/30">
       <div className="mx-auto flex h-14 sm:h-16 max-w-7xl items-center justify-between gap-3 px-3 sm:px-6">
-        <Link href="/" className="group transition-opacity hover:opacity-90 shrink-0 min-w-0">
+        <Link
+          href={isAdmin ? "/admin" : "/"}
+          className="group transition-opacity hover:opacity-90 shrink-0 min-w-0"
+        >
           <BrandWordmark size="md" className="text-sm sm:text-lg" />
         </Link>
         <SiteNav user={navUser} />

@@ -15,6 +15,8 @@ export async function POST(request: Request) {
   const amount = Number(body.amount);
   const method = body.method as DepositMethod;
   const transactionId = (body.transaction_id as string)?.trim();
+  const senderPhone = (body.sender_phone as string)?.trim();
+  const senderName = (body.sender_name as string)?.trim();
 
   if (!amount || amount <= 0) {
     return NextResponse.json({ error: "Enter a valid amount" }, { status: 400 });
@@ -52,6 +54,8 @@ export async function POST(request: Request) {
     amount,
     method,
     transactionId,
+    senderPhone: senderPhone || undefined,
+    senderName: senderName || undefined,
     userEmail: user.email,
     userName: profile?.full_name ?? undefined,
   });

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Plus, Wallet, History, ChevronDown } from "lucide-react";
+import { getSiteCurrency } from "@/lib/currency";
 import { cn, formatCurrency } from "@/lib/utils";
 
 interface WalletHeaderChipProps {
@@ -14,7 +15,7 @@ interface WalletHeaderChipProps {
 
 export function WalletHeaderChip({
   balance,
-  currency = "ZMW",
+  currency = getSiteCurrency(),
   className,
   compact = false,
 }: WalletHeaderChipProps) {
@@ -68,7 +69,7 @@ export function WalletHeaderChip({
             <p className="px-3 py-2 text-xs text-zinc-500">Your prepaid balance</p>
             <p className="px-3 pb-2 text-lg font-bold text-white">{formatted}</p>
             <Link
-              href="/dashboard?tab=wallet"
+              href="/dashboard?tab=wallet#wallet-deposit"
               onClick={() => setOpen(false)}
               className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-zinc-300 hover:text-white hover:bg-white/5"
             >
@@ -76,12 +77,12 @@ export function WalletHeaderChip({
               Add funds
             </Link>
             <Link
-              href="/dashboard?tab=wallet"
+              href="/dashboard?tab=history"
               onClick={() => setOpen(false)}
               className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-zinc-300 hover:text-white hover:bg-white/5"
             >
               <History className="h-4 w-4 text-zinc-400" />
-              Wallet history
+              Transaction history
             </Link>
           </div>
         )}
@@ -113,7 +114,7 @@ export function WalletHeaderChip({
       {open && (
         <div className="absolute top-full right-0 mt-2 w-56 panel-solid rounded-xl border border-white/10 p-2 shadow-2xl z-[60]">
           <Link
-            href="/dashboard?tab=wallet"
+            href="/dashboard?tab=wallet#wallet-deposit"
             onClick={() => setOpen(false)}
             className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-zinc-300 hover:text-white hover:bg-white/5"
           >
@@ -121,12 +122,12 @@ export function WalletHeaderChip({
             Add funds via MTN / Airtel
           </Link>
           <Link
-            href="/dashboard?tab=wallet"
+            href="/dashboard?tab=history"
             onClick={() => setOpen(false)}
             className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-zinc-300 hover:text-white hover:bg-white/5"
           >
             <History className="h-4 w-4" />
-            View wallet activity
+            Transaction history
           </Link>
         </div>
       )}

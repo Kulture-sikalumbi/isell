@@ -11,23 +11,20 @@ export function isZambianCurrency(currency?: string): boolean {
   return (currency ?? getSiteCurrency()).toUpperCase() === "ZMW";
 }
 
-export function getPlatformFeeAmount(): number {
-  const currency = getSiteCurrency();
-  if (currency === "USD") {
-    const usd = Number(process.env.PLATFORM_FEE_USD ?? process.env.PLATFORM_FEE ?? 1);
-    return Number.isFinite(usd) && usd >= 0 ? usd : 1;
-  }
-  const zmw = Number(process.env.PLATFORM_FEE ?? process.env.PLATFORM_FEE_ZMW ?? 25);
-  return Number.isFinite(zmw) && zmw >= 0 ? zmw : 25;
-}
-
 export function getCurrencyLabel(currency?: string): string {
   return isZambianCurrency(currency) ? "K" : "USD";
 }
 
+/** Customer-facing currency — on a Zambian site always show Kwacha (K). */
+export function resolveDisplayCurrency(currency?: string | null): string {
+  const site = getSiteCurrency();
+  if (isZambianCurrency(site)) return "ZMW";
+  return (currency?.trim() || site).toUpperCase();
+}
+
 /** Format money for display — ZMW uses K prefix (Zambian convention). */
 export function formatSiteCurrency(amount: number, currency?: string): string {
-  const c = (currency ?? getSiteCurrency()).toUpperCase();
+  const c = resolveDisplayCurrency(currency);
   const n = Number(amount);
 
   if (!Number.isFinite(n)) {

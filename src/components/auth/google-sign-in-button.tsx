@@ -39,7 +39,7 @@ declare global {
  * This shows your Google Console app name instead of *.supabase.co
  */
 export function GoogleSignInButton({
-  next = "/dashboard",
+  next = "/tools",
 }: GoogleSignInButtonProps) {
   const buttonRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(false);
@@ -77,7 +77,13 @@ export function GoogleSignInButton({
         return;
       }
 
-      window.location.href = next;
+      try {
+        const res = await fetch(`/api/auth/post-login?next=${encodeURIComponent(next)}`);
+        const data = await res.json();
+        window.location.href = data.path || next;
+      } catch {
+        window.location.href = next;
+      }
     },
     [next]
   );

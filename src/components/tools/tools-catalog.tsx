@@ -6,12 +6,13 @@ import { ArrowUpDown, Search, SlidersHorizontal, X } from "lucide-react";
 import { ToolCard } from "@/components/tools/tool-card";
 import { ToolsEmptyState } from "@/components/tools/tools-empty-state";
 import { cn } from "@/lib/utils";
+import type { StorefrontTool } from "@/lib/storefront-tool";
 import type { Tool } from "@/types/database";
 
 type SortOption = "name" | "price-asc" | "price-desc";
 
 interface ToolsCatalogProps {
-  tools: Tool[];
+  tools: StorefrontTool[];
   isAdmin?: boolean;
 }
 
@@ -43,8 +44,8 @@ function ToolsCatalogInner({ tools, isAdmin }: ToolsCatalogProps) {
     }
 
     return [...result].sort((a, b) => {
-      if (sort === "price-asc") return a.retail_price - b.retail_price;
-      if (sort === "price-desc") return b.retail_price - a.retail_price;
+      if (sort === "price-asc") return a.checkout_price - b.checkout_price;
+      if (sort === "price-desc") return b.checkout_price - a.checkout_price;
       return a.name.localeCompare(b.name);
     });
   }, [tools, query, sort]);

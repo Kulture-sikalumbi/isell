@@ -1,6 +1,8 @@
+import { Suspense } from "react";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
-import { SiteAssistant } from "@/components/assistant/site-assistant";
+import { StoreAssistantGate } from "@/components/assistant/store-assistant-gate";
+import { CustomerDepositPromptGate } from "@/components/wallet/customer-deposit-prompt-gate";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +16,10 @@ export default function StoreLayout({
       <SiteHeader />
       <main className="min-h-screen page-enter">{children}</main>
       <SiteFooter />
-      <SiteAssistant />
+      <StoreAssistantGate />
+      <Suspense fallback={null}>
+        <CustomerDepositPromptGate />
+      </Suspense>
     </>
   );
 }

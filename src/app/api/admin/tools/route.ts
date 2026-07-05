@@ -1,6 +1,15 @@
 import { NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/auth";
+import { isValidPlatformFeePercent } from "@/lib/platform-fee";
 import { createServiceClient } from "@/lib/supabase/server";
+
+function parsePlatformFeePercent(body: Record<string, unknown>): number | null {
+  const raw = body.platform_fee_percent;
+  if (raw === "" || raw === undefined || raw === null) return null;
+  const n = Number(raw);
+  if (!isValidPlatformFeePercent(n)) return null;
+  return n;
+}
 
 export async function POST(request: Request) {
   try {
@@ -10,6 +19,14 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
+    const platformFeePercent = parsePlatformFeePercent(body);
+    if (platformFeePercent === null) {
+      return NextResponse.json(
+        { error: "Activation service fee % is required (0–100)" },
+        { status: 400 }
+      );
+    }
+
     const supabase = createServiceClient();
     if (!supabase) {
       return NextResponse.json({ error: "Database not configured" }, { status: 503 });
@@ -28,6 +45,7 @@ export async function POST(request: Request) {
       developer_name: (body.developer_name as string) || null,
       retail_price: body.retail_price as number,
       wholesale_cost: body.wholesale_cost as number,
+      platform_fee_percent: platformFeePercent,
       identifier_label: (body.identifier_label as string) || "IMEI",
       identifier_instructions: (body.identifier_instructions as string) || null,
       identifier_placeholder: (body.identifier_placeholder as string) || null,

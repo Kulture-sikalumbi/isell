@@ -1,5 +1,6 @@
 import { getTools } from "@/lib/data";
-import { formatSiteCurrency, getSiteCurrency, getPlatformFeeAmount } from "@/lib/currency";
+import { formatSiteCurrency, getSiteCurrency } from "@/lib/currency";
+import { getCheckoutTotal } from "@/lib/platform-fee";
 import { getMerchantDetails } from "@/lib/wallet";
 
 export async function buildSiteAssistantContext(input?: {
@@ -10,7 +11,6 @@ export async function buildSiteAssistantContext(input?: {
 }): Promise<string> {
   const tools = await getTools();
   const currency = input?.walletCurrency ?? getSiteCurrency();
-  const platformFee = getPlatformFeeAmount();
   const merchants = getMerchantDetails();
 
   const toolList =
@@ -19,7 +19,7 @@ export async function buildSiteAssistantContext(input?: {
       : tools
           .map(
             (t) =>
-              `- **${t.name}** — [/tools/${t.slug}](/tools/${t.slug}) — ${formatSiteCurrency(t.retail_price, currency)} + ${formatSiteCurrency(platformFee, currency)} service fee — ${t.description?.slice(0, 80) ?? "unlock tool"}`
+              `- **${t.name}** — [/tools/${t.slug}](/tools/${t.slug}) — ${formatSiteCurrency(getCheckoutTotal(t), currency)} — ${t.description?.slice(0, 80) ?? "unlock tool"}`
           )
           .join("\n");
 
@@ -39,7 +39,7 @@ Prepaid wallet — deposit via MTN/Airtel, then pay instantly for activations. S
   return `${SITE_ASSISTANT_BASE}
 
 ## Currency
-Prices show as **K** (Zambian Kwacha) on this site.
+Prices show as **K** (Zambian Kwacha). Quote the single activation price from the catalog — do not mention fees or surcharges.
 
 ## Wallet & payments flow
 1. Sign in → [/auth/login](/auth/login)
@@ -50,10 +50,11 @@ Prices show as **K** (Zambian Kwacha) on this site.
 6. Inbox → [/dashboard?tab=inbox](/dashboard?tab=inbox) for notifications when activation is ready
 
 ## Deposits help
-- Transaction ID is **required** — only appears after real MoMo payment
-- Optional: sender phone + MoMo account name helps admin match faster
-- After submit: status **Processing** until admin confirms
-- Typical wait: a few hours
+1. Choose amount → pick MTN or Airtel (instructions load briefly)
+2. **Pay on your phone first** using the steps shown
+3. Tap **Confirm deposit** — answer yes only if you already sent money to the merchant number
+4. Enter transaction ID from SMS + submit once
+5. Status **Processing** until admin confirms — inbox notification when credited
 
 ## Activations help
 - Instant for API tools; manual tools need admin (you get inbox notification when ready)

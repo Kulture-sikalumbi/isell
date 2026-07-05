@@ -1,7 +1,7 @@
 import { getTools, getPayments } from "@/lib/data";
 import { getMerchantAccountingSummary } from "@/lib/ledger";
 import { getAdminAttentionCounts, getPendingDeposits, getPlatformFeeStats } from "@/lib/wallet";
-import { formatSiteCurrency, getSiteCurrency, getPlatformFeeAmount } from "@/lib/currency";
+import { formatSiteCurrency, getSiteCurrency } from "@/lib/currency";
 import { getMerchantDetails } from "@/lib/wallet";
 import { getSupportConversations } from "@/lib/support";
 
@@ -25,10 +25,11 @@ export async function buildAdminAssistantContext(): Promise<string> {
   const readyDeposits = pendingDeposits.filter((d) => d.transaction_id);
 
   const toolList = tools
-    .map(
-      (t) =>
-        `- **${t.name}** (${t.slug}) — ${formatSiteCurrency(t.retail_price, currency)} — ${t.fulfillment_mode} — ${t.is_active ? "active" : "inactive"}`
-    )
+    .map((t) => {
+      const pct =
+        t.platform_fee_percent != null ? ` — activation fee ${t.platform_fee_percent}%` : "";
+      return `- **${t.name}** (${t.slug}) — ${formatSiteCurrency(t.retail_price, currency)} — ${t.fulfillment_mode} — ${t.is_active ? "active" : "inactive"}${pct}`;
+    })
     .join("\n");
 
   const depositList =
@@ -112,7 +113,7 @@ ${
 ${toolList || "No tools yet"}
 
 ## Workflows you should know
-**Deposits:** Customer pays MTN/Airtel → submits txn ID → you verify on phone → Confirm at [/admin/deposits](/admin/deposits) → wallet credited → customer notified in inbox.
+**Deposits:** Customer picks amount → pays MTN/Airtel on phone → enters txn ID + details in **one submit** → you verify on phone → Confirm at [/admin/deposits](/admin/deposits) → wallet credited → customer notified in inbox.
 
 **Orders:** Wallet purchase → manual tools need fulfillment at [/admin/payments](/admin/payments) → enter activation code → customer gets inbox notification.
 
@@ -120,7 +121,7 @@ ${toolList || "No tools yet"}
 
 **Support:** Reply at [/admin/messages](/admin/messages) — customer gets inbox notification.
 
-Platform fee per order: ${formatSiteCurrency(getPlatformFeeAmount(), currency)}
+Activation service fee: set per tool at [/admin/tools](/admin/tools) (0–100%). Charged only on activation checkout — never on wallet deposits.
 
 Be concise, actionable, use markdown links. Prioritize what needs attention now.
 `.trim();

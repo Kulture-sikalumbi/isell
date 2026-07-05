@@ -3,7 +3,6 @@ import { getCurrentUser } from "@/lib/auth";
 import {
   getMerchantDetails,
   getOrCreateWallet,
-  getPlatformFee,
   getUserDeposits,
   getWalletTransactions,
 } from "@/lib/wallet";
@@ -22,7 +21,6 @@ export async function GET() {
 
   return NextResponse.json({
     wallet,
-    platformFee: getPlatformFee(),
     merchants: getMerchantDetails(),
     transactions,
     deposits,

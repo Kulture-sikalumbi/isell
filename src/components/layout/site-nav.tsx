@@ -1,28 +1,33 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Bell,
+  Home,
+  KeyRound,
   LayoutDashboard,
   LogIn,
   LogOut,
   Menu,
   MessageCircle,
-  Search,
+  Receipt,
   Shield,
   Sparkles,
+  Wallet,
   Wrench,
   X,
 } from "lucide-react";
 import { BrandWordmark } from "@/components/brand/brand-wordmark";
+import { AdminPanelHeaderChip } from "@/components/layout/admin-panel-header-chip";
 import { LiveMerchantHeaderChip } from "@/components/layout/live-merchant-header-chip";
 import { LiveWalletHeaderChip } from "@/components/layout/live-wallet-header-chip";
 import { UserInboxBell } from "@/components/user/user-inbox-bell";
 import { ConnectionStatus } from "@/components/layout/connection-status";
 import { useNavigationLoading } from "@/components/layout/navigation-progress";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 
 export interface SiteNavUser {
   id: string;
@@ -36,27 +41,107 @@ export interface SiteNavUser {
   merchantCurrency?: string;
   platformFees?: number;
   inboxUnread?: number;
+  adminAttention?: number;
+  pendingDeposits?: number;
+  awaitingOrders?: number;
+  adminInboxUnread?: number;
+  adminMessagesUnread?: number;
 }
 
 interface SiteNavProps {
   user: SiteNavUser | null;
 }
 
-const customerNavLinks = [
+type NavItem = {
+  href: string;
+  label: string;
+  icon: typeof Wrench;
+  badge?: number;
+};
+
+const guestMenuLinks: NavItem[] = [
+  { href: "/", label: "Home", icon: Home },
+  { href: "/tools", label: "Tools", icon: Wrench },
+];
+
+const customerMenuLinks: NavItem[] = [
   { href: "/tools", label: "Tools", icon: Wrench },
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/dashboard?tab=wallet", label: "Wallet", icon: Wallet },
+  { href: "/dashboard?tab=activations", label: "My activations", icon: KeyRound },
+  { href: "/dashboard?tab=inbox", label: "Inbox", icon: Bell },
   { href: "/dashboard?tab=messages", label: "Support", icon: MessageCircle },
-] as const;
+];
 
-const adminStoreNavLinks = [
-  { href: "/tools", label: "Tools", icon: Wrench },
-  { href: "/admin", label: "Admin", icon: Shield },
-] as const;
+function buildAdminDrawerLinks(user: SiteNavUser): NavItem[] {
+  return [
+    { href: "/admin", label: "Overview", icon: Shield, badge: user.adminAttention },
+    { href: "/admin/inbox", label: "Inbox", icon: Bell, badge: user.adminInboxUnread },
+    { href: "/admin/deposits", label: "Deposits", icon: Wallet, badge: user.pendingDeposits },
+    { href: "/admin/payments", label: "Orders to fulfill", icon: KeyRound, badge: user.awaitingOrders },
+    {
+      href: "/admin/messages",
+      label: "Customer chat",
+      icon: MessageCircle,
+      badge: user.adminMessagesUnread,
+    },
+    { href: "/admin/ledger", label: "Accounting", icon: Receipt },
+    { href: "/admin/tools", label: "Manage tools", icon: Wrench },
+    { href: "/tools", label: "View storefront", icon: Home },
+  ];
+}
+
+function UserAvatarBadge({ user }: { user: SiteNavUser }) {
+  const initials = user.name
+    .split(" ")
+    .map((p) => p[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+  return (
+    <div
+      className="flex items-center gap-2 shrink-0 pl-0.5"
+      title={user.name}
+    >
+      {user.avatarUrl ? (
+        <Image
+          src={user.avatarUrl}
+          alt={user.name}
+          width={32}
+          height={32}
+          className="h-8 w-8 rounded-full object-cover"
+        />
+      ) : (
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-violet-500 text-[10px] font-bold text-white">
+          {initials}
+        </div>
+      )}
+      <span className="hidden sm:block max-w-[88px] truncate text-xs font-medium text-zinc-200 pr-1">
+        {user.name.split(" ")[0]}
+      </span>
+      {user.isAdmin && (
+        <Shield className="hidden sm:block h-3 w-3 text-amber-400 shrink-0" aria-hidden />
+      )}
+    </div>
+  );
+}
+
+function drawerLinkClass(active: boolean, admin = false) {
+  return cn(
+    "flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium border transition-colors",
+    active
+      ? admin
+        ? "text-white bg-amber-500/15 border-amber-500/35"
+        : "text-white bg-cyan-500/15 border-cyan-500/35"
+      : "text-zinc-100 bg-[#181a24] border-white/10 hover:bg-[#1e2130] hover:border-white/20"
+  );
+}
 
 export function SiteNav({ user }: SiteNavProps) {
   const [open, setOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const pathname = usePathname();
+  const { isNavigating } = useNavigationLoading();
 
   useEffect(() => {
     setOpen(false);
@@ -69,57 +154,52 @@ export function SiteNav({ user }: SiteNavProps) {
     };
   }, [open]);
 
-  const initials = user?.name
-    .split(" ")
-    .map((p) => p[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+  const drawerLinks: NavItem[] = user?.isAdmin
+    ? buildAdminDrawerLinks(user)
+    : user
+      ? customerMenuLinks.map((item) =>
+          item.href.includes("tab=inbox")
+            ? { ...item, badge: user.inboxUnread ?? 0 }
+            : item
+        )
+      : guestMenuLinks;
 
-  const navLinks = user?.isAdmin ? adminStoreNavLinks : user ? customerNavLinks : customerNavLinks.slice(0, 2);
-
-  function handleHeaderSearch(e: React.FormEvent) {
-    e.preventDefault();
-    const q = searchQuery.trim();
-    window.location.href = q ? `/tools?q=${encodeURIComponent(q)}` : "/tools";
+  function isLinkActive(href: string) {
+    if (href === "/") return pathname === "/";
+    if (href.includes("?")) return pathname === href.split("?")[0];
+    if (href === "/dashboard") return pathname === "/dashboard";
+    return pathname.startsWith(href);
   }
 
-  const ctaHref = user?.isAdmin ? "/admin" : "/dashboard";
-  const ctaLabel = user?.isAdmin ? "Admin panel" : "Dashboard";
-  const CtaIcon = user?.isAdmin ? Shield : LayoutDashboard;
-  const { isNavigating } = useNavigationLoading();
+  const menuTrigger = (
+    <button
+      type="button"
+      onClick={() => setOpen(true)}
+      className={cn(
+        "rounded-lg border-0 bg-transparent p-2 text-white hover:bg-white/10 transition-colors shrink-0",
+        isNavigating && "opacity-60"
+      )}
+      aria-label="Open menu"
+      aria-expanded={open}
+    >
+      <Menu className="h-5 w-5" />
+    </button>
+  );
+
+  const accountMenu = user ? (
+    <div className="flex items-center gap-1 shrink-0 rounded-xl border border-white/10 bg-[#14151c] p-0.5">
+      <UserAvatarBadge user={user} />
+      {menuTrigger}
+    </div>
+  ) : (
+    menuTrigger
+  );
 
   return (
     <>
-      {/* Desktop */}
-      <div className="hidden lg:flex items-center gap-3 xl:gap-5 ml-auto shrink-0">
+      {/* Desktop — far right: wallet · inbox · [☰ + avatar] */}
+      <div className="hidden lg:flex items-center gap-2 xl:gap-3 ml-auto shrink-0 min-w-0">
         <ConnectionStatus compact className="hidden xl:flex" />
-        <nav className="flex items-center gap-0.5">
-          {navLinks.map((item) => {
-            const active =
-              item.href === "/admin"
-                ? pathname.startsWith("/admin")
-                : item.href.includes("?")
-                  ? pathname === "/dashboard"
-                  : pathname.startsWith(item.href);
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors",
-                  active ? "text-white bg-white/10" : "text-zinc-400 hover:text-white hover:bg-white/5",
-                  item.href === "/admin" && "text-amber-400/90"
-                )}
-              >
-                <item.icon className="h-4 w-4" />
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-
         {user && !user.isAdmin && typeof user.walletBalance === "number" && (
           <LiveWalletHeaderChip
             userId={user.id}
@@ -130,6 +210,9 @@ export function SiteNav({ user }: SiteNavProps) {
         {user && !user.isAdmin && (
           <UserInboxBell userId={user.id} initialUnread={user.inboxUnread ?? 0} />
         )}
+        {user?.isAdmin && (
+          <AdminPanelHeaderChip initialAttention={user.adminAttention ?? 0} />
+        )}
         {user?.isAdmin && typeof user.merchantBalance === "number" && (
           <LiveMerchantHeaderChip
             initialBalance={user.merchantBalance}
@@ -137,31 +220,25 @@ export function SiteNav({ user }: SiteNavProps) {
             initialCurrency={user.merchantCurrency}
           />
         )}
-
-        {user ? (
-          <UserChip user={user} />
-        ) : (
-          <Link href="/auth/login" className="text-sm text-zinc-400 hover:text-white px-2">
-            Sign in
-          </Link>
+        {!user && (
+          <>
+            <Link href="/auth/login" className="text-sm text-zinc-400 hover:text-white px-2">
+              Sign in
+            </Link>
+            <Link
+              href="/auth/login?next=/tools"
+              className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-white shadow-lg hover:brightness-110 transition-all bg-gradient-to-r from-cyan-500 to-violet-500 shadow-cyan-500/20"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              Get started
+            </Link>
+          </>
         )}
-
-        <Link
-          href={user ? ctaHref : "/auth/login?next=/tools"}
-          className={cn(
-            "inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-white shadow-lg hover:brightness-110 transition-all",
-            user?.isAdmin
-              ? "bg-gradient-to-r from-amber-500 to-orange-500 shadow-amber-500/20"
-              : "bg-gradient-to-r from-cyan-500 to-violet-500 shadow-cyan-500/20"
-          )}
-        >
-          {user ? <CtaIcon className="h-3.5 w-3.5" /> : <Sparkles className="h-3.5 w-3.5" />}
-          {user ? ctaLabel : "Get started"}
-        </Link>
+        {accountMenu}
       </div>
 
-      {/* Mobile — wallet + menu aligned right */}
-      <div className="flex lg:hidden items-center gap-2 ml-auto shrink-0">
+      {/* Mobile — far right: wallet · inbox · [☰ + avatar] */}
+      <div className="flex lg:hidden items-center gap-1.5 ml-auto shrink-0">
         {user && !user.isAdmin && typeof user.walletBalance === "number" && (
           <LiveWalletHeaderChip
             userId={user.id}
@@ -173,6 +250,9 @@ export function SiteNav({ user }: SiteNavProps) {
         {user && !user.isAdmin && (
           <UserInboxBell userId={user.id} initialUnread={user.inboxUnread ?? 0} compact />
         )}
+        {user?.isAdmin && (
+          <AdminPanelHeaderChip compact initialAttention={user.adminAttention ?? 0} />
+        )}
         {user?.isAdmin && typeof user.merchantBalance === "number" && (
           <LiveMerchantHeaderChip
             initialBalance={user.merchantBalance}
@@ -183,108 +263,101 @@ export function SiteNav({ user }: SiteNavProps) {
         {!user && (
           <Link
             href="/auth/login?next=/tools"
-            className="inline-flex items-center gap-1.5 rounded-xl border border-cyan-500/35 bg-gradient-to-r from-cyan-500/15 to-violet-500/15 px-3 py-2 text-xs font-semibold text-cyan-100 shadow-sm shadow-cyan-500/10 hover:brightness-110 transition-all shrink-0"
+            className="inline-flex items-center rounded-xl border border-cyan-500/35 bg-gradient-to-r from-cyan-500/15 to-violet-500/15 p-2 text-cyan-100"
+            aria-label="Sign in"
           >
-            <LogIn className="h-3.5 w-3.5" />
-            Sign in
+            <LogIn className="h-4 w-4" />
           </Link>
         )}
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className={cn(
-            "rounded-xl border border-white/10 bg-white/5 p-2.5 text-zinc-300 hover:text-white hover:bg-white/10 transition-colors",
-            isNavigating && "opacity-60"
-          )}
-          aria-label="Open menu"
-        >
-          <Menu className="h-5 w-5" />
-        </button>
+        {accountMenu}
       </div>
 
       {open && (
-        <div className="lg:hidden fixed inset-0 z-[100]">
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setOpen(false)} />
-          <aside className="absolute inset-y-0 right-0 w-full max-w-sm panel-solid border-l border-white/10 flex flex-col shadow-2xl">
-            <div className="flex items-center justify-between p-5 border-b border-white/5">
-              <BrandWordmark size="sm" />
+        <div className="fixed inset-0 z-[100] flex justify-end">
+          <div
+            className="absolute inset-0 bg-black/85"
+            onClick={() => setOpen(false)}
+            aria-hidden
+          />
+          <aside
+            className="relative z-10 w-full max-w-[280px] sm:max-w-xs flex flex-col shadow-2xl animate-slide-in-right border-l border-white/15 bg-[#0a0b10]"
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-[#0f1016]">
+              {user?.isAdmin ? (
+                <div className="flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-amber-400" />
+                  <span className="text-sm font-semibold text-amber-100">Admin menu</span>
+                </div>
+              ) : (
+                <BrandWordmark size="sm" />
+              )}
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="rounded-lg p-2 text-zinc-400 hover:text-white"
+                className="rounded-lg p-2 text-zinc-400 hover:text-white hover:bg-white/10"
                 aria-label="Close menu"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            {user && (
-              <div className="p-5 border-b border-white/5">
-                <div className="flex items-center gap-3 rounded-xl bg-white/5 border border-white/10 p-3">
-                  {user.avatarUrl ? (
-                    <Image src={user.avatarUrl} alt={user.name} width={44} height={44} className="h-11 w-11 rounded-full object-cover" />
-                  ) : (
-                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-violet-500 text-sm font-bold text-white">
-                      {initials}
-                    </div>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-white truncate">{user.name}</p>
-                    <p className="text-xs text-zinc-500 truncate">{user.email}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <form onSubmit={handleHeaderSearch} className="p-5 border-b border-white/5">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
-                <input
-                  type="search"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search tools..."
-                  className="w-full rounded-xl border border-white/10 bg-white/5 py-3 pl-10 pr-4 text-sm text-white placeholder:text-zinc-500 focus:border-cyan-400/40 focus:outline-none"
-                />
-              </div>
-            </form>
-
-            <nav className="flex-1 overflow-y-auto p-3 space-y-1">
-              {navLinks.map((item) => (
+            <nav className="p-3 space-y-1.5 bg-[#0a0b10]">
+              {drawerLinks.map((item) => (
                 <Link
-                  key={item.href}
+                  key={`${item.href}-${item.label}`}
                   href={item.href}
-                  className="flex items-center gap-3 rounded-xl px-4 py-3.5 text-sm text-zinc-300 hover:text-white hover:bg-white/5"
+                  onClick={() => setOpen(false)}
+                  className={drawerLinkClass(isLinkActive(item.href), user?.isAdmin)}
                 >
-                  <item.icon className="h-4 w-4" />
-                  {item.label}
+                  <item.icon
+                    className={cn(
+                      "h-4 w-4 shrink-0",
+                      user?.isAdmin ? "text-amber-400" : "text-cyan-400"
+                    )}
+                  />
+                  <span className="flex-1">{item.label}</span>
+                  {item.badge != null && item.badge > 0 && (
+                    <span
+                      className={cn(
+                        "rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                        user?.isAdmin
+                          ? "bg-amber-500/20 text-amber-200"
+                          : "bg-cyan-500/20 text-cyan-300"
+                      )}
+                    >
+                      {item.badge}
+                    </span>
+                  )}
                 </Link>
               ))}
+
               {!user && (
-                <Link href="/auth/login" className="flex items-center gap-3 rounded-xl px-4 py-3.5 text-sm text-cyan-400">
-                  Sign in with Google
+                <Link
+                  href="/auth/login"
+                  onClick={() => setOpen(false)}
+                  className={drawerLinkClass(false)}
+                >
+                  <LogIn className="h-4 w-4 shrink-0 text-cyan-400" />
+                  Sign in
                 </Link>
               )}
             </nav>
 
-            <div className="p-5 border-t border-white/5 space-y-3">
-              <Link
-                href={user ? ctaHref : "/auth/login?next=/tools"}
-                className={cn(
-                  "flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-medium text-white",
-                  user?.isAdmin
-                    ? "bg-gradient-to-r from-amber-500 to-orange-500"
-                    : "bg-gradient-to-r from-cyan-500 to-violet-500"
-                )}
-              >
-                {user ? <CtaIcon className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
-                {user ? ctaLabel : "Get started"}
-              </Link>
-              {user && (
+            <div className="px-3 pb-3 pt-1 bg-[#0a0b10]">
+              {!user ? (
+                <Link
+                  href="/auth/login?next=/tools"
+                  onClick={() => setOpen(false)}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-cyan-500 to-violet-500"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  Get started
+                </Link>
+              ) : (
                 <form action="/api/auth/signout" method="POST">
                   <button
                     type="submit"
-                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 px-4 py-3 text-sm text-zinc-400 hover:text-white"
+                    className="flex w-full items-center justify-center gap-2 rounded-lg border border-white/15 bg-[#181a24] px-3 py-2.5 text-sm text-zinc-200 hover:text-white hover:bg-[#1e2130]"
                   >
                     <LogOut className="h-4 w-4" />
                     Sign out
@@ -296,60 +369,5 @@ export function SiteNav({ user }: SiteNavProps) {
         </div>
       )}
     </>
-  );
-}
-
-function UserChip({ user }: { user: SiteNavUser }) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const initials = user.name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase();
-
-  return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => setMenuOpen((v) => !v)}
-        className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-2 py-1.5 hover:bg-white/10"
-      >
-        {user.avatarUrl ? (
-          <Image src={user.avatarUrl} alt={user.name} width={28} height={28} className="h-7 w-7 rounded-full object-cover" />
-        ) : (
-          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-violet-500 text-xs font-bold text-white">
-            {initials}
-          </div>
-        )}
-      </button>
-      {menuOpen && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
-          <div className="absolute right-0 z-50 mt-2 w-56 panel-solid rounded-xl border border-white/10 p-2 shadow-2xl">
-            <div className="px-3 py-2 border-b border-white/5 mb-1">
-              <p className="text-sm font-medium text-white truncate">{user.name}</p>
-              <p className="text-xs text-zinc-500 truncate">{user.email}</p>
-            </div>
-            {!user.isAdmin ? (
-              <>
-                <Link href="/dashboard" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-white/5">
-                  <LayoutDashboard className="h-4 w-4" /> Dashboard
-                </Link>
-                <Link href="/dashboard?tab=wallet" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-white/5">
-                  Wallet
-                </Link>
-              </>
-            ) : (
-              <Link href="/admin" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-white/5">
-                <Shield className="h-4 w-4" /> Admin panel
-              </Link>
-            )}
-            <div className="mt-1 border-t border-white/5 pt-1">
-              <form action="/api/auth/signout" method="POST">
-                <button type="submit" className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-400 hover:bg-white/5">
-                  <LogOut className="h-4 w-4" /> Sign out
-                </button>
-              </form>
-            </div>
-          </div>
-        </>
-      )}
-    </div>
   );
 }

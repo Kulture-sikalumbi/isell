@@ -1,14 +1,23 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { Hero, HowItWorks } from "@/components/landing/hero";
 import { FaqSection } from "@/components/landing/faq-section";
 import { TrustSection } from "@/components/landing/trust-section";
 import { ToolCard } from "@/components/tools/tool-card";
 import { ToolsEmptyState } from "@/components/tools/tools-empty-state";
+import { getCurrentProfile, getCurrentUser } from "@/lib/auth";
 import { getTools } from "@/lib/data";
+import { toStorefrontTools } from "@/lib/storefront-tool";
 
 export default async function HomePage() {
-  const tools = await getTools();
+  const user = await getCurrentUser();
+  const profile = user ? await getCurrentProfile() : null;
+  if (profile?.role === "admin") {
+    redirect("/admin");
+  }
+
+  const tools = toStorefrontTools(await getTools());
 
   return (
     <>

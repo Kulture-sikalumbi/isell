@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
-import { MessageCircle, Receipt, Wallet } from "lucide-react";
+import { MessageCircle, Receipt } from "lucide-react";
 import { AppleIcon } from "@/components/brand/apple-icon";
 import { ActivationCard } from "@/components/dashboard/activation-card";
 import { DashboardRealtimeRefresh } from "@/components/dashboard/dashboard-realtime-refresh";
@@ -9,8 +9,8 @@ import { ActivationWaitingPanel } from "@/components/dashboard/activation-waitin
 import { DashboardTabs } from "@/components/dashboard/dashboard-tabs";
 import { OrderCard } from "@/components/dashboard/order-card";
 import { SupportChat } from "@/components/support/support-chat";
-import { DepositForm } from "@/components/wallet/deposit-form";
-import { PendingDepositsList } from "@/components/wallet/pending-deposits-list";
+import { WalletPanel } from "@/components/wallet/wallet-panel";
+import { WalletHistoryPanel } from "@/components/wallet/wallet-history-panel";
 import { UserNotificationsInbox } from "@/components/user/user-notifications-inbox";
 import { Button } from "@/components/ui/button";
 import { requireUser, getCurrentProfile } from "@/lib/auth";
@@ -18,13 +18,10 @@ import { redirect } from "next/navigation";
 import { getActivations, getUserPayments } from "@/lib/data";
 import {
   getMerchantDetails,
+  getPendingWalletDeposits,
   getOrCreateWallet,
-  getPlatformFee,
-  getUserDeposits,
-  getWalletTransactions,
 } from "@/lib/wallet";
-import { WalletTransactionsList } from "@/components/wallet/wallet-transactions-list";
-import { formatCurrency } from "@/lib/utils";
+import { getSiteCurrency } from "@/lib/currency";
 import { getUserNotifications, getUnreadUserNotificationCount } from "@/lib/user-notifications";
 
 export const metadata = {
@@ -39,35 +36,41 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const user = await requireUser();
   const profile = await getCurrentProfile();
   const isAdmin = profile?.role === "admin";
+
+  if (isAdmin) {
+    redirect("/admin");
+  }
+
   const params = await searchParams;
   const tab =
     params.tab === "activations" ||
     params.tab === "messages" ||
     params.tab === "wallet" ||
+    params.tab === "history" ||
     params.tab === "inbox"
       ? params.tab
       : "orders";
 
-  if (isAdmin && (tab === "wallet" || tab === "messages")) {
-    redirect("/admin/ledger");
-  }
+  const isWalletArea = tab === "wallet" || tab === "history";
 
-  const [activations, orders, wallet, transactions, deposits, notifications, inboxUnread] =
+  const [activations, orders, wallet, notifications, inboxUnread, pendingDeposits] =
     await Promise.all([
     getActivations(user.id),
     getUserPayments(user.id),
-    isAdmin ? Promise.resolve(null) : getOrCreateWallet(user.id),
-    isAdmin ? Promise.resolve([]) : getWalletTransactions(user.id),
-    isAdmin ? Promise.resolve([]) : getUserDeposits(user.id),
-    isAdmin ? Promise.resolve([]) : getUserNotifications(user.id),
-    isAdmin ? Promise.resolve(0) : getUnreadUserNotificationCount(user.id),
+    isWalletArea ? getOrCreateWallet(user.id) : Promise.resolve(null),
+    getUserNotifications(user.id),
+    getUnreadUserNotificationCount(user.id),
+    getPendingWalletDeposits(user.id),
   ]);
 
   const merchants = getMerchantDetails();
-  const platformFee = getPlatformFee();
   const balance = wallet ? Number(wallet.balance) : 0;
-  const pendingProcessing = deposits.filter(
-    (d) => d.status === "pending" && d.transaction_id
+  const displayCurrency = getSiteCurrency();
+
+  const activationByPaymentId = new Map(
+    activations
+      .filter((a) => a.payment_id)
+      .map((a) => [a.payment_id as string, a])
   );
 
   const displayName =
@@ -81,99 +84,68 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   return (
     <section className="pt-28 pb-20 page-enter">
       <div className="mx-auto max-w-4xl px-6">
-        {!isAdmin && <DashboardRealtimeRefresh userId={user.id} />}
+        <DashboardRealtimeRefresh userId={user.id} />
         {params.error === "admin_required" && (
           <div className="mb-6 rounded-xl bg-amber-500/10 border border-amber-500/20 px-4 py-3 text-sm text-amber-300">
             Admin access is restricted. Contact the site owner if you need admin privileges.
           </div>
         )}
 
-        <div className="flex items-center gap-4 mb-8">
-          {avatarUrl ? (
-            <Image
-              src={avatarUrl}
-              alt={displayName ?? "User"}
-              width={48}
-              height={48}
-              className="h-12 w-12 rounded-xl object-cover"
-            />
-          ) : (
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-violet-500">
-              <AppleIcon className="h-5 w-5 text-white" />
+        <div className="relative mb-8 rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-transparent p-5 sm:p-6 overflow-hidden">
+          <div className="absolute top-0 right-0 h-24 w-24 bg-cyan-500/10 blur-3xl pointer-events-none" />
+          <div className="relative flex items-center gap-4">
+            {avatarUrl ? (
+              <Image
+                src={avatarUrl}
+                alt={displayName ?? "User"}
+                width={52}
+                height={52}
+                className="h-[52px] w-[52px] rounded-2xl object-cover ring-2 ring-white/10"
+              />
+            ) : (
+              <div className="flex h-[52px] w-[52px] items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-violet-500 ring-2 ring-white/10">
+                <AppleIcon className="h-5 w-5 text-white" />
+              </div>
+            )}
+            <div className="min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold truncate">My Account</h1>
+              <p className="text-sm text-zinc-400 truncate">
+                <span className="text-zinc-200">{displayName}</span>
+                {user.email && (
+                  <span className="text-zinc-500"> · {user.email}</span>
+                )}
+              </p>
             </div>
-          )}
-          <div>
-            <h1 className="text-3xl font-bold">My Account</h1>
-            <p className="text-sm text-zinc-400">
-              Signed in as <span className="text-zinc-200">{displayName}</span>
-              {user.email && (
-                <span className="text-zinc-500"> · {user.email}</span>
-              )}
-            </p>
           </div>
         </div>
 
         <Suspense fallback={null}>
           <DashboardTabs
-            isAdmin={isAdmin}
             ordersCount={orders.length}
             activationsCount={activations.length}
             inboxUnread={inboxUnread}
+            pendingDeposits={pendingDeposits.length}
           />
         </Suspense>
 
-        {isAdmin && (
-          <div className="mb-6 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-sm text-amber-200">
-            You&apos;re signed in as admin. Customer wallet and support chat are in the{" "}
-            <a href="/admin" className="underline text-amber-100">
-              admin panel
-            </a>
-            . Merchant accounting is under{" "}
-            <a href="/admin/ledger" className="underline text-amber-100">
-              Merchant accounting
-            </a>
-            .
-          </div>
-        )}
-
-        {tab === "wallet" && !isAdmin ? (
-          <div className="space-y-8">
-            <div className="glass rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-cyan-500/10">
-                  <Wallet className="h-6 w-6 text-cyan-400" />
-                </div>
-                <div>
-                  <p className="text-sm text-zinc-500">Available balance</p>
-                  <p className="text-3xl font-bold text-white">
-                    {formatCurrency(balance, wallet?.currency ?? "ZMW")}
-                  </p>
-                </div>
-              </div>
-              <p className="text-xs text-zinc-500 max-w-xs">
-                Add funds via MTN or Airtel, then buy activations instantly. Service fee{" "}
-                {formatCurrency(platformFee)} per order.
-              </p>
-            </div>
-
-            {pendingProcessing.length > 0 && (
-              <div className="rounded-xl bg-cyan-500/10 border border-cyan-500/20 px-4 py-3 text-sm text-cyan-200">
-                {pendingProcessing.length} deposit
-                {pendingProcessing.length !== 1 ? "s" : ""} being processed — admin
-                verification in progress.
-              </div>
-            )}
-
-            <PendingDepositsList deposits={deposits} />
-
-            <div>
-              <h2 className="font-semibold text-white mb-4">Add funds</h2>
-              <DepositForm merchants={merchants} currency={merchants.currency} />
-            </div>
-
-            <WalletTransactionsList transactions={transactions} />
-          </div>
-        ) : tab === "inbox" && !isAdmin ? (
+        {tab === "wallet" && wallet ? (
+          <Suspense fallback={null}>
+            <WalletPanel
+              balance={balance}
+              currency={displayCurrency}
+              merchants={merchants}
+              pendingDepositCount={pendingDeposits.length}
+            />
+          </Suspense>
+        ) : tab === "history" && wallet ? (
+          <Suspense fallback={null}>
+            <WalletHistoryPanel
+              balance={balance}
+              currency={displayCurrency}
+              pendingDepositCount={pendingDeposits.length}
+            />
+          </Suspense>
+        ) : tab === "inbox" ? (
           <div>
             <h2 className="font-semibold text-white mb-4">Inbox</h2>
             <p className="text-sm text-zinc-500 mb-6">
@@ -181,7 +153,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             </p>
             <UserNotificationsInbox notifications={notifications} />
           </div>
-        ) : tab === "messages" && !isAdmin ? (
+        ) : tab === "messages" ? (
           <div>
             <div className="flex items-center gap-2 mb-4">
               <MessageCircle className="h-5 w-5 text-cyan-400" />
@@ -230,7 +202,11 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           ) : (
             <div className="space-y-4">
               {orders.map((order) => (
-                <OrderCard key={order.id} payment={order} />
+                <OrderCard
+                  key={order.id}
+                  payment={order}
+                  activation={activationByPaymentId.get(order.id)}
+                />
               ))}
             </div>
           )

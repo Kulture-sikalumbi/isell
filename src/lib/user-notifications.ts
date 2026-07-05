@@ -68,8 +68,8 @@ export async function notifyActivationReady(input: {
     userId: input.userId,
     type: "activation_ready",
     title: `Activation ready: ${input.toolName}`,
-    message: `Your activation for ${input.toolName} (${input.hardwareId}) has been processed. Open your activations to view your key.`,
-    link: "/dashboard?tab=activations",
+    message: `Your activation for ${input.toolName} (${input.hardwareId}) is ready. Tap to view your key.`,
+    link: `/dashboard?tab=activations&wait=${input.paymentId}`,
   });
 }
 

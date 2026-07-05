@@ -1,13 +1,9 @@
 import { NextResponse } from "next/server";
-import { createAuthClient } from "@/lib/supabase/server";
 import { completePaidOrder } from "@/lib/complete-order";
 import { getToolBySlug } from "@/lib/data";
-import { createServiceClient } from "@/lib/supabase/server";
-import {
-  getPlatformFee,
-  getWalletBalance,
-  purchaseWithWallet,
-} from "@/lib/wallet";
+import { getCheckoutTotal } from "@/lib/platform-fee";
+import { createAuthClient, createServiceClient } from "@/lib/supabase/server";
+import { getWalletBalance, purchaseWithWallet } from "@/lib/wallet";
 
 export async function POST(request: Request) {
   try {
@@ -46,8 +42,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const platformFee = getPlatformFee();
-    const totalCost = Number(tool.retail_price) + platformFee;
+    const totalCost = getCheckoutTotal(tool);
     const balance = await getWalletBalance(user.id);
 
     if (balance < totalCost) {
@@ -56,7 +51,6 @@ export async function POST(request: Request) {
           error: "Insufficient wallet balance",
           required: totalCost,
           balance,
-          platformFee,
         },
         { status: 402 }
       );

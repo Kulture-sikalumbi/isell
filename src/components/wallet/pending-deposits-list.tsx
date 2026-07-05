@@ -14,13 +14,6 @@ const methodLabels = {
 };
 
 function statusMeta(deposit: WalletDeposit) {
-  if (deposit.status === "pending" && !deposit.transaction_id) {
-    return {
-      label: "Complete payment",
-      variant: "warning" as const,
-      hint: "Send mobile money using the reference, then submit your transaction ID.",
-    };
-  }
   if (deposit.status === "pending") {
     return {
       label: "Processing",
@@ -44,7 +37,9 @@ function statusMeta(deposit: WalletDeposit) {
 
 export function PendingDepositsList({ deposits }: PendingDepositsListProps) {
   const relevant = deposits.filter(
-    (d) => d.status === "pending" || d.status === "rejected"
+    (d) =>
+      (d.status === "pending" && d.transaction_id) ||
+      d.status === "rejected"
   );
 
   if (relevant.length === 0) return null;

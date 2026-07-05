@@ -8,16 +8,16 @@ import { PaymentMethodsRow } from "@/components/payments/payment-method-icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getSiteCurrency } from "@/lib/currency";
+import type { StorefrontTool } from "@/lib/storefront-tool";
 import { formatCurrency } from "@/lib/utils";
 import { useConnectivityOptional } from "@/components/layout/connectivity-provider";
 import { offlineAwareFetch, offlineMessage } from "@/lib/offline-fetch";
-import type { Tool } from "@/types/database";
 
 interface CheckoutFormProps {
-  tool: Tool;
+  tool: StorefrontTool;
   userEmail: string;
   walletBalance: number;
-  platformFee: number;
+  checkoutTotal: number;
   currency?: string;
 }
 
@@ -25,7 +25,7 @@ export function CheckoutForm({
   tool,
   userEmail,
   walletBalance,
-  platformFee,
+  checkoutTotal,
   currency = getSiteCurrency(),
 }: CheckoutFormProps) {
   const connectivity = useConnectivityOptional();
@@ -34,9 +34,7 @@ export function CheckoutForm({
   const [error, setError] = useState("");
   const [waitingPaymentId, setWaitingPaymentId] = useState<string | null>(null);
 
-  const toolPrice = Number(tool.retail_price);
-  const totalCost = toolPrice + platformFee;
-  const canAfford = walletBalance >= totalCost;
+  const canAfford = walletBalance >= checkoutTotal;
 
   async function handleCheckout(e: React.FormEvent) {
     e.preventDefault();
@@ -104,7 +102,7 @@ export function CheckoutForm({
 
       {!canAfford && (
         <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 px-4 py-3 text-sm text-amber-300">
-          You need {formatCurrency(totalCost - walletBalance, currency)} more.{" "}
+          You need {formatCurrency(checkoutTotal - walletBalance, currency)} more.{" "}
           <Link href="/dashboard?tab=wallet" className="underline text-amber-200">
             Add funds via MTN / Airtel
           </Link>
@@ -128,20 +126,11 @@ export function CheckoutForm({
         <p className="text-sm text-white font-medium">{userEmail}</p>
       </div>
 
-      <div className="rounded-2xl border border-white/15 bg-black/40 p-5 space-y-3 text-sm shadow-inner">
-        <div className="flex items-center justify-between text-zinc-400">
-          <span>Activation</span>
-          <span className="text-white">{formatCurrency(toolPrice, currency)}</span>
-        </div>
-        <div className="flex items-center justify-between text-zinc-400">
-          <span>Service fee</span>
-          <span className="text-white">{formatCurrency(platformFee, currency)}</span>
-        </div>
-        <div className="glow-line" />
+      <div className="rounded-2xl border border-white/15 bg-black/40 p-5 text-sm shadow-inner">
         <div className="flex items-center justify-between">
           <span className="font-semibold text-white text-base">Total</span>
           <span className="text-xl font-bold text-gradient">
-            {formatCurrency(totalCost, currency)}
+            {formatCurrency(checkoutTotal, currency)}
           </span>
         </div>
       </div>

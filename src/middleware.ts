@@ -25,58 +25,92 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  let supabaseResponse = NextResponse.next({ request });
-
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!url || !key) return supabaseResponse;
-
-  const supabase = createServerClient(url, key, {
-    cookies: {
-      getAll() {
-        return request.cookies.getAll();
-      },
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value }) => {
-          request.cookies.set(name, value);
-        });
-        supabaseResponse = NextResponse.next({ request });
-        cookiesToSet.forEach(({ name, value, options }) => {
-          supabaseResponse.cookies.set(name, value, options);
-        });
-      },
-    },
-  });
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
   const isDashboard = pathname.startsWith("/dashboard");
   const isAdmin = pathname.startsWith("/admin");
 
-  if ((isDashboard || isAdmin) && !user) {
+  // Only hit Supabase on protected routes — avoids fetch on every static/asset request
+  if (!isDashboard && !isAdmin) {
+    return NextResponse.next();
+  }
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+
+  if (!url || !key) {
     const loginUrl = new URL("/auth/login", request.url);
     loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  if (isAdmin && user) {
-    const { data: profile } = await supabase
+  let supabaseResponse = NextResponse.next({ request });
+
+  try {
+    const supabase = createServerClient(url, key, {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => {
+            request.cookies.set(name, value);
+          });
+          supabaseResponse = NextResponse.next({ request });
+          cookiesToSet.forEach(({ name, value, options }) => {
+            supabaseResponse.cookies.set(name, value, options);
+          });
+        },
+      },
+    });
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError) {
+      console.error("[middleware] getUser:", userError.message);
+    }
+
+    if (!user) {
+      const loginUrl = new URL("/auth/login", request.url);
+      loginUrl.searchParams.set("next", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("role")
       .eq("id", user.id)
       .single();
 
-    if (profile?.role !== "admin") {
-      return NextResponse.redirect(
-        new URL("/dashboard?error=admin_required", request.url)
-      );
+    if (profileError) {
+      console.error("[middleware] profile:", profileError.message);
     }
-  }
 
-  return supabaseResponse;
+    const userIsAdmin = profile?.role === "admin";
+
+    if (isDashboard && userIsAdmin) {
+      return NextResponse.redirect(new URL("/admin", request.url));
+    }
+
+    if (isAdmin) {
+      if (!userIsAdmin) {
+        return NextResponse.redirect(
+          new URL("/dashboard?error=admin_required", request.url)
+        );
+      }
+    }
+
+    return supabaseResponse;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "unknown";
+    console.error("[middleware] Supabase fetch failed:", message);
+
+    const loginUrl = new URL("/auth/login", request.url);
+    loginUrl.searchParams.set("next", pathname);
+    loginUrl.searchParams.set("error", "auth_unavailable");
+    return NextResponse.redirect(loginUrl);
+  }
 }
 
 export const config = {

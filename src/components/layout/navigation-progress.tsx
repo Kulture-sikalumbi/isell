@@ -1,7 +1,7 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { Suspense, createContext, useCallback, useContext, useEffect, useState } from "react";
 
 interface NavigationContextValue {
   isNavigating: boolean;
@@ -18,14 +18,23 @@ export function useNavigationLoading() {
 }
 
 export function NavigationProgressProvider({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={children}>
+      <NavigationProgressInner>{children}</NavigationProgressInner>
+    </Suspense>
+  );
+}
+
+function NavigationProgressInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [isNavigating, setIsNavigating] = useState(false);
 
   const startNavigation = useCallback(() => setIsNavigating(true), []);
 
   useEffect(() => {
     setIsNavigating(false);
-  }, [pathname]);
+  }, [pathname, searchParams]);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -37,9 +46,12 @@ export function NavigationProgressProvider({ children }: { children: React.React
       if (!href || href.startsWith("#") || anchor.target === "_blank") return;
       if (href.startsWith("http") && !href.startsWith(window.location.origin)) return;
 
-      const path = href.split("?")[0];
-      const current = pathname;
-      if (path !== current && path.startsWith("/")) {
+      const url = new URL(href, window.location.origin);
+      const nextPath = url.pathname;
+      const nextSearch = url.search;
+      const currentSearch = window.location.search;
+
+      if (nextPath !== pathname || nextSearch !== currentSearch) {
         setIsNavigating(true);
       }
     }

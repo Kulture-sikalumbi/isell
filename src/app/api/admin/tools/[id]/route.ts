@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/auth";
+import { isValidPlatformFeePercent } from "@/lib/platform-fee";
 import { createServiceClient } from "@/lib/supabase/server";
 
 interface RouteParams {
@@ -14,6 +15,14 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
   const { id } = await params;
   const body = await request.json();
+  const feePercent = Number(body.platform_fee_percent);
+  if (!isValidPlatformFeePercent(feePercent)) {
+    return NextResponse.json(
+      { error: "Activation service fee % is required (0–100)" },
+      { status: 400 }
+    );
+  }
+
   const supabase = createServiceClient();
 
   if (!supabase) {
@@ -35,6 +44,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       developer_name: body.developer_name || null,
       retail_price: body.retail_price,
       wholesale_cost: body.wholesale_cost,
+      platform_fee_percent: feePercent,
       identifier_label: body.identifier_label,
       identifier_instructions: body.identifier_instructions || null,
       identifier_placeholder: body.identifier_placeholder || null,

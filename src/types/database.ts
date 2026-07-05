@@ -29,6 +29,7 @@ export interface Tool {
   identifier_placeholder: string | null;
   developer_name: string | null;
   api_config: Record<string, unknown>;
+  platform_fee_percent: number | null;
   is_active: boolean;
   icon_url: string | null;
   created_at: string;
