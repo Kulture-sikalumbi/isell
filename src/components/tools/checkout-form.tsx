@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getSiteCurrency } from "@/lib/currency";
 import { formatCurrency } from "@/lib/utils";
+import { useConnectivityOptional } from "@/components/layout/connectivity-provider";
+import { offlineAwareFetch, offlineMessage } from "@/lib/offline-fetch";
 import type { Tool } from "@/types/database";
 
 interface CheckoutFormProps {
@@ -26,6 +28,7 @@ export function CheckoutForm({
   platformFee,
   currency = getSiteCurrency(),
 }: CheckoutFormProps) {
+  const connectivity = useConnectivityOptional();
   const [hardwareId, setHardwareId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -40,8 +43,14 @@ export function CheckoutForm({
     setLoading(true);
     setError("");
 
+    if (connectivity && !connectivity.isOnline) {
+      setError("You're offline. Reconnect to checkout — you're still signed in.");
+      setLoading(false);
+      return;
+    }
+
     try {
-      const res = await fetch("/api/checkout", {
+      const res = await offlineAwareFetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -65,7 +74,7 @@ export function CheckoutForm({
 
       setWaitingPaymentId(data.paymentId);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError(offlineMessage(err));
     } finally {
       setLoading(false);
     }

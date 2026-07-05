@@ -15,6 +15,7 @@ import {
   type AssistantClientContext,
   type CachedTool,
 } from "@/lib/assistant-storage";
+import { useConnectivityOptional } from "@/components/layout/connectivity-provider";
 import { cn } from "@/lib/utils";
 
 interface Message {
@@ -67,6 +68,7 @@ function renderMessageContent(text: string) {
 
 export function SiteAssistant() {
   const pathname = usePathname();
+  const connectivity = useConnectivityOptional();
   const [open, setOpen] = useState(false);
   const [showBubble, setShowBubble] = useState(false);
   const [messages, setMessages] = useState<Message[]>([WELCOME]);
@@ -94,19 +96,37 @@ export function SiteAssistant() {
 
   useEffect(() => {
     refreshCatalog();
+  }, [refreshCatalog]);
+
+  useEffect(() => {
+    if (connectivity?.sessionHint?.loggedIn) {
+      setIsLoggedIn(true);
+      setUserEmail(connectivity.sessionHint.email);
+    }
+
+    if (!connectivity?.isOnline && connectivity?.wasLoggedIn) {
+      return;
+    }
+
     fetch("/api/auth/me")
       .then((r) => r.json())
       .then((d) => {
         setIsLoggedIn(Boolean(d.loggedIn));
         setUserEmail(d.email);
       })
-      .catch(() => {});
+      .catch(() => {
+        if (connectivity?.wasLoggedIn) {
+          setIsLoggedIn(true);
+        }
+      });
+  }, [connectivity?.isOnline, connectivity?.wasLoggedIn, connectivity?.sessionHint]);
 
+  useEffect(() => {
     if (!isBubbleDismissed()) {
       const t = setTimeout(() => setShowBubble(true), 2500);
       return () => clearTimeout(t);
     }
-  }, [refreshCatalog]);
+  }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -260,12 +280,17 @@ export function SiteAssistant() {
             </p>
           </div>
 
-          {!isLoggedIn && (
+          {!isLoggedIn && connectivity?.isOnline !== false && (
             <div className="mx-3 mt-3 rounded-xl bg-amber-500/10 border border-amber-500/20 px-3 py-2 text-xs text-amber-200">
               <Link href="/auth/login" className="underline font-medium">
                 Sign in with Google
               </Link>{" "}
               to download tools, pay, and view orders.
+            </div>
+          )}
+          {!isLoggedIn && connectivity?.isOnline === false && connectivity?.wasLoggedIn && (
+            <div className="mx-3 mt-3 rounded-xl bg-amber-500/10 border border-amber-500/20 px-3 py-2 text-xs text-amber-200">
+              You&apos;re offline but still signed in. Reconnect to use wallet and orders.
             </div>
           )}
 

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Bell } from "lucide-react";
 import { subscribeToTables } from "@/lib/realtime";
+import { offlineAwareFetch } from "@/lib/offline-fetch";
 import { cn } from "@/lib/utils";
 
 const INBOX_POLL_MS = 20_000;
@@ -19,7 +20,7 @@ export function UserInboxBell({ userId, initialUnread = 0, compact }: UserInboxB
 
   const refresh = useCallback(async () => {
     try {
-      const res = await fetch("/api/user/notifications", { cache: "no-store" });
+      const res = await offlineAwareFetch("/api/user/notifications", { cache: "no-store" });
       if (res.ok) {
         const data = await res.json();
         setUnread(data.unread ?? 0);

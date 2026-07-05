@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { AirtelMoneyIcon, MtnMoMoIcon } from "@/components/payments/payment-method-icons";
 import { getCurrencyLabel } from "@/lib/currency";
 import { cn, formatCurrency } from "@/lib/utils";
+import { useConnectivityOptional } from "@/components/layout/connectivity-provider";
+import { offlineAwareFetch, offlineMessage } from "@/lib/offline-fetch";
 import type { DepositMethod, WalletDeposit } from "@/types/database";
 
 interface MerchantDetails {
@@ -68,6 +70,7 @@ function InstructionStep({
 
 export function DepositForm({ merchants, currency }: DepositFormProps) {
   const router = useRouter();
+  const connectivity = useConnectivityOptional();
   const [step, setStep] = useState<"pick" | "pay" | "done">("pick");
   const [method, setMethod] = useState<DepositMethod | null>(null);
   const [amount, setAmount] = useState("");
@@ -92,6 +95,11 @@ export function DepositForm({ merchants, currency }: DepositFormProps) {
       return;
     }
 
+    if (connectivity && !connectivity.isOnline) {
+      setError("You're offline. Reconnect to start a deposit — you're still signed in.");
+      return;
+    }
+
     const number = merchantFor(selected, merchants);
     if (!number) {
       setError(`${methodLabel(selected)} merchant number is not set up yet. Contact admin.`);
@@ -104,7 +112,7 @@ export function DepositForm({ merchants, currency }: DepositFormProps) {
     setError("");
 
     try {
-      const res = await fetch("/api/wallet/deposit/intent", {
+      const res = await offlineAwareFetch("/api/wallet/deposit/intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ amount: parsed, method: selected }),
@@ -116,7 +124,7 @@ export function DepositForm({ merchants, currency }: DepositFormProps) {
       setShowDetails(false);
       setStep("pay");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError(offlineMessage(err));
       setMethod(null);
     } finally {
       setLoading(false);
@@ -132,7 +140,7 @@ export function DepositForm({ merchants, currency }: DepositFormProps) {
     setError("");
 
     try {
-      const res = await fetch(`/api/wallet/deposit/${activeDeposit.id}`, {
+      const res = await offlineAwareFetch(`/api/wallet/deposit/${activeDeposit.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -147,7 +155,7 @@ export function DepositForm({ merchants, currency }: DepositFormProps) {
       setStep("done");
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError(offlineMessage(err));
     } finally {
       setLoading(false);
     }

@@ -19,6 +19,7 @@ import { BrandWordmark } from "@/components/brand/brand-wordmark";
 import { LiveMerchantHeaderChip } from "@/components/layout/live-merchant-header-chip";
 import { LiveWalletHeaderChip } from "@/components/layout/live-wallet-header-chip";
 import { UserInboxBell } from "@/components/user/user-inbox-bell";
+import { ConnectionStatus } from "@/components/layout/connection-status";
 import { useNavigationLoading } from "@/components/layout/navigation-progress";
 import { cn } from "@/lib/utils";
 
@@ -91,6 +92,7 @@ export function SiteNav({ user }: SiteNavProps) {
     <>
       {/* Desktop */}
       <div className="hidden lg:flex items-center gap-3 xl:gap-5 ml-auto shrink-0">
+        <ConnectionStatus compact className="hidden xl:flex" />
         <nav className="flex items-center gap-0.5">
           {navLinks.map((item) => {
             const active =

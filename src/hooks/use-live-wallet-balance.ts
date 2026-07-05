@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { subscribeToTables, subscribeToWallet } from "@/lib/realtime";
 import { getSiteCurrency } from "@/lib/currency";
+import { offlineAwareFetch } from "@/lib/offline-fetch";
 
 const WALLET_POLL_MS = 20_000;
 
@@ -28,7 +29,7 @@ export function useLiveWalletBalance(
   const fetchBalance = useCallback(async () => {
     if (!userId) return;
     try {
-      const res = await fetch("/api/wallet", { cache: "no-store" });
+      const res = await offlineAwareFetch("/api/wallet", { cache: "no-store" });
       if (!res.ok) return;
       const data = await res.json();
       applyBalance(Number(data.wallet?.balance ?? 0));
