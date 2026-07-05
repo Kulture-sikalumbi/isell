@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
+  LogIn,
   LogOut,
   Menu,
   MessageCircle,
@@ -178,6 +179,15 @@ export function SiteNav({ user }: SiteNavProps) {
             initialCurrency={user.merchantCurrency}
             compact
           />
+        )}
+        {!user && (
+          <Link
+            href="/auth/login?next=/tools"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-cyan-500/35 bg-gradient-to-r from-cyan-500/15 to-violet-500/15 px-3 py-2 text-xs font-semibold text-cyan-100 shadow-sm shadow-cyan-500/10 hover:brightness-110 transition-all shrink-0"
+          >
+            <LogIn className="h-3.5 w-3.5" />
+            Sign in
+          </Link>
         )}
         <button
           type="button"
