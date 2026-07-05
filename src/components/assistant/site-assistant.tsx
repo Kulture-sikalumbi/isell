@@ -26,7 +26,7 @@ interface Message {
 const WELCOME: Message = {
   role: "assistant",
   content:
-    "Hi! Looking for an **iPhone unlock tool**?\n\nI can help you **find tools**, **sign in**, or check **orders**. What are you looking for?",
+    "Hi! I can help you **find tools**, **add wallet funds**, track **activations**, or check your **inbox**.\n\nTry: \"iPhone 14 unlock tool\" or \"how do I deposit?\"",
 };
 
 function renderMessageContent(text: string) {

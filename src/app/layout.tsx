@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { AppProviders } from "@/components/layout/app-providers";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -13,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "iSell Unlocking — Instant Tool Activation",
+  title: "iSell Unlocks — Instant Tool Activation",
   description:
-    "Automated middleware platform for digital tool activations. Download free, pay once, activate instantly.",
+    "Zambia's prepaid wallet platform for device unlock tool activations. Pay with MTN or Airtel, activate instantly.",
   icons: {
     icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
     apple: [{ url: "/apple-icon.svg", type: "image/svg+xml" }],
@@ -32,7 +33,9 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full mesh-bg">{children}</body>
+      <body className="min-h-full mesh-bg">
+        <AppProviders>{children}</AppProviders>
+      </body>
     </html>
   );
 }

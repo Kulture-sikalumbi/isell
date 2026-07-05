@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 import { getTools } from "@/lib/data";
+import { getCurrentUser } from "@/lib/auth";
 import { buildSiteAssistantContext } from "@/lib/site-assistant-knowledge";
 import {
   analyzeToolQuery,
+  buildToolMatchReply,
   buildToolRequestReply,
 } from "@/lib/assistant-tool-matching";
 import { callGemini, fallbackAssistantReply } from "@/lib/site-assistant";
 import type { AssistantClientContext } from "@/lib/assistant-storage";
+import { getOrCreateWallet, getUserDeposits } from "@/lib/wallet";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -23,15 +26,17 @@ function buildSessionContext(ctx?: AssistantClientContext) {
 ## Live session (ground truth — do not contradict)
 - User signed in: ${ctx.isLoggedIn ? "YES" : "NO"}
 - User email: ${ctx.userEmail ?? "unknown"}
+- Wallet balance: ${ctx.walletBalance ?? "unknown"}
+- Pending deposits: ${ctx.pendingDeposits ?? 0}
 - Page: ${ctx.currentPath ?? "unknown"}
 - Tools in catalog RIGHT NOW (only these exist): ${toolNames}
 - Recent user searches: ${ctx.recentSearches.join(", ") || "none"}
 
 ## Mandatory rules for this session
-- If user is NOT signed in and asks about orders, checkout, download, or dashboard → tell them to [sign in with Google](/auth/login) FIRST.
+- If user is NOT signed in and asks about orders, wallet, checkout, or dashboard → tell them to [sign in with Google](/auth/login) FIRST.
 - NEVER invent tool names not in the catalog list above.
 - If user wants a tool NOT in the catalog → say it's not available yet, offer to notify admin, tell them to check [/tools](/tools) in a few hours.
-- Download and pay require sign-in at [/auth/login](/auth/login).
+- Help with deposits: MTN/Airtel → submit txn ID → wait for admin → inbox notification when confirmed.
 `.trim();
 }
 
@@ -56,15 +61,33 @@ export async function POST(request: Request) {
     const tools = await getTools();
     const lastUser = [...messages].reverse().find((m) => m.role === "user");
     const lastQuery = lastUser?.content ?? "";
-    const isLoggedIn = clientContext?.isLoggedIn ?? false;
+
+    const serverUser = await getCurrentUser();
+    const isLoggedIn = clientContext?.isLoggedIn ?? Boolean(serverUser);
+
+    let walletBalance = clientContext?.walletBalance;
+    let walletCurrency = clientContext?.walletCurrency;
+    let pendingDeposits = clientContext?.pendingDeposits ?? 0;
+
+    if (serverUser && walletBalance === undefined) {
+      const wallet = await getOrCreateWallet(serverUser.id);
+      walletBalance = wallet ? Number(wallet.balance) : 0;
+      walletCurrency = wallet?.currency ?? "ZMW";
+      const deposits = await getUserDeposits(serverUser.id);
+      pendingDeposits = deposits.filter((d) => d.status === "pending").length;
+    }
 
     const toolAnalysis = analyzeToolQuery(lastQuery, tools);
 
+    if (toolAnalysis.matched) {
+      return NextResponse.json({
+        reply: buildToolMatchReply(toolAnalysis.matched, isLoggedIn),
+        matchedTool: { slug: toolAnalysis.matched.slug, name: toolAnalysis.matched.name },
+      });
+    }
+
     if (toolAnalysis.shouldOfferRequest) {
-      const toolName =
-        toolAnalysis.wish ||
-        toolAnalysis.matched?.name ||
-        lastQuery.slice(0, 80);
+      const toolName = toolAnalysis.wish || lastQuery.slice(0, 80);
       return NextResponse.json({
         reply: buildToolRequestReply(toolName, isLoggedIn),
         suggestToolRequest: { toolName },
@@ -74,7 +97,7 @@ export async function POST(request: Request) {
 
     if (
       !isLoggedIn &&
-      /order|dashboard|activation|checkout|pay|download|my account|invoice/i.test(
+      /order|dashboard|activation|checkout|pay|wallet|deposit|download|my account|invoice|inbox|balance/.test(
         lastQuery
       )
     ) {
@@ -83,14 +106,30 @@ export async function POST(request: Request) {
           "You'll need to **sign in first** to access that.\n\n" +
           "1. Go to [/auth/login](/auth/login)\n" +
           "2. Click **Continue with Google**\n" +
-          "3. Then visit [/dashboard](/dashboard) or [/tools](/tools)\n\n" +
-          "Sign-in is required for downloads, payments, and order history.",
+          "3. Add wallet funds at [/dashboard?tab=wallet](/dashboard?tab=wallet)\n\n" +
+          "Sign-in is required for wallet, orders, and activations.",
         requiresLogin: true,
       });
     }
 
     const systemPrompt =
-      (await buildSiteAssistantContext()) + "\n\n" + buildSessionContext(clientContext);
+      (await buildSiteAssistantContext({
+        isLoggedIn,
+        walletBalance,
+        walletCurrency,
+        pendingDeposits,
+      })) +
+      "\n\n" +
+      buildSessionContext({
+        isLoggedIn,
+        walletBalance,
+        walletCurrency,
+        pendingDeposits,
+        cachedTools: clientContext?.cachedTools ?? [],
+        recentSearches: clientContext?.recentSearches ?? [],
+        userEmail: clientContext?.userEmail,
+        currentPath: clientContext?.currentPath,
+      });
 
     const result = await callGemini({
       apiKey,
@@ -100,9 +139,9 @@ export async function POST(request: Request) {
 
     if (result.ok) {
       let reply = result.text;
-      if (!isLoggedIn && /dashboard|download|checkout|pay|order/i.test(reply)) {
+      if (!isLoggedIn && /dashboard|wallet|checkout|pay|order/i.test(reply)) {
         reply +=
-          "\n\n**Note:** [Sign in](/auth/login) with Google to download tools or view your orders.";
+          "\n\n**Note:** [Sign in](/auth/login) with Google to use your wallet and view orders.";
       }
       return NextResponse.json({ reply, requiresLogin: !isLoggedIn });
     }

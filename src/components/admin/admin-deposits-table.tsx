@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Check, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ const methodLabels = {
 };
 
 export function AdminDepositsTable({ initialDeposits }: AdminDepositsTableProps) {
+  const router = useRouter();
   const [deposits, setDeposits] = useState(initialDeposits);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -39,6 +41,7 @@ export function AdminDepositsTable({ initialDeposits }: AdminDepositsTableProps)
       if (!res.ok) throw new Error(data.error || "Action failed");
 
       setDeposits((prev) => prev.filter((d) => d.id !== id));
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Action failed");
     } finally {
@@ -93,7 +96,16 @@ export function AdminDepositsTable({ initialDeposits }: AdminDepositsTableProps)
                   <Badge variant="info">{methodLabels[d.method]}</Badge>
                 </td>
                 <td className="px-6 py-4 font-mono text-xs text-zinc-300">
-                  {d.transaction_id}
+                  {d.transaction_id || (
+                    <span className="text-amber-400">Awaiting customer</span>
+                  )}
+                  {(d.sender_phone || d.sender_name) && (
+                    <p className="text-zinc-500 font-sans mt-1 normal-case">
+                      {d.sender_name}
+                      {d.sender_name && d.sender_phone ? " · " : ""}
+                      {d.sender_phone}
+                    </p>
+                  )}
                 </td>
                 <td className="px-6 py-4 font-mono text-xs text-zinc-400">
                   {d.reference}
@@ -103,8 +115,9 @@ export function AdminDepositsTable({ initialDeposits }: AdminDepositsTableProps)
                   <div className="flex gap-2">
                     <Button
                       size="sm"
-                      disabled={loadingId === d.id}
+                      disabled={loadingId === d.id || !d.transaction_id}
                       onClick={() => handleAction(d.id, "confirm")}
+                      title={!d.transaction_id ? "Customer has not submitted transaction ID yet" : undefined}
                     >
                       {loadingId === d.id ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />

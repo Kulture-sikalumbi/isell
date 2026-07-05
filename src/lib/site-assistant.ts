@@ -86,6 +86,31 @@ export async function callGemini(input: {
   return { ok: false, error: "Gemini unavailable" };
 }
 
+export function fallbackAdminReply(userMessage: string): string {
+  const q = userMessage.toLowerCase();
+
+  if (/deposit|wallet|mtn|airtel|confirm/.test(q)) {
+    return "Check pending deposits at [/admin/deposits](/admin/deposits). Confirm only after verifying the txn ID on your merchant phone.";
+  }
+  if (/order|fulfill|activation|payment/.test(q)) {
+    return "Orders awaiting fulfillment are at [/admin/payments](/admin/payments). Enter the activation code or mark device registered.";
+  }
+  if (/message|chat|support|customer/.test(q)) {
+    return "Customer support chats are at [/admin/messages](/admin/messages). Replies notify the customer in their inbox.";
+  }
+  if (/ledger|account|withdraw|balance|reconcile/.test(q)) {
+    return "Merchant accounting & withdrawals: [/admin/ledger](/admin/ledger).";
+  }
+  if (/tool|catalog/.test(q)) {
+    return "Manage tools at [/admin/tools](/admin/tools).";
+  }
+  if (/inbox|notification|alert/.test(q)) {
+    return "Admin inbox: [/admin/inbox](/admin/inbox) — new orders, deposits, and tool requests.";
+  }
+
+  return "Admin quick links:\n\n• [/admin](/admin) — overview\n• [/admin/deposits](/admin/deposits) — confirm wallet top-ups\n• [/admin/payments](/admin/payments) — fulfill orders\n• [/admin/messages](/admin/messages) — customer chat\n• [/admin/ledger](/admin/ledger) — accounting\n\nWhat do you need to check?";
+}
+
 /** Offline fallback when API fails — still useful for navigation */
 export function fallbackAssistantReply(
   userMessage: string,
@@ -125,12 +150,24 @@ export function fallbackAssistantReply(
     return `Browse all tools: [/tools](/tools)\n\nAvailable now:\n${list}`;
   }
 
-  if (/pay|mobile money|mtn|airtel|binance|imei/.test(q)) {
-    return "How to pay:\n1. Open a tool page from [/tools](/tools)\n2. Sign in at [/auth/login](/auth/login)\n3. Enter your IMEI (*#06# on iPhone)\n4. Pay with MTN, Airtel, or Binance at checkout\n\nTrack the order on [/dashboard](/dashboard).";
+  if (/pay|mobile money|mtn|airtel|binance|imei|wallet|deposit|balance|fund/.test(q)) {
+    return (
+      "How wallet payments work:\n\n" +
+      "1. [Sign in](/auth/login)\n" +
+      "2. Add funds → [/dashboard?tab=wallet](/dashboard?tab=wallet) (MTN/Airtel + txn ID)\n" +
+      "3. Pick a tool → [/tools](/tools)\n" +
+      "4. Pay from wallet at checkout\n\n" +
+      "You'll get an inbox notification when your deposit is confirmed or activation is ready." +
+      loginReminder
+    );
+  }
+
+  if (/inbox|notification|alert/.test(q)) {
+    return `Your notifications are in [/dashboard?tab=inbox](/dashboard?tab=inbox) — deposit confirmations, activation ready alerts, and admin replies.${loginReminder}`;
   }
 
   if (/home|start|hello|hi|help/.test(q)) {
-    return "Hi! I'm here to help with iSell Unlocking.\n\n• [Browse tools](/tools)\n• [Sign in](/auth/login)\n• [My orders](/dashboard)\n• [Activations](/dashboard?tab=activations)\n\nWhat would you like to do?";
+    return "Hi! I'm here to help with iSell Unlocks.\n\n• [Browse tools](/tools)\n• [Sign in](/auth/login)\n• [My orders](/dashboard)\n• [Activations](/dashboard?tab=activations)\n\nWhat would you like to do?";
   }
 
   return "I can help you navigate the site:\n\n• [Sign in](/auth/login)\n• [Browse tools](/tools)\n• [Order history](/dashboard)\n• [Activations](/dashboard?tab=activations)\n\nTell me what you're looking for!";

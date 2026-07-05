@@ -3,7 +3,7 @@ import { getCurrentProfile } from "@/lib/auth";
 import { getTools } from "@/lib/data";
 
 export const metadata = {
-  title: "Tools — iSell Unlocking",
+  title: "Tools — iSell Unlocks",
 };
 
 export default async function ToolsPage() {

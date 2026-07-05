@@ -7,6 +7,7 @@ import { SignInGate } from "@/components/tools/sign-in-gate";
 import { Badge } from "@/components/ui/badge";
 import { getToolBySlug } from "@/lib/data";
 import { getPlatformFee, getWalletBalance } from "@/lib/wallet";
+import { getSiteCurrency } from "@/lib/currency";
 import { formatCurrency } from "@/lib/utils";
 
 interface ToolDetailPageProps {
@@ -16,7 +17,7 @@ interface ToolDetailPageProps {
 export async function generateMetadata({ params }: ToolDetailPageProps) {
   const { slug } = await params;
   const tool = await getToolBySlug(slug);
-  return { title: tool ? `${tool.name} — iSell Unlocking` : "Tool Not Found" };
+  return { title: tool ? `${tool.name} — iSell Unlocks` : "Tool Not Found" };
 }
 
 export default async function ToolDetailPage({ params }: ToolDetailPageProps) {
@@ -29,6 +30,7 @@ export default async function ToolDetailPage({ params }: ToolDetailPageProps) {
   const userEmail = user?.email ?? "";
   const walletBalance = user ? await getWalletBalance(user.id) : 0;
   const platformFee = getPlatformFee();
+  const currency = getSiteCurrency();
 
   return (
     <section className="pt-28 pb-20">
@@ -53,7 +55,7 @@ export default async function ToolDetailPage({ params }: ToolDetailPageProps) {
               <div className="flex items-center justify-between">
                 <span className="text-sm text-zinc-400">Activation Price</span>
                 <span className="text-2xl font-bold text-white">
-                  {formatCurrency(tool.retail_price)}
+                  {formatCurrency(tool.retail_price, currency)}
                 </span>
               </div>
               <div className="glow-line" />
@@ -96,14 +98,19 @@ export default async function ToolDetailPage({ params }: ToolDetailPageProps) {
             )}
           </div>
 
-          <div className="panel-solid rounded-2xl p-6 sm:p-8">
-            <h2 className="text-xl font-semibold mb-6">Activate Now</h2>
+          <div className="panel-solid rounded-2xl p-6 sm:p-8 border border-cyan-500/20 shadow-xl shadow-cyan-500/5 ring-1 ring-white/5 sticky top-24">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-xl font-bold text-white">Activate now</h2>
+              <span className="text-xs text-zinc-500 uppercase tracking-wide">{currency}</span>
+            </div>
+            <p className="text-sm text-zinc-500 mb-6">Pay from your prepaid wallet — MTN & Airtel funded</p>
             {user && userEmail ? (
               <CheckoutForm
                 tool={tool}
                 userEmail={userEmail}
                 walletBalance={walletBalance}
                 platformFee={platformFee}
+                currency={currency}
               />
             ) : (
               <SignInGate tool={tool} mode="activate" />

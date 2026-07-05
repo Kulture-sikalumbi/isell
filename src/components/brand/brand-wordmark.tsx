@@ -7,7 +7,7 @@ interface BrandWordmarkProps {
 }
 
 /**
- * Wordmark: iS + Apple mark + ll Unlocking
+ * Wordmark: iS + Apple mark + ll Unlocks
  * Override mark with NEXT_PUBLIC_BRAND_MARK_URL if needed.
  */
 export function BrandWordmark({ className, size = "md" }: BrandWordmarkProps) {
@@ -27,7 +27,7 @@ export function BrandWordmark({ className, size = "md" }: BrandWordmarkProps) {
         s.gap,
         className
       )}
-      aria-label="iSell Unlocking"
+      aria-label="iSell Unlocks"
     >
       <span>iS</span>
       {customMark ? (
@@ -40,7 +40,7 @@ export function BrandWordmark({ className, size = "md" }: BrandWordmarkProps) {
       ) : (
         <AppleIcon className={cn("inline-block mx-[0.04em]", s.mark)} />
       )}
-      <span>ll Unlocking</span>
+      <span>ll Unlocks</span>
     </span>
   );
 }

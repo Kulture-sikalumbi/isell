@@ -131,7 +131,25 @@ export async function sendAdminSupportMessage(userId: string, body: string) {
     .select()
     .single();
 
+  if (!error && data) {
+    const { notifySupportReply } = await import("@/lib/user-notifications");
+    await notifySupportReply({ userId, preview: trimmed });
+  }
+
   return error ? null : data;
+}
+
+export async function getUnreadSupportMessageCount(): Promise<number> {
+  const supabase = createServiceClient();
+  if (!supabase) return 0;
+
+  const { count } = await supabase
+    .from("support_messages")
+    .select("id", { count: "exact", head: true })
+    .eq("sender_role", "user")
+    .is("read_by_admin_at", null);
+
+  return count ?? 0;
 }
 
 export async function markSupportReadByAdmin(userId: string) {

@@ -69,7 +69,9 @@ export interface WalletDeposit {
   amount: number;
   currency: string;
   method: DepositMethod;
-  transaction_id: string;
+  transaction_id: string | null;
+  sender_phone: string | null;
+  sender_name: string | null;
   reference: string;
   status: DepositStatus;
   admin_note: string | null;

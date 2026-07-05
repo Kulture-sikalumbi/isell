@@ -1,4 +1,6 @@
 import { requireAdmin } from "@/lib/auth";
+import { AdminAssistant } from "@/components/admin/admin-assistant";
+import { AdminRealtimeRefresh } from "@/components/admin/admin-realtime-refresh";
 
 export const dynamic = "force-dynamic";
 
@@ -9,5 +11,11 @@ export default async function AdminLayout({
 }) {
   await requireAdmin();
 
-  return <div className="min-h-screen mesh-bg">{children}</div>;
+  return (
+    <div className="min-h-screen mesh-bg">
+      <AdminRealtimeRefresh />
+      {children}
+      <AdminAssistant />
+    </div>
+  );
 }

@@ -1,5 +1,6 @@
 import { fulfillPayment } from "@/lib/fulfillment";
 import { notifyAdminNewOrder } from "@/lib/notifications";
+import { notifyOrderProcessing } from "@/lib/user-notifications";
 import { createServiceClient } from "@/lib/supabase/server";
 import type { Payment, Tool } from "@/types/database";
 
@@ -19,6 +20,12 @@ export async function completePaidOrder(payment: Payment & { tool?: Tool }) {
       .eq("id", payment.id);
 
     await notifyAdminNewOrder(payment);
+    if (payment.user_id) {
+      await notifyOrderProcessing({
+        userId: payment.user_id,
+        toolName: tool.name,
+      });
+    }
     return { awaiting_admin: true, fulfilled: false };
   }
 

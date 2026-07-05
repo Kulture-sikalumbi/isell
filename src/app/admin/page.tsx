@@ -1,35 +1,57 @@
 import Link from "next/link";
 import { AlertCircle, Bell, CreditCard, DollarSign, Package, ShoppingCart, TrendingUp } from "lucide-react";
+import { AdminPendingDepositsPanel } from "@/components/admin/admin-pending-deposits-panel";
 import { AdminShell } from "@/components/admin/admin-sidebar";
 import { PaymentsTable } from "@/components/admin/payments-table";
 import { StatCard } from "@/components/admin/stat-card";
 import { getAdminStats, getPayments, getResellerCredits, getUnreadNotificationCount } from "@/lib/data";
-import { getPendingDeposits, getPlatformFeeStats } from "@/lib/wallet";
+import { getAdminAttentionCounts, getPendingDeposits, getPlatformFeeStats } from "@/lib/wallet";
 import { formatCurrency } from "@/lib/utils";
 
-export const metadata = { title: "Admin — iSell Unlocking" };
+export const metadata = { title: "Admin — iSell Unlocks" };
 
 export default async function AdminPage() {
   const payments = await getPayments();
   const credits = await getResellerCredits();
   const unread = await getUnreadNotificationCount();
   const stats = getAdminStats(payments, credits);
-  const [pendingDeposits, platformFees] = await Promise.all([
+  const [pendingDeposits, platformFees, attention] = await Promise.all([
     getPendingDeposits(),
     getPlatformFeeStats(),
+    getAdminAttentionCounts(),
   ]);
+
+  const readyToConfirm = pendingDeposits.filter((d) => d.transaction_id);
 
   return (
     <AdminShell title="Overview" description="Business performance at a glance">
-      {pendingDeposits.length > 0 && (
+      {attention.awaitingOrders > 0 && (
+        <Link
+          href="/admin/payments"
+          className="mb-6 flex items-center gap-3 rounded-xl border border-violet-500/30 bg-violet-500/10 px-4 py-3 text-sm text-violet-200 hover:bg-violet-500/15 transition-colors"
+        >
+          <ShoppingCart className="h-4 w-4 shrink-0" />
+          <span>
+            <strong>{attention.awaitingOrders}</strong> paid order
+            {attention.awaitingOrders !== 1 ? "s" : ""} need activation — open Payments
+          </span>
+        </Link>
+      )}
+      {readyToConfirm.length > 0 && (
+        <div className="mb-8">
+          <AdminPendingDepositsPanel deposits={readyToConfirm} compact />
+        </div>
+      )}
+      {pendingDeposits.length > readyToConfirm.length && (
         <Link
           href="/admin/deposits"
           className="mb-6 flex items-center gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200 hover:bg-amber-500/15 transition-colors"
         >
           <CreditCard className="h-4 w-4 shrink-0" />
           <span>
-            <strong>{pendingDeposits.length}</strong> deposit
-            {pendingDeposits.length !== 1 ? "s" : ""} awaiting verification
+            <strong>{pendingDeposits.length - readyToConfirm.length}</strong> deposit
+            {pendingDeposits.length - readyToConfirm.length !== 1 ? "s" : ""} waiting for
+            customer transaction ID
           </span>
         </Link>
       )}

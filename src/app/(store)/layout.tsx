@@ -12,7 +12,7 @@ export default function StoreLayout({
   return (
     <>
       <SiteHeader />
-      <main className="min-h-screen">{children}</main>
+      <main className="min-h-screen page-enter">{children}</main>
       <SiteFooter />
       <SiteAssistant />
     </>

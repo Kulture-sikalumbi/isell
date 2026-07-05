@@ -4,13 +4,17 @@ import { Suspense } from "react";
 import { MessageCircle, Receipt, Wallet } from "lucide-react";
 import { AppleIcon } from "@/components/brand/apple-icon";
 import { ActivationCard } from "@/components/dashboard/activation-card";
+import { DashboardRealtimeRefresh } from "@/components/dashboard/dashboard-realtime-refresh";
+import { ActivationWaitingPanel } from "@/components/dashboard/activation-waiting-panel";
 import { DashboardTabs } from "@/components/dashboard/dashboard-tabs";
 import { OrderCard } from "@/components/dashboard/order-card";
 import { SupportChat } from "@/components/support/support-chat";
 import { DepositForm } from "@/components/wallet/deposit-form";
-import { WalletTransactionsList } from "@/components/wallet/wallet-transactions-list";
+import { PendingDepositsList } from "@/components/wallet/pending-deposits-list";
+import { UserNotificationsInbox } from "@/components/user/user-notifications-inbox";
 import { Button } from "@/components/ui/button";
-import { requireUser } from "@/lib/auth";
+import { requireUser, getCurrentProfile } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import { getActivations, getUserPayments } from "@/lib/data";
 import {
   getMerchantDetails,
@@ -19,36 +23,52 @@ import {
   getUserDeposits,
   getWalletTransactions,
 } from "@/lib/wallet";
+import { WalletTransactionsList } from "@/components/wallet/wallet-transactions-list";
 import { formatCurrency } from "@/lib/utils";
+import { getUserNotifications, getUnreadUserNotificationCount } from "@/lib/user-notifications";
 
 export const metadata = {
-  title: "Dashboard — iSell Unlocking",
+  title: "Dashboard — iSell Unlocks",
 };
 
 interface DashboardPageProps {
-  searchParams: Promise<{ error?: string; tab?: string }>;
+  searchParams: Promise<{ error?: string; tab?: string; wait?: string }>;
 }
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const user = await requireUser();
+  const profile = await getCurrentProfile();
+  const isAdmin = profile?.role === "admin";
   const params = await searchParams;
   const tab =
-    params.tab === "activations" || params.tab === "messages" || params.tab === "wallet"
+    params.tab === "activations" ||
+    params.tab === "messages" ||
+    params.tab === "wallet" ||
+    params.tab === "inbox"
       ? params.tab
       : "orders";
 
-  const [activations, orders, wallet, transactions, deposits] = await Promise.all([
+  if (isAdmin && (tab === "wallet" || tab === "messages")) {
+    redirect("/admin/ledger");
+  }
+
+  const [activations, orders, wallet, transactions, deposits, notifications, inboxUnread] =
+    await Promise.all([
     getActivations(user.id),
     getUserPayments(user.id),
-    getOrCreateWallet(user.id),
-    getWalletTransactions(user.id),
-    getUserDeposits(user.id),
+    isAdmin ? Promise.resolve(null) : getOrCreateWallet(user.id),
+    isAdmin ? Promise.resolve([]) : getWalletTransactions(user.id),
+    isAdmin ? Promise.resolve([]) : getUserDeposits(user.id),
+    isAdmin ? Promise.resolve([]) : getUserNotifications(user.id),
+    isAdmin ? Promise.resolve(0) : getUnreadUserNotificationCount(user.id),
   ]);
 
   const merchants = getMerchantDetails();
   const platformFee = getPlatformFee();
   const balance = wallet ? Number(wallet.balance) : 0;
-  const pendingDeposits = deposits.filter((d) => d.status === "pending");
+  const pendingProcessing = deposits.filter(
+    (d) => d.status === "pending" && d.transaction_id
+  );
 
   const displayName =
     user.user_metadata?.full_name ||
@@ -59,8 +79,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     user.user_metadata?.avatar_url || user.user_metadata?.picture || null;
 
   return (
-    <section className="pt-28 pb-20">
+    <section className="pt-28 pb-20 page-enter">
       <div className="mx-auto max-w-4xl px-6">
+        {!isAdmin && <DashboardRealtimeRefresh userId={user.id} />}
         {params.error === "admin_required" && (
           <div className="mb-6 rounded-xl bg-amber-500/10 border border-amber-500/20 px-4 py-3 text-sm text-amber-300">
             Admin access is restricted. Contact the site owner if you need admin privileges.
@@ -94,12 +115,28 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
         <Suspense fallback={null}>
           <DashboardTabs
+            isAdmin={isAdmin}
             ordersCount={orders.length}
             activationsCount={activations.length}
+            inboxUnread={inboxUnread}
           />
         </Suspense>
 
-        {tab === "wallet" ? (
+        {isAdmin && (
+          <div className="mb-6 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-sm text-amber-200">
+            You&apos;re signed in as admin. Customer wallet and support chat are in the{" "}
+            <a href="/admin" className="underline text-amber-100">
+              admin panel
+            </a>
+            . Merchant accounting is under{" "}
+            <a href="/admin/ledger" className="underline text-amber-100">
+              Merchant accounting
+            </a>
+            .
+          </div>
+        )}
+
+        {tab === "wallet" && !isAdmin ? (
           <div className="space-y-8">
             <div className="glass rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center gap-3">
@@ -109,7 +146,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 <div>
                   <p className="text-sm text-zinc-500">Available balance</p>
                   <p className="text-3xl font-bold text-white">
-                    {formatCurrency(balance, wallet?.currency ?? "USD")}
+                    {formatCurrency(balance, wallet?.currency ?? "ZMW")}
                   </p>
                 </div>
               </div>
@@ -119,12 +156,15 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               </p>
             </div>
 
-            {pendingDeposits.length > 0 && (
-              <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 px-4 py-3 text-sm text-amber-300">
-                {pendingDeposits.length} deposit{pendingDeposits.length !== 1 ? "s" : ""}{" "}
-                awaiting admin verification.
+            {pendingProcessing.length > 0 && (
+              <div className="rounded-xl bg-cyan-500/10 border border-cyan-500/20 px-4 py-3 text-sm text-cyan-200">
+                {pendingProcessing.length} deposit
+                {pendingProcessing.length !== 1 ? "s" : ""} being processed — admin
+                verification in progress.
               </div>
             )}
+
+            <PendingDepositsList deposits={deposits} />
 
             <div>
               <h2 className="font-semibold text-white mb-4">Add funds</h2>
@@ -133,7 +173,15 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
             <WalletTransactionsList transactions={transactions} />
           </div>
-        ) : tab === "messages" ? (
+        ) : tab === "inbox" && !isAdmin ? (
+          <div>
+            <h2 className="font-semibold text-white mb-4">Inbox</h2>
+            <p className="text-sm text-zinc-500 mb-6">
+              Deposit confirmations, activation ready alerts, and admin replies appear here.
+            </p>
+            <UserNotificationsInbox notifications={notifications} />
+          </div>
+        ) : tab === "messages" && !isAdmin ? (
           <div>
             <div className="flex items-center gap-2 mb-4">
               <MessageCircle className="h-5 w-5 text-cyan-400" />
@@ -150,6 +198,23 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               viewerRole="user"
             />
           </div>
+        ) : tab === "activations" ? (
+          params.wait ? (
+            <ActivationWaitingPanel paymentId={params.wait} />
+          ) : activations.length === 0 ? (
+          <div className="glass rounded-2xl p-12 text-center">
+            <p className="text-zinc-400 mb-2">No activations yet</p>
+            <p className="text-sm text-zinc-500">
+              Completed orders show activation codes here once processed.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {activations.map((activation) => (
+              <ActivationCard key={activation.id} activation={activation} />
+            ))}
+          </div>
+        )
         ) : tab === "orders" ? (
           orders.length === 0 ? (
             <div className="glass rounded-2xl p-12 text-center">
@@ -169,20 +234,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               ))}
             </div>
           )
-        ) : activations.length === 0 ? (
-          <div className="glass rounded-2xl p-12 text-center">
-            <p className="text-zinc-400 mb-2">No activations yet</p>
-            <p className="text-sm text-zinc-500">
-              Completed orders show activation codes here once processed.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {activations.map((activation) => (
-              <ActivationCard key={activation.id} activation={activation} />
-            ))}
-          </div>
-        )}
+        ) : null}
       </div>
     </section>
   );

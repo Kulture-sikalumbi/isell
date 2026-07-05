@@ -1,4 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/server";
+import { notifyActivationReady } from "@/lib/user-notifications";
 import {
   buildDeveloperAuthHeaders,
   buildDeveloperRequestPayload,
@@ -148,6 +149,15 @@ export async function fulfillPayment(
       success: false,
       error: error?.message || "Failed to save activation",
     };
+  }
+
+  if (payment.user_id) {
+    await notifyActivationReady({
+      userId: payment.user_id,
+      toolName: tool.name,
+      hardwareId: payment.hardware_id,
+      paymentId: payment.id,
+    });
   }
 
   return { success: true, activation };

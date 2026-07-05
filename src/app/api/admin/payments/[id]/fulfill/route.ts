@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/server";
+import { notifyActivationReady } from "@/lib/user-notifications";
+import type { Tool } from "@/types/database";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -75,6 +77,16 @@ export async function POST(request: Request, { params }: RouteParams) {
     .from("payments")
     .update({ fulfillment_status: "fulfilled" })
     .eq("id", id);
+
+  const toolName = (payment.tool as Tool | null)?.name ?? "your tool";
+  if (payment.user_id) {
+    await notifyActivationReady({
+      userId: payment.user_id,
+      toolName,
+      hardwareId: payment.hardware_id,
+      paymentId: id,
+    });
+  }
 
   return NextResponse.json({ success: true });
 }

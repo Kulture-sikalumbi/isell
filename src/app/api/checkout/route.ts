@@ -99,7 +99,7 @@ export async function POST(request: Request) {
       balance: result.balance,
       awaitingAdmin: orderResult.awaiting_admin,
       fulfilled: orderResult.fulfilled,
-      redirectUrl: "/dashboard?tab=orders",
+      redirectUrl: `/dashboard?tab=activations&wait=${result.payment_id}`,
     });
   } catch {
     return NextResponse.json({ error: "Checkout failed" }, { status: 500 });

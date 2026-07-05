@@ -63,13 +63,19 @@ export function NotificationsInbox({ notifications }: NotificationsInboxProps) {
                 <p className="text-xs text-zinc-600 mt-2">{formatDate(n.created_at)}</p>
               </div>
               <div className="flex gap-2">
-                {n.payment_id && (
+                {n.type === "wallet_deposit" ? (
+                  <Link href="/admin/deposits">
+                    <Button size="sm" variant="secondary">
+                      Review deposit
+                    </Button>
+                  </Link>
+                ) : n.payment_id ? (
                   <Link href="/admin/payments">
                     <Button size="sm" variant="secondary">
                       View order
                     </Button>
                   </Link>
-                )}
+                ) : null}
                 {!n.read_at && (
                   <Button size="sm" variant="ghost" onClick={() => markRead(n.id)}>
                     Mark read

@@ -1,10 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Wallet, Zap } from "lucide-react";
+import { ShieldCheck, Zap } from "lucide-react";
 import Link from "next/link";
+import { ActivationWaitingPanel } from "@/components/dashboard/activation-waiting-panel";
+import { PaymentMethodsRow } from "@/components/payments/payment-method-icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { getSiteCurrency } from "@/lib/currency";
 import { formatCurrency } from "@/lib/utils";
 import type { Tool } from "@/types/database";
 
@@ -13,6 +16,7 @@ interface CheckoutFormProps {
   userEmail: string;
   walletBalance: number;
   platformFee: number;
+  currency?: string;
 }
 
 export function CheckoutForm({
@@ -20,10 +24,12 @@ export function CheckoutForm({
   userEmail,
   walletBalance,
   platformFee,
+  currency = getSiteCurrency(),
 }: CheckoutFormProps) {
   const [hardwareId, setHardwareId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [waitingPaymentId, setWaitingPaymentId] = useState<string | null>(null);
 
   const toolPrice = Number(tool.retail_price);
   const totalCost = toolPrice + platformFee;
@@ -51,13 +57,13 @@ export function CheckoutForm({
       if (!res.ok) {
         if (res.status === 402) {
           throw new Error(
-            `Insufficient balance. You need ${formatCurrency(data.required)} but have ${formatCurrency(data.balance)}.`
+            `Insufficient balance. You need ${formatCurrency(data.required, currency)} but have ${formatCurrency(data.balance, currency)}.`
           );
         }
         throw new Error(data.error || "Checkout failed");
       }
 
-      window.location.href = data.redirectUrl || "/dashboard?tab=orders";
+      setWaitingPaymentId(data.paymentId);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -65,21 +71,33 @@ export function CheckoutForm({
     }
   }
 
+  if (waitingPaymentId) {
+    return <ActivationWaitingPanel paymentId={waitingPaymentId} />;
+  }
+
   return (
     <form onSubmit={handleCheckout} className="space-y-5">
-      <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Wallet className="h-4 w-4 text-cyan-400" />
-          <span className="text-sm text-zinc-300">Wallet balance</span>
+      <div className="rounded-xl border border-cyan-500/30 bg-gradient-to-r from-cyan-500/10 to-violet-500/5 px-4 py-4">
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <div>
+            <p className="text-xs text-cyan-300/80 uppercase tracking-wide font-medium">Pay with</p>
+            <p className="text-sm text-white font-semibold">Prepaid wallet</p>
+          </div>
+          <PaymentMethodsRow />
         </div>
-        <span className="font-semibold text-white">{formatCurrency(walletBalance)}</span>
+        <div className="flex items-center justify-between pt-3 border-t border-white/10">
+          <span className="text-sm text-zinc-400">Your balance</span>
+          <span className="text-lg font-bold text-white">
+            {formatCurrency(walletBalance, currency)}
+          </span>
+        </div>
       </div>
 
       {!canAfford && (
         <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 px-4 py-3 text-sm text-amber-300">
-          You need {formatCurrency(totalCost - walletBalance)} more.{" "}
+          You need {formatCurrency(totalCost - walletBalance, currency)} more.{" "}
           <Link href="/dashboard?tab=wallet" className="underline text-amber-200">
-            Add funds
+            Add funds via MTN / Airtel
           </Link>
         </div>
       )}
@@ -97,24 +115,31 @@ export function CheckoutForm({
       />
 
       <div className="rounded-xl border border-white/10 bg-black/30 px-4 py-3">
-        <p className="text-xs text-zinc-500 mb-1">Order updates on your dashboard</p>
+        <p className="text-xs text-zinc-500 mb-1">Order updates sent to</p>
         <p className="text-sm text-white font-medium">{userEmail}</p>
       </div>
 
-      <div className="glass rounded-xl p-4 space-y-2 text-sm">
+      <div className="rounded-2xl border border-white/15 bg-black/40 p-5 space-y-3 text-sm shadow-inner">
         <div className="flex items-center justify-between text-zinc-400">
           <span>Activation</span>
-          <span>{formatCurrency(toolPrice)}</span>
+          <span className="text-white">{formatCurrency(toolPrice, currency)}</span>
         </div>
         <div className="flex items-center justify-between text-zinc-400">
           <span>Service fee</span>
-          <span>{formatCurrency(platformFee)}</span>
+          <span className="text-white">{formatCurrency(platformFee, currency)}</span>
         </div>
         <div className="glow-line" />
-        <div className="flex items-center justify-between font-semibold text-white">
-          <span>Total from wallet</span>
-          <span>{formatCurrency(totalCost)}</span>
+        <div className="flex items-center justify-between">
+          <span className="font-semibold text-white text-base">Total</span>
+          <span className="text-xl font-bold text-gradient">
+            {formatCurrency(totalCost, currency)}
+          </span>
         </div>
+      </div>
+
+      <div className="flex items-start gap-2 text-xs text-zinc-500">
+        <ShieldCheck className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
+        Instant deduction from wallet · activation key shown on this page when ready
       </div>
 
       {error && (
@@ -123,18 +148,9 @@ export function CheckoutForm({
         </div>
       )}
 
-      <Button type="submit" size="lg" className="w-full" disabled={loading || !canAfford}>
-        {loading ? (
-          <>
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Processing...
-          </>
-        ) : (
-          <>
-            <Zap className="h-4 w-4" />
-            Pay from wallet & activate
-          </>
-        )}
+      <Button type="submit" size="lg" className="w-full h-12 text-base" loading={loading} disabled={!canAfford}>
+        <Zap className="h-4 w-4" />
+        Pay & activate now
       </Button>
     </form>
   );

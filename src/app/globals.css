@@ -145,6 +145,63 @@ body {
   animation: fade-up 0.4s ease-out both;
 }
 
+/* Top navigation progress */
+.nav-progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  z-index: 200;
+  background: linear-gradient(90deg, transparent, var(--accent-cyan), var(--accent-violet), transparent);
+  transform: scaleX(0);
+  transform-origin: left;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+}
+
+.nav-progress-bar--active {
+  opacity: 1;
+  animation: nav-progress 1.2s ease-in-out infinite;
+}
+
+@keyframes nav-progress {
+  0% { transform: scaleX(0); transform-origin: left; }
+  50% { transform: scaleX(0.65); transform-origin: left; }
+  51% { transform: scaleX(0.65); transform-origin: right; }
+  100% { transform: scaleX(0); transform-origin: right; }
+}
+
+.page-enter {
+  animation: fade-up 0.35s ease-out both;
+}
+
+@keyframes badge-pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+.animate-badge-pop {
+  animation: badge-pop 0.35s ease-out;
+}
+
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.7; }
+}
+
+.skeleton {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 0.75rem;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+.touch-manipulation {
+  touch-action: manipulation;
+}
+
 .code-block {
   font-family: var(--font-geist-mono), monospace;
   letter-spacing: 0.05em;

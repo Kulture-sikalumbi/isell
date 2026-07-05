@@ -30,6 +30,9 @@ function orderStatus(payment: Payment): {
 
 export function OrderCard({ payment }: OrderCardProps) {
   const status = orderStatus(payment);
+  const isWallet = payment.provider === "wallet";
+  const platformFee = Number(payment.platform_fee ?? 0);
+  const totalCharged = Number(payment.amount) + platformFee;
 
   return (
     <div className="glass rounded-2xl p-6">
@@ -40,6 +43,9 @@ export function OrderCard({ payment }: OrderCardProps) {
           </h3>
           <p className="text-xs text-zinc-500 mt-1 font-mono">
             Invoice #{payment.provider_reference ?? payment.id.slice(0, 8)}
+            {isWallet && (
+              <span className="text-cyan-500/80 ml-2">· Paid from wallet</span>
+            )}
           </p>
         </div>
         <Badge variant={status.variant}>{status.label}</Badge>
@@ -54,9 +60,23 @@ export function OrderCard({ payment }: OrderCardProps) {
         </div>
         <div className="rounded-xl bg-black/30 border border-white/5 px-4 py-3">
           <p className="text-xs text-zinc-500 mb-1">Amount paid</p>
-          <p className="font-semibold text-white">
-            {formatCurrency(payment.amount, payment.currency)}
-          </p>
+          {isWallet && platformFee > 0 ? (
+            <div className="space-y-0.5">
+              <p className="text-zinc-400 text-xs">
+                Activation {formatCurrency(payment.amount, payment.currency)}
+              </p>
+              <p className="text-zinc-400 text-xs">
+                Service fee {formatCurrency(platformFee, payment.currency)}
+              </p>
+              <p className="font-semibold text-white">
+                Total {formatCurrency(totalCharged, payment.currency)}
+              </p>
+            </div>
+          ) : (
+            <p className="font-semibold text-white">
+              {formatCurrency(payment.amount, payment.currency)}
+            </p>
+          )}
         </div>
       </div>
 

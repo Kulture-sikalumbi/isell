@@ -1,5 +1,6 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import { sendEmailToAdmins } from "@/lib/email";
+import { formatSiteCurrency } from "@/lib/currency";
 import type { DepositMethod } from "@/types/database";
 
 const methodLabels: Record<DepositMethod, string> = {
@@ -18,12 +19,22 @@ export async function notifyAdminNewDeposit(input: {
   method: DepositMethod;
   reference: string;
   transactionId: string;
+  senderPhone?: string | null;
+  senderName?: string | null;
 }) {
   const supabase = createServiceClient();
   if (!supabase) return;
 
-  const title = `Deposit pending: ${input.currency} ${input.amount}`;
-  const message = `${input.userEmail} — ${methodLabels[input.method]} — ref ${input.reference} — txn ${input.transactionId}`;
+  const amountLabel = formatSiteCurrency(input.amount, input.currency);
+  const title = `Deposit pending: ${amountLabel}`;
+  const senderBits = [
+    input.senderName ? `name ${input.senderName}` : null,
+    input.senderPhone ? `from ${input.senderPhone}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  const message = `${input.userEmail} — ${methodLabels[input.method]} — ref ${input.reference} — txn ${input.transactionId}${senderBits ? ` — ${senderBits}` : ""}`;
 
   await supabase.from("admin_notifications").insert({
     type: "wallet_deposit",
@@ -38,10 +49,12 @@ export async function notifyAdminNewDeposit(input: {
     html: `
       <h2>New wallet deposit to verify</h2>
       <p><strong>Customer:</strong> ${input.userName || input.userEmail}</p>
-      <p><strong>Amount:</strong> ${input.currency} ${input.amount}</p>
+      <p><strong>Amount:</strong> ${amountLabel}</p>
       <p><strong>Method:</strong> ${methodLabels[input.method]}</p>
       <p><strong>Reference:</strong> ${input.reference}</p>
       <p><strong>Transaction ID:</strong> ${input.transactionId}</p>
+      ${input.senderPhone ? `<p><strong>Sender phone:</strong> ${input.senderPhone}</p>` : ""}
+      ${input.senderName ? `<p><strong>MoMo account name:</strong> ${input.senderName}</p>` : ""}
       <p><a href="${appUrl}/admin/deposits">Confirm in admin →</a></p>
     `,
   });

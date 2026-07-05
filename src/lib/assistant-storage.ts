@@ -19,6 +19,9 @@ export interface AssistantToolsCache {
 export interface AssistantClientContext {
   isLoggedIn: boolean;
   userEmail?: string;
+  walletBalance?: number;
+  walletCurrency?: string;
+  pendingDeposits?: number;
   cachedTools: CachedTool[];
   recentSearches: string[];
   currentPath?: string;
