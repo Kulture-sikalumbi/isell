@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { AlertCircle, Bell, DollarSign, Package, ShoppingCart, TrendingUp } from "lucide-react";
+import { AlertCircle, Bell, CreditCard, DollarSign, Package, ShoppingCart, TrendingUp } from "lucide-react";
 import { AdminShell } from "@/components/admin/admin-sidebar";
 import { PaymentsTable } from "@/components/admin/payments-table";
 import { StatCard } from "@/components/admin/stat-card";
 import { getAdminStats, getPayments, getResellerCredits, getUnreadNotificationCount } from "@/lib/data";
+import { getPendingDeposits, getPlatformFeeStats } from "@/lib/wallet";
 import { formatCurrency } from "@/lib/utils";
 
 export const metadata = { title: "Admin — iSell Unlocking" };
@@ -13,9 +14,25 @@ export default async function AdminPage() {
   const credits = await getResellerCredits();
   const unread = await getUnreadNotificationCount();
   const stats = getAdminStats(payments, credits);
+  const [pendingDeposits, platformFees] = await Promise.all([
+    getPendingDeposits(),
+    getPlatformFeeStats(),
+  ]);
 
   return (
     <AdminShell title="Overview" description="Business performance at a glance">
+      {pendingDeposits.length > 0 && (
+        <Link
+          href="/admin/deposits"
+          className="mb-6 flex items-center gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200 hover:bg-amber-500/15 transition-colors"
+        >
+          <CreditCard className="h-4 w-4 shrink-0" />
+          <span>
+            <strong>{pendingDeposits.length}</strong> deposit
+            {pendingDeposits.length !== 1 ? "s" : ""} awaiting verification
+          </span>
+        </Link>
+      )}
       {unread > 0 && (
         <Link
           href="/admin/inbox"
@@ -27,9 +44,10 @@ export default async function AdminPage() {
           </span>
         </Link>
       )}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
         <StatCard label="Total Revenue" value={formatCurrency(stats.revenue)} icon={DollarSign} accent="cyan" />
         <StatCard label="Net Profit" value={formatCurrency(stats.profit)} icon={TrendingUp} accent="emerald" trend={`${stats.orders} orders`} />
+        <StatCard label="Platform Fees" value={formatCurrency(platformFees.totalFees)} icon={CreditCard} accent="cyan" trend={`${platformFees.transactionCount} wallet orders`} />
         <StatCard label="Awaiting Process" value={stats.awaitingFulfillment.toString()} icon={AlertCircle} accent="amber" />
         <StatCard label="Completed Orders" value={stats.orders.toString()} icon={ShoppingCart} accent="violet" />
         <StatCard label="Wholesale Credit" value={formatCurrency(stats.totalCredit)} icon={Package} accent="amber" />

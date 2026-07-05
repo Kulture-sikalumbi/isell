@@ -9,8 +9,9 @@ import { cn } from "@/lib/utils";
 const links = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
   { href: "/admin/inbox", label: "Inbox", icon: Bell },
+  { href: "/admin/deposits", label: "Deposits", icon: Wallet },
   { href: "/admin/messages", label: "Messages", icon: MessageCircle },
-  { href: "/admin/ledger", label: "Ledger", icon: Wallet },
+  { href: "/admin/ledger", label: "Ledger", icon: CreditCard },
   { href: "/admin/tools", label: "Tools", icon: Wrench },
   { href: "/admin/users", label: "Customers", icon: Users },
   { href: "/admin/payments", label: "Payments", icon: CreditCard },

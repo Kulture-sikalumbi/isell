@@ -1,15 +1,25 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
-import { MessageCircle, Receipt } from "lucide-react";
+import { MessageCircle, Receipt, Wallet } from "lucide-react";
 import { AppleIcon } from "@/components/brand/apple-icon";
 import { ActivationCard } from "@/components/dashboard/activation-card";
 import { DashboardTabs } from "@/components/dashboard/dashboard-tabs";
 import { OrderCard } from "@/components/dashboard/order-card";
 import { SupportChat } from "@/components/support/support-chat";
+import { DepositForm } from "@/components/wallet/deposit-form";
+import { WalletTransactionsList } from "@/components/wallet/wallet-transactions-list";
 import { Button } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth";
 import { getActivations, getUserPayments } from "@/lib/data";
+import {
+  getMerchantDetails,
+  getOrCreateWallet,
+  getPlatformFee,
+  getUserDeposits,
+  getWalletTransactions,
+} from "@/lib/wallet";
+import { formatCurrency } from "@/lib/utils";
 
 export const metadata = {
   title: "Dashboard — iSell Unlocking",
@@ -23,14 +33,22 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const user = await requireUser();
   const params = await searchParams;
   const tab =
-    params.tab === "activations" || params.tab === "messages"
+    params.tab === "activations" || params.tab === "messages" || params.tab === "wallet"
       ? params.tab
       : "orders";
 
-  const [activations, orders] = await Promise.all([
+  const [activations, orders, wallet, transactions, deposits] = await Promise.all([
     getActivations(user.id),
     getUserPayments(user.id),
+    getOrCreateWallet(user.id),
+    getWalletTransactions(user.id),
+    getUserDeposits(user.id),
   ]);
+
+  const merchants = getMerchantDetails();
+  const platformFee = getPlatformFee();
+  const balance = wallet ? Number(wallet.balance) : 0;
+  const pendingDeposits = deposits.filter((d) => d.status === "pending");
 
   const displayName =
     user.user_metadata?.full_name ||
@@ -81,7 +99,41 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           />
         </Suspense>
 
-        {tab === "messages" ? (
+        {tab === "wallet" ? (
+          <div className="space-y-8">
+            <div className="glass rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-cyan-500/10">
+                  <Wallet className="h-6 w-6 text-cyan-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-zinc-500">Available balance</p>
+                  <p className="text-3xl font-bold text-white">
+                    {formatCurrency(balance, wallet?.currency ?? "USD")}
+                  </p>
+                </div>
+              </div>
+              <p className="text-xs text-zinc-500 max-w-xs">
+                Add funds via MTN or Airtel, then buy activations instantly. Service fee{" "}
+                {formatCurrency(platformFee)} per order.
+              </p>
+            </div>
+
+            {pendingDeposits.length > 0 && (
+              <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 px-4 py-3 text-sm text-amber-300">
+                {pendingDeposits.length} deposit{pendingDeposits.length !== 1 ? "s" : ""}{" "}
+                awaiting admin verification.
+              </div>
+            )}
+
+            <div>
+              <h2 className="font-semibold text-white mb-4">Add funds</h2>
+              <DepositForm merchants={merchants} currency={merchants.currency} />
+            </div>
+
+            <WalletTransactionsList transactions={transactions} />
+          </div>
+        ) : tab === "messages" ? (
           <div>
             <div className="flex items-center gap-2 mb-4">
               <MessageCircle className="h-5 w-5 text-cyan-400" />

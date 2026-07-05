@@ -6,6 +6,7 @@ import { CheckoutForm } from "@/components/tools/checkout-form";
 import { SignInGate } from "@/components/tools/sign-in-gate";
 import { Badge } from "@/components/ui/badge";
 import { getToolBySlug } from "@/lib/data";
+import { getPlatformFee, getWalletBalance } from "@/lib/wallet";
 import { formatCurrency } from "@/lib/utils";
 
 interface ToolDetailPageProps {
@@ -26,6 +27,8 @@ export default async function ToolDetailPage({ params }: ToolDetailPageProps) {
   if (!tool) notFound();
 
   const userEmail = user?.email ?? "";
+  const walletBalance = user ? await getWalletBalance(user.id) : 0;
+  const platformFee = getPlatformFee();
 
   return (
     <section className="pt-28 pb-20">
@@ -96,7 +99,12 @@ export default async function ToolDetailPage({ params }: ToolDetailPageProps) {
           <div className="panel-solid rounded-2xl p-6 sm:p-8">
             <h2 className="text-xl font-semibold mb-6">Activate Now</h2>
             {user && userEmail ? (
-              <CheckoutForm tool={tool} userEmail={userEmail} />
+              <CheckoutForm
+                tool={tool}
+                userEmail={userEmail}
+                walletBalance={walletBalance}
+                platformFee={platformFee}
+              />
             ) : (
               <SignInGate tool={tool} mode="activate" />
             )}

@@ -1,30 +1,21 @@
 import { NextResponse } from "next/server";
-import { createAuthClient, createServiceClient } from "@/lib/supabase/server";
+import { createAuthClient } from "@/lib/supabase/server";
+import { completePaidOrder } from "@/lib/complete-order";
 import { getToolBySlug } from "@/lib/data";
+import { createServiceClient } from "@/lib/supabase/server";
+import {
+  getPlatformFee,
+  getWalletBalance,
+  purchaseWithWallet,
+} from "@/lib/wallet";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { toolId, toolSlug, hardwareId, email, amount } = body;
+    const { toolId, toolSlug, hardwareId, email } = body;
 
     if (!toolId || !hardwareId || !email) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
-    }
-
-    const supabase = createServiceClient();
-    if (!supabase) {
-      return NextResponse.json(
-        { error: "Database not configured" },
-        { status: 503 }
-      );
-    }
-
-    const paystackKey = process.env.PAYSTACK_SECRET_KEY;
-    if (!paystackKey) {
-      return NextResponse.json(
-        { error: "Payment gateway not configured. Add PAYSTACK_SECRET_KEY to your environment." },
-        { status: 503 }
-      );
     }
 
     const tool = toolSlug ? await getToolBySlug(toolSlug) : null;
@@ -55,59 +46,60 @@ export async function POST(request: Request) {
       );
     }
 
-    const reference = `isel_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    const userId = user.id;
+    const platformFee = getPlatformFee();
+    const totalCost = Number(tool.retail_price) + platformFee;
+    const balance = await getWalletBalance(user.id);
 
-    const { data: payment, error } = await supabase
-      .from("payments")
-      .insert({
-        user_id: userId,
-        tool_id: toolId,
-        hardware_id: hardwareId,
-        amount: amount || tool.retail_price,
-        currency: "USD",
-        provider: "paystack",
-        provider_reference: reference,
-        status: "pending",
-      })
-      .select()
-      .single();
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    const paystackRes = await fetch("https://api.paystack.co/transaction/initialize", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${paystackKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        email,
-        amount: Math.round((amount || tool.retail_price) * 100),
-        reference,
-        callback_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`,
-        metadata: {
-          payment_id: payment.id,
-          tool_id: toolId,
-          hardware_id: hardwareId,
-        },
-      }),
-    });
-
-    const paystackData = await paystackRes.json();
-
-    if (!paystackData.status) {
+    if (balance < totalCost) {
       return NextResponse.json(
-        { error: paystackData.message || "Payment initialization failed" },
-        { status: 502 }
+        {
+          error: "Insufficient wallet balance",
+          required: totalCost,
+          balance,
+          platformFee,
+        },
+        { status: 402 }
       );
     }
 
+    const result = await purchaseWithWallet({
+      userId: user.id,
+      tool,
+      hardwareId: hardwareId.trim(),
+    });
+
+    if (!result.ok || !result.payment_id) {
+      return NextResponse.json(
+        { error: result.error || "Purchase failed" },
+        { status: 400 }
+      );
+    }
+
+    const supabase = createServiceClient();
+    if (!supabase) {
+      return NextResponse.json({ error: "Database not configured" }, { status: 503 });
+    }
+
+    const { data: payment } = await supabase
+      .from("payments")
+      .select("*, tool:tools(*)")
+      .eq("id", result.payment_id)
+      .single();
+
+    if (!payment) {
+      return NextResponse.json({ error: "Payment record not found" }, { status: 500 });
+    }
+
+    const orderResult = await completePaidOrder(payment);
+
     return NextResponse.json({
-      authorizationUrl: paystackData.data.authorization_url,
-      reference,
+      success: true,
+      paymentId: result.payment_id,
+      reference: result.reference,
+      balance: result.balance,
+      awaitingAdmin: orderResult.awaiting_admin,
+      fulfilled: orderResult.fulfilled,
+      redirectUrl: "/dashboard?tab=orders",
     });
   } catch {
     return NextResponse.json({ error: "Checkout failed" }, { status: 500 });

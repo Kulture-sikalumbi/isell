@@ -46,9 +46,48 @@ export interface Payment {
   provider_reference: string | null;
   status: PaymentStatus;
   fulfillment_status: FulfillmentStatus | null;
+  platform_fee: number;
   created_at: string;
   completed_at: string | null;
   tool?: Tool;
+}
+
+export type DepositStatus = "pending" | "confirmed" | "rejected";
+export type DepositMethod = "mtn" | "airtel" | "binance" | "other";
+export type WalletTxType = "deposit" | "purchase" | "platform_fee" | "refund" | "adjustment";
+
+export interface UserWallet {
+  user_id: string;
+  balance: number;
+  currency: string;
+  updated_at: string;
+}
+
+export interface WalletDeposit {
+  id: string;
+  user_id: string;
+  amount: number;
+  currency: string;
+  method: DepositMethod;
+  transaction_id: string;
+  reference: string;
+  status: DepositStatus;
+  admin_note: string | null;
+  confirmed_at: string | null;
+  created_at: string;
+}
+
+export interface WalletTransaction {
+  id: string;
+  user_id: string;
+  type: WalletTxType;
+  amount: number;
+  balance_after: number;
+  currency: string;
+  description: string | null;
+  deposit_id: string | null;
+  payment_id: string | null;
+  created_at: string;
 }
 
 export interface Activation {
@@ -108,6 +147,7 @@ export interface LedgerEntry {
   currency: string;
   description: string | null;
   payment_id: string | null;
+  deposit_id: string | null;
   created_at: string;
 }
 

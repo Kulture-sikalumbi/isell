@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 
 const tabs = [
   { id: "orders", label: "Order history", href: "/dashboard" },
+  { id: "wallet", label: "Wallet", href: "/dashboard?tab=wallet" },
   { id: "activations", label: "My activations", href: "/dashboard?tab=activations" },
   { id: "messages", label: "Talk to admin", href: "/dashboard?tab=messages" },
 ] as const;
@@ -26,7 +27,9 @@ export function DashboardTabs({
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
   const active: DashboardTab =
-    tabParam === "activations" || tabParam === "messages" ? tabParam : "orders";
+    tabParam === "activations" || tabParam === "messages" || tabParam === "wallet"
+      ? tabParam
+      : "orders";
 
   return (
     <div className="flex flex-wrap gap-2 mb-8 p-1 rounded-xl bg-white/5 border border-white/10 w-fit">
