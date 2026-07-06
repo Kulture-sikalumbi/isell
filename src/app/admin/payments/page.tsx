@@ -14,7 +14,7 @@ export default async function AdminPaymentsPage() {
   ]);
 
   return (
-    <AdminShell title="Payments" description="Paid orders — process pending activations here">
+    <AdminShell title="Orders to fulfill" description="Paid orders — paste the activation key and send to the customer (email + dashboard)">
       {attention.awaitingOrders > 0 && (
         <div className="mb-6 flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
           <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />

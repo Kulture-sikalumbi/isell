@@ -1,5 +1,7 @@
-import { createServiceClient } from "@/lib/supabase/server";
+import { getUserEmail } from "@/lib/auth";
+import { sendActivationReadyEmail } from "@/lib/email";
 import { formatSiteCurrency } from "@/lib/currency";
+import { createServiceClient } from "@/lib/supabase/server";
 
 export interface UserNotification {
   id: string;
@@ -61,8 +63,11 @@ export async function getUnreadUserNotificationCount(userId: string): Promise<nu
 export async function notifyActivationReady(input: {
   userId: string;
   toolName: string;
+  toolDescription?: string | null;
+  identifierLabel?: string;
   hardwareId: string;
   paymentId: string;
+  activationCode: string;
 }) {
   await notifyUser({
     userId: input.userId,
@@ -70,6 +75,32 @@ export async function notifyActivationReady(input: {
     title: `Activation ready: ${input.toolName}`,
     message: `Your activation for ${input.toolName} (${input.hardwareId}) is ready. Tap to view your key.`,
     link: `/dashboard?tab=activations&wait=${input.paymentId}`,
+  });
+
+  const email = await getUserEmail(input.userId);
+  if (!email) return;
+
+  const supabase = createServiceClient();
+  let customerName: string | null = null;
+  if (supabase) {
+    const { data } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", input.userId)
+      .single();
+    customerName = data?.full_name ?? null;
+  }
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  await sendActivationReadyEmail({
+    to: email,
+    toolName: input.toolName,
+    toolDescription: input.toolDescription,
+    hardwareId: input.hardwareId,
+    identifierLabel: input.identifierLabel,
+    activationCode: input.activationCode,
+    appUrl,
+    customerName,
   });
 }
 
@@ -109,7 +140,7 @@ export async function notifyOrderProcessing(input: {
     userId: input.userId,
     type: "order_processing",
     title: `Order received: ${input.toolName}`,
-    message: "Payment received. We're processing your activation — you'll get a notification when your key is ready.",
+    message: "Payment received. We're processing your activation — we'll email your key and add it to Activations when ready.",
     link: "/dashboard?tab=orders",
   });
 }

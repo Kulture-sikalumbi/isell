@@ -8,6 +8,10 @@ import { PaymentMethodsRow } from "@/components/payments/payment-method-icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getSiteCurrency } from "@/lib/currency";
+import {
+  getCustomerIdentifierLabel,
+  getCustomerIdentifierPlaceholder,
+} from "@/lib/identifier-label";
 import type { StorefrontTool } from "@/lib/storefront-tool";
 import { formatCurrency } from "@/lib/utils";
 import { useConnectivityOptional } from "@/components/layout/connectivity-provider";
@@ -110,15 +114,15 @@ export function CheckoutForm({
       )}
 
       <Input
-        label={tool.identifier_label}
-        placeholder={
-          tool.identifier_placeholder ||
-          `Enter your ${tool.identifier_label.toLowerCase()}`
-        }
+        label={getCustomerIdentifierLabel(tool.identifier_label)}
+        placeholder={getCustomerIdentifierPlaceholder(
+          tool.identifier_label,
+          tool.identifier_placeholder
+        )}
         value={hardwareId}
         onChange={(e) => setHardwareId(e.target.value)}
         required
-        hint="This binds the activation to your specific device"
+        hint="Dial *#06# on the phone or check Settings → About → IMEI"
       />
 
       <div className="rounded-xl border border-white/10 bg-black/30 px-4 py-3">
@@ -137,7 +141,7 @@ export function CheckoutForm({
 
       <div className="flex items-start gap-2 text-xs text-zinc-500">
         <ShieldCheck className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
-        Instant deduction from wallet · activation key shown on this page when ready
+        Instant wallet payment · key emailed and saved to Activations when ready
       </div>
 
       {error && (

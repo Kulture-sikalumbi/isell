@@ -1,4 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/server";
+import { paymentNeedsFulfillment, type AdminPaymentRow } from "@/lib/payment-fulfillment";
 import type {
   Activation,
   AdminNotification,
@@ -160,7 +161,7 @@ export async function getPayments(): Promise<Payment[]> {
 
   const { data, error } = await supabase
     .from("payments")
-    .select("*, tool:tools(*)")
+    .select("*, tool:tools(*), activation:activations(id), profile:profiles(email, full_name)")
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -247,8 +248,8 @@ export function getAdminStats(payments: Payment[], credits: ResellerCredit[]) {
     profit,
     orders: completed.length,
     pending: payments.filter((p) => p.status === "pending").length,
-    awaitingFulfillment: payments.filter(
-      (p) => p.status === "completed" && p.fulfillment_status === "awaiting"
+    awaitingFulfillment: payments.filter((p) =>
+      paymentNeedsFulfillment(p as AdminPaymentRow)
     ).length,
     totalCredit,
   };

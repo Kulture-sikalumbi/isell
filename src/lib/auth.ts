@@ -69,6 +69,21 @@ export async function getAdminUser() {
   return user;
 }
 
+/** Email for a user profile (service role). */
+export async function getUserEmail(userId: string): Promise<string | null> {
+  const supabase = createServiceClient();
+  if (!supabase) return null;
+
+  const { data } = await supabase
+    .from("profiles")
+    .select("email")
+    .eq("id", userId)
+    .single();
+
+  const email = data?.email?.trim();
+  return email || null;
+}
+
 /** Email addresses for all accounts with role = admin in profiles */
 export async function getAdminEmails(): Promise<string[]> {
   const supabase = createServiceClient();

@@ -72,7 +72,7 @@ export function NotificationsInbox({ notifications }: NotificationsInboxProps) {
                 ) : n.payment_id ? (
                   <Link href="/admin/payments">
                     <Button size="sm" variant="secondary">
-                      View order
+                      Send activation key
                     </Button>
                   </Link>
                 ) : null}

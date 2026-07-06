@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { resolvePostLoginPath, sanitizeNextPath } from "@/lib/post-login";
+import { sendWelcomeEmailIfNeeded } from "@/lib/welcome-email";
 
 function profileIsAdmin(role: string | null | undefined) {
   return role === "admin";
@@ -75,6 +76,10 @@ export async function GET(request: NextRequest) {
 
   let destination = safeNext;
   if (user) {
+    void sendWelcomeEmailIfNeeded(user.id).catch((err) =>
+      console.error("[welcome-email]", err)
+    );
+
     const { data: profile } = await supabase
       .from("profiles")
       .select("role")

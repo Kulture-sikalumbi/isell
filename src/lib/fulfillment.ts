@@ -155,8 +155,11 @@ export async function fulfillPayment(
     await notifyActivationReady({
       userId: payment.user_id,
       toolName: tool.name,
+      toolDescription: tool.description,
+      identifierLabel: tool.identifier_label,
       hardwareId: payment.hardware_id,
       paymentId: payment.id,
+      activationCode: activation.activation_code,
     });
   }
 

@@ -1,4 +1,5 @@
 import { formatSiteCurrency, getCurrencyLabel, resolveDisplayCurrency } from "@/lib/currency";
+import { getCustomerIdentifierLabel } from "@/lib/identifier-label";
 import { formatDate } from "@/lib/utils";
 import type { Activation, Payment } from "@/types/database";
 
@@ -53,7 +54,7 @@ export function buildOrderReceiptData(input: {
     customerName,
     customerEmail,
     toolName: payment.tool?.name ?? "Tool activation",
-    identifierLabel: payment.tool?.identifier_label ?? "Device ID",
+    identifierLabel: getCustomerIdentifierLabel(payment.tool?.identifier_label),
     hardwareId: payment.hardware_id,
     subtotal,
     platformFee,

@@ -36,10 +36,16 @@ export async function completePaidOrder(payment: Payment & { tool?: Tool }) {
       .from("payments")
       .update({ fulfillment_status: "fulfilled" })
       .eq("id", payment.id);
+  } else {
+    await supabase
+      .from("payments")
+      .update({ fulfillment_status: "awaiting" })
+      .eq("id", payment.id);
+    await notifyAdminNewOrder(payment);
   }
 
   return {
-    awaiting_admin: false,
+    awaiting_admin: !result.success,
     fulfilled: result.success,
     error: result.error,
   };

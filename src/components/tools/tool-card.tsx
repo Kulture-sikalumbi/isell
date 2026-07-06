@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight, Cpu } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { StorefrontTool } from "@/lib/storefront-tool";
+import { getCustomerIdentifierLabel } from "@/lib/identifier-label";
 import { formatCurrency } from "@/lib/utils";
 
 interface ToolCardProps {
@@ -51,7 +52,7 @@ export function ToolCard({ tool, highlight }: ToolCardProps) {
             <Cpu className="h-5 w-5 text-white/80" />
           </div>
           <Badge variant="info" className="text-[10px] shrink-0">
-            {tool.identifier_label}
+            {getCustomerIdentifierLabel(tool.identifier_label)}
           </Badge>
         </div>
 

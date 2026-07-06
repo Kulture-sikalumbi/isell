@@ -50,7 +50,7 @@ VALUES
     22.00,
     'https://api.cipherdiag.net/activate',
     'cipher_diag_pro',
-    'ECID',
+    'IMEI',
     true
   )
 ON CONFLICT (slug) DO NOTHING;

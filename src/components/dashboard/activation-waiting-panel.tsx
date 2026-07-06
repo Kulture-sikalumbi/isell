@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, Clock, KeyRound, Loader2, RefreshCw } from "lucide-react";
+import { CheckCircle2, Clock, KeyRound, Loader2, Mail, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ActivationCard } from "@/components/dashboard/activation-card";
@@ -129,20 +129,43 @@ export function ActivationWaitingPanel({ paymentId, onDone }: ActivationWaitingP
         </p>
         <p className="text-xs font-mono text-zinc-500 mb-6">{status.hardwareId}</p>
 
-        <p className="text-sm text-zinc-400 leading-relaxed mb-6">
+        <p className="text-sm text-zinc-400 leading-relaxed mb-4">
           {isManualWait
-            ? "Payment received. An admin will complete your activation shortly — your key will appear here automatically."
-            : "We're contacting the activation server. This usually takes a few seconds. Stay on this page."}
+            ? "Payment received. An admin is preparing your activation key — this usually takes a few minutes."
+            : "We're contacting the activation server. This usually takes a few seconds."}
         </p>
 
-        <div className="flex items-center gap-2 text-xs text-zinc-600">
-          <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-          Live — waiting for your key{polls > 0 ? ` · synced` : ""}
+        <div className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-left text-sm text-zinc-400 mb-6 space-y-2">
+          <p className="flex items-start gap-2">
+            <Mail className="h-4 w-4 text-cyan-400 shrink-0 mt-0.5" />
+            <span>
+              <strong className="text-zinc-200">You can leave this page.</strong> We'll email your key when
+              it's ready, and it will appear in your{" "}
+              <Link href="/dashboard?tab=activations" className="text-cyan-400 hover:text-cyan-300">
+                Activations
+              </Link>{" "}
+              tab and under Orders.
+            </span>
+          </p>
         </div>
 
-        <Link href="/dashboard?tab=activations" className="mt-6 text-xs text-cyan-400 hover:text-cyan-300">
-          Open activations tab
-        </Link>
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <Link href="/dashboard?tab=activations">
+            <Button variant="secondary" size="sm">
+              Go to Activations
+            </Button>
+          </Link>
+          <Link href="/tools">
+            <Button variant="ghost" size="sm">
+              Browse tools
+            </Button>
+          </Link>
+        </div>
+
+        <div className="flex items-center gap-2 text-xs text-zinc-600 mt-6">
+          <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+          Still watching for your key{polls > 0 ? " · synced" : ""}
+        </div>
       </div>
     </div>
   );

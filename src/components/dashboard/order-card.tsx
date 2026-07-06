@@ -6,6 +6,7 @@ import { Check, Copy, KeyRound, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ReceiptDownloadButton } from "@/components/dashboard/receipt-download-button";
+import { getCustomerIdentifierLabel } from "@/lib/identifier-label";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { getSiteCurrency } from "@/lib/currency";
 import type { Activation, Payment } from "@/types/database";
@@ -73,7 +74,7 @@ export function OrderCard({ payment, activation }: OrderCardProps) {
       <div className="grid sm:grid-cols-2 gap-3 text-sm">
         <div className="rounded-xl bg-black/30 border border-white/5 px-4 py-3">
           <p className="text-xs text-zinc-500 mb-1">
-            {payment.tool?.identifier_label ?? "Device ID"}
+            {getCustomerIdentifierLabel(payment.tool?.identifier_label)}
           </p>
           <p className="font-mono text-zinc-200">{payment.hardware_id}</p>
         </div>
@@ -124,7 +125,8 @@ export function OrderCard({ payment, activation }: OrderCardProps) {
             <div>
               <p className="text-sm text-cyan-100 font-medium">Waiting for activation</p>
               <p className="text-xs text-zinc-500 mt-0.5">
-                Payment received — admin is preparing your key. It will appear here automatically.
+                Payment received — your key will be emailed and added to Activations when ready. You can
+                leave this page.
               </p>
             </div>
           </div>

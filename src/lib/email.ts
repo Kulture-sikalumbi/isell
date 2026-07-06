@@ -1,4 +1,7 @@
 import { getAdminEmails } from "@/lib/auth";
+import { buildActivationReadyEmailHtml } from "@/lib/activation-email-template";
+import { buildWelcomeEmailHtml } from "@/lib/welcome-email-template";
+import { getCustomerIdentifierLabel } from "@/lib/identifier-label";
 
 interface SendEmailInput {
   to: string | string[];
@@ -79,5 +82,45 @@ export async function sendAdminOrderEmail(input: {
       <p><strong>Reference:</strong> ${input.reference}</p>
       <p><a href="${input.appUrl}/admin/payments">Process in admin panel →</a></p>
     `,
+  });
+}
+
+export async function sendActivationReadyEmail(input: {
+  to: string;
+  toolName: string;
+  toolDescription?: string | null;
+  hardwareId: string;
+  identifierLabel?: string;
+  activationCode: string;
+  appUrl: string;
+  customerName?: string | null;
+}) {
+  return sendEmail({
+    to: input.to,
+    subject: `Your activation key is ready — ${input.toolName}`,
+    html: buildActivationReadyEmailHtml({
+      toolName: input.toolName,
+      toolDescription: input.toolDescription,
+      hardwareId: input.hardwareId,
+      identifierLabel: getCustomerIdentifierLabel(input.identifierLabel),
+      activationCode: input.activationCode,
+      appUrl: input.appUrl,
+      customerName: input.customerName,
+    }),
+  });
+}
+
+export async function sendWelcomeEmail(input: {
+  to: string;
+  customerName?: string | null;
+  appUrl: string;
+}) {
+  return sendEmail({
+    to: input.to,
+    subject: "Welcome to iSell Unlocks — here's how to get started",
+    html: buildWelcomeEmailHtml({
+      customerName: input.customerName,
+      appUrl: input.appUrl,
+    }),
   });
 }

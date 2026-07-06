@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Check, Copy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { getCustomerIdentifierLabel } from "@/lib/identifier-label";
 import { parseToolApiConfig } from "@/lib/tool-api-config";
 import { formatDate } from "@/lib/utils";
 import type { Activation } from "@/types/database";
@@ -32,7 +33,7 @@ export function ActivationCard({ activation }: ActivationCardProps) {
             {activation.tool?.name ?? "Unknown Tool"}
           </h3>
           <p className="text-xs text-zinc-500 mt-1">
-            {activation.tool?.identifier_label}: {activation.hardware_id}
+            {getCustomerIdentifierLabel(activation.tool?.identifier_label)}: {activation.hardware_id}
           </p>
         </div>
         <Badge variant="success">Active</Badge>

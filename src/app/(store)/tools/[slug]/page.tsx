@@ -9,6 +9,7 @@ import { toStorefrontTool } from "@/lib/storefront-tool";
 import { getToolBySlug } from "@/lib/data";
 import { getWalletBalance } from "@/lib/wallet";
 import { getSiteCurrency } from "@/lib/currency";
+import { getCustomerIdentifierLabel } from "@/lib/identifier-label";
 import { formatCurrency } from "@/lib/utils";
 
 interface ToolDetailPageProps {
@@ -32,6 +33,7 @@ export default async function ToolDetailPage({ params }: ToolDetailPageProps) {
   const walletBalance = user ? await getWalletBalance(user.id) : 0;
   const storefrontTool = toStorefrontTool(tool);
   const currency = getSiteCurrency();
+  const identifierLabel = getCustomerIdentifierLabel(tool.identifier_label);
 
   return (
     <section className="pt-28 pb-20">
@@ -62,7 +64,7 @@ export default async function ToolDetailPage({ params }: ToolDetailPageProps) {
               <div className="glow-line" />
               <div className="flex items-center gap-3 text-sm text-zinc-400">
                 <Shield className="h-4 w-4 text-cyan-400" />
-                Hardware-bound to your {tool.identifier_label}
+                Hardware-bound to your {identifierLabel}
               </div>
             </div>
 
@@ -89,7 +91,7 @@ export default async function ToolDetailPage({ params }: ToolDetailPageProps) {
                 <div className="flex items-center gap-2 mb-3">
                   <ListOrdered className="h-4 w-4 text-cyan-400" />
                   <h3 className="text-sm font-medium text-white">
-                    How to find your {tool.identifier_label}
+                    How to find your {identifierLabel}
                   </h3>
                 </div>
                 <div className="text-sm text-zinc-400 whitespace-pre-line leading-relaxed">

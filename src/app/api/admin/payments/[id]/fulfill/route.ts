@@ -79,12 +79,16 @@ export async function POST(request: Request, { params }: RouteParams) {
     .eq("id", id);
 
   const toolName = (payment.tool as Tool | null)?.name ?? "your tool";
+  const tool = payment.tool as Tool | null;
   if (payment.user_id) {
     await notifyActivationReady({
       userId: payment.user_id,
       toolName,
+      toolDescription: tool?.description,
+      identifierLabel: tool?.identifier_label,
       hardwareId: payment.hardware_id,
       paymentId: id,
+      activationCode: code,
     });
   }
 

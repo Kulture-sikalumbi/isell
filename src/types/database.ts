@@ -8,6 +8,7 @@ export interface Profile {
   email: string;
   full_name: string | null;
   role: UserRole;
+  welcome_email_sent_at: string | null;
   created_at: string;
 }
 
