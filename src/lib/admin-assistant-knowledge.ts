@@ -38,7 +38,7 @@ export async function buildAdminAssistantContext(): Promise<string> {
           .slice(0, 8)
           .map(
             (d) =>
-              `- ${d.profile?.email ?? "user"} — ${formatSiteCurrency(d.amount, d.currency)} — txn ${d.transaction_id} — [/admin/deposits](/admin/deposits)`
+              `- ${d.profile?.email ?? "user"} — ${formatSiteCurrency(d.amount, d.currency)} — TID ${d.transaction_id} — [/admin/deposits](/admin/deposits)`
           )
           .join("\n");
 
@@ -75,7 +75,7 @@ You know LIVE operational data below. Guide the admin to the right page, summari
 
 ## Live attention counts
 - Total needs attention: **${attention.totalAttention}**
-- Pending deposits: **${attention.pendingDeposits}** (${readyDeposits.length} ready to confirm with txn ID)
+- Pending deposits: **${attention.pendingDeposits}** (${readyDeposits.length} ready to confirm with TID)
 - Orders awaiting fulfillment: **${attention.awaitingOrders}**
 - Unread inbox notifications: **${attention.unreadNotifications}**
 - Unread customer messages: **${attention.unreadMessages}**
@@ -112,7 +112,7 @@ ${
 ${toolList || "No tools yet"}
 
 ## Workflows you should know
-**Deposits:** Customer picks amount → pays MTN/Airtel on phone → enters txn ID + details in **one submit** → you verify on phone → Confirm at [/admin/deposits](/admin/deposits) → wallet credited → customer notified in inbox.
+**Deposits:** Customer picks amount → pays MTN/Airtel on phone → enters TID + details in **one submit** → you verify on phone → Confirm at [/admin/deposits](/admin/deposits) → wallet credited → customer notified in inbox.
 
 **Orders:** Wallet purchase → manual tools need fulfillment at [/admin/payments](/admin/payments) → enter activation code → customer gets inbox notification.
 

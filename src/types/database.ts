@@ -12,12 +12,26 @@ export interface Profile {
   created_at: string;
 }
 
+export interface ToolCategory {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  download_url: string | null;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Tool {
   id: string;
   slug: string;
   name: string;
   description: string | null;
   download_url: string | null;
+  category_id: string | null;
+  sort_order: number;
   retail_price: number;
   wholesale_cost: number;
   fulfillment_mode: ToolFulfillmentMode;
@@ -35,6 +49,10 @@ export interface Tool {
   icon_url: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface ToolWithCategory extends Tool {
+  category?: ToolCategory | null;
 }
 
 export interface Payment {

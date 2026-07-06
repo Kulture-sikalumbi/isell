@@ -34,7 +34,7 @@ export async function notifyAdminNewDeposit(input: {
     .filter(Boolean)
     .join(" · ");
 
-  const message = `${input.userEmail} — ${methodLabels[input.method]} — ref ${input.reference} — txn ${input.transactionId}${senderBits ? ` — ${senderBits}` : ""}`;
+  const message = `${input.userEmail} — ${methodLabels[input.method]} — ref ${input.reference} — TID ${input.transactionId}${senderBits ? ` — ${senderBits}` : ""}`;
 
   await supabase.from("admin_notifications").insert({
     type: "wallet_deposit",
@@ -52,7 +52,7 @@ export async function notifyAdminNewDeposit(input: {
       <p><strong>Amount:</strong> ${amountLabel}</p>
       <p><strong>Method:</strong> ${methodLabels[input.method]}</p>
       <p><strong>Reference:</strong> ${input.reference}</p>
-      <p><strong>Transaction ID:</strong> ${input.transactionId}</p>
+      <p><strong>TID:</strong> ${input.transactionId}</p>
       ${input.senderPhone ? `<p><strong>Sender phone:</strong> ${input.senderPhone}</p>` : ""}
       ${input.senderName ? `<p><strong>MoMo account name:</strong> ${input.senderName}</p>` : ""}
       <p><a href="${appUrl}/admin/deposits">Confirm in admin →</a></p>

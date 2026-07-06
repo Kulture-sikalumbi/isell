@@ -26,7 +26,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
 
   const updates: Record<string, unknown> = {
-    slug: body.slug,
+    category_id: body.category_id || null,
+    sort_order: Number.isFinite(Number(body.sort_order)) ? Number(body.sort_order) : 0,
     name: body.name,
     description: body.description || null,
     download_url: body.download_url || null,

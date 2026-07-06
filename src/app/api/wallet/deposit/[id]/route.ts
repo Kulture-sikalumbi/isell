@@ -19,7 +19,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   const senderName = (body.sender_name as string)?.trim();
 
   if (!transactionId) {
-    return NextResponse.json({ error: "Transaction ID is required" }, { status: 400 });
+    return NextResponse.json({ error: "TID is required" }, { status: 400 });
   }
 
   const profile = await getCurrentProfile();

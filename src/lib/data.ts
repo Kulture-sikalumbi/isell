@@ -1,5 +1,7 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import { paymentNeedsFulfillment, type AdminPaymentRow } from "@/lib/payment-fulfillment";
+import { toStorefrontTools } from "@/lib/storefront-tool";
+import type { StorefrontTool } from "@/lib/storefront-tool";
 import type {
   Activation,
   AdminNotification,
@@ -8,8 +10,14 @@ import type {
   Profile,
   ResellerCredit,
   Tool,
+  ToolCategory,
   ToolRequest,
+  ToolWithCategory,
 } from "@/types/database";
+
+export interface ToolCategoryWithTools extends ToolCategory {
+  tools: StorefrontTool[];
+}
 
 function getClient() {
   return createServiceClient();
@@ -32,32 +40,109 @@ export async function getTools(): Promise<Tool[]> {
   return data ?? [];
 }
 
-export async function getToolBySlug(slug: string): Promise<Tool | null> {
+export async function getToolBySlug(slug: string): Promise<ToolWithCategory | null> {
   const supabase = getClient();
   if (!supabase) return null;
 
   const { data, error } = await supabase
     .from("tools")
-    .select("*")
+    .select("*, category:tool_categories(*)")
     .eq("slug", slug)
     .eq("is_active", true)
+    .single();
+
+  if (error) return null;
+  return data as ToolWithCategory;
+}
+
+export async function getAllCategories(): Promise<ToolCategory[]> {
+  const supabase = getClient();
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from("tool_categories")
+    .select("*")
+    .order("sort_order")
+    .order("name");
+
+  if (error) {
+    console.error("getAllCategories:", error.message);
+    return [];
+  }
+  return data ?? [];
+}
+
+export async function getCategoryById(id: string): Promise<ToolCategory | null> {
+  const supabase = getClient();
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
+    .from("tool_categories")
+    .select("*")
+    .eq("id", id)
     .single();
 
   if (error) return null;
   return data;
 }
 
-export async function getAllTools(): Promise<Tool[]> {
+export async function getActiveCategoriesWithTools(): Promise<ToolCategoryWithTools[]> {
   const supabase = getClient();
   if (!supabase) return [];
 
-  const { data, error } = await supabase.from("tools").select("*").order("name");
+  const { data: categories, error: catError } = await supabase
+    .from("tool_categories")
+    .select("*")
+    .eq("is_active", true)
+    .order("sort_order")
+    .order("name");
+
+  if (catError) {
+    console.error("getActiveCategoriesWithTools:", catError.message);
+    return [];
+  }
+
+  const { data: tools, error: toolError } = await supabase
+    .from("tools")
+    .select("*")
+    .eq("is_active", true)
+    .order("sort_order")
+    .order("name");
+
+  if (toolError) {
+    console.error("getActiveCategoriesWithTools tools:", toolError.message);
+    return [];
+  }
+
+  const toolsByCategory = new Map<string, Tool[]>();
+  for (const tool of tools ?? []) {
+    if (!tool.category_id) continue;
+    const list = toolsByCategory.get(tool.category_id) ?? [];
+    list.push(tool);
+    toolsByCategory.set(tool.category_id, list);
+  }
+
+  return (categories ?? []).map((category) => ({
+    ...category,
+    tools: toStorefrontTools(toolsByCategory.get(category.id) ?? []),
+  }));
+}
+
+export async function getAllTools(): Promise<ToolWithCategory[]> {
+  const supabase = getClient();
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from("tools")
+    .select("*, category:tool_categories(*)")
+    .order("sort_order")
+    .order("name");
 
   if (error) {
     console.error("getAllTools:", error.message);
     return [];
   }
-  return data ?? [];
+  return (data as ToolWithCategory[]) ?? [];
 }
 
 export async function getToolById(id: string): Promise<Tool | null> {

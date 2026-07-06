@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Layers,
   MessageCircle,
   Wallet,
   Users,
@@ -12,7 +13,6 @@ import {
   LayoutDashboard,
   Package,
   Settings,
-  Wrench,
   X,
   MoreHorizontal,
 } from "lucide-react";
@@ -54,7 +54,7 @@ const sections: NavSection[] = [
   {
     title: "Manage",
     links: [
-      { href: "/admin/tools", label: "Tools", icon: Wrench, badgeKey: null },
+      { href: "/admin/categories", label: "Catalog", icon: Layers, badgeKey: null },
       { href: "/admin/users", label: "Customers", icon: Users, badgeKey: null },
       { href: "/admin/ledger", label: "Accounting", icon: CreditCard, badgeKey: null },
       { href: "/admin/credits", label: "Credits", icon: Package, badgeKey: null },

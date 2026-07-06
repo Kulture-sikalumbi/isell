@@ -67,7 +67,7 @@ export function PendingDepositsList({ deposits }: PendingDepositsListProps) {
               <p className="text-xs text-zinc-500">{meta.hint}</p>
               {d.transaction_id && (
                 <p className="text-xs text-zinc-600 mt-2 font-mono">
-                  Txn: {d.transaction_id}
+                  TID: {d.transaction_id}
                 </p>
               )}
               {(d.sender_phone || d.sender_name) && (

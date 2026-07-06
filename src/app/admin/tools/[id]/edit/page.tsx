@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getToolById } from "@/lib/data";
+import { getAllCategories, getToolById } from "@/lib/data";
 import { EditToolPage } from "./edit-tool-client";
 
 interface PageProps {
@@ -8,7 +8,7 @@ interface PageProps {
 
 export default async function EditToolRoute({ params }: PageProps) {
   const { id } = await params;
-  const tool = await getToolById(id);
+  const [tool, categories] = await Promise.all([getToolById(id), getAllCategories()]);
   if (!tool) notFound();
-  return <EditToolPage tool={tool} />;
+  return <EditToolPage tool={tool} categories={categories} />;
 }

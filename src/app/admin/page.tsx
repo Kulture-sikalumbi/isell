@@ -51,7 +51,7 @@ export default async function AdminPage() {
           <span>
             <strong>{pendingDeposits.length - readyToConfirm.length}</strong> deposit
             {pendingDeposits.length - readyToConfirm.length !== 1 ? "s" : ""} waiting for
-            customer transaction ID
+            customer TID
           </span>
         </Link>
       )}

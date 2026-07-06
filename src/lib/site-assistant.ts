@@ -90,7 +90,7 @@ export function fallbackAdminReply(userMessage: string): string {
   const q = userMessage.toLowerCase();
 
   if (/deposit|wallet|mtn|airtel|confirm/.test(q)) {
-    return "Check pending deposits at [/admin/deposits](/admin/deposits). Confirm only after verifying the txn ID on your merchant phone.";
+    return "Check pending deposits at [/admin/deposits](/admin/deposits). Confirm only after verifying the TID on your merchant phone.";
   }
   if (/order|fulfill|activation|payment/.test(q)) {
     return "Orders awaiting fulfillment are at [/admin/payments](/admin/payments). Enter the activation code or mark device registered.";
@@ -154,7 +154,7 @@ export function fallbackAssistantReply(
     return (
       "How wallet payments work:\n\n" +
       "1. [Sign in](/auth/login)\n" +
-      "2. Add funds → [/dashboard?tab=wallet](/dashboard?tab=wallet) (MTN/Airtel + txn ID)\n" +
+      "2. Add funds → [/dashboard?tab=wallet](/dashboard?tab=wallet) (MTN/Airtel + TID)\n" +
       "3. Pick a tool → [/tools](/tools)\n" +
       "4. Pay from wallet at checkout\n\n" +
       "You'll get an inbox notification when your deposit is confirmed or activation is ready." +

@@ -34,23 +34,30 @@ export default async function ToolDetailPage({ params }: ToolDetailPageProps) {
   const storefrontTool = toStorefrontTool(tool);
   const currency = getSiteCurrency();
   const identifierLabel = getCustomerIdentifierLabel(tool.identifier_label);
+  const downloadUrl = tool.download_url || null;
+  const backHref = tool.category?.slug
+    ? `/tools?category=${tool.category.slug}`
+    : "/tools";
 
   return (
     <section className="pt-28 pb-20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <Link
-          href="/tools"
+          href={backHref}
           className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors mb-8"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to tools
+          {tool.category ? `Back to ${tool.category.name}` : "Back to tools"}
         </Link>
 
         <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
           <div>
-            <Badge variant="info" className="mb-4">
-              Instant Activation
-            </Badge>
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+              {tool.category && (
+                <Badge variant="default">{tool.category.name}</Badge>
+              )}
+              <Badge variant="info">Instant Activation</Badge>
+            </div>
             <h1 className="text-3xl sm:text-4xl font-bold mb-4">{tool.name}</h1>
             <p className="text-zinc-400 leading-relaxed mb-8">{tool.description}</p>
 
@@ -68,11 +75,11 @@ export default async function ToolDetailPage({ params }: ToolDetailPageProps) {
               </div>
             </div>
 
-            {tool.download_url && (
+            {downloadUrl && (
               <div className="mb-4">
                 {user ? (
                   <a
-                    href={tool.download_url}
+                    href={downloadUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-medium text-white hover:bg-white/10 transition-colors"

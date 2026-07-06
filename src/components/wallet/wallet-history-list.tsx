@@ -38,7 +38,7 @@ function PendingDepositRow({ deposit }: { deposit: WalletDeposit }) {
         </p>
         {deposit.transaction_id && (
           <p className="text-[11px] text-zinc-600 mt-1 font-mono truncate">
-            Txn {deposit.transaction_id}
+            TID {deposit.transaction_id}
           </p>
         )}
       </div>

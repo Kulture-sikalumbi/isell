@@ -11,8 +11,7 @@ import {
   buildDirectApiPayload,
 } from "@/components/admin/tool-form-direct-api";
 import { getCurrencyLabel } from "@/lib/currency";
-import { slugify } from "@/lib/utils";
-import type { Tool, ToolFulfillmentMode } from "@/types/database";
+import type { Tool, ToolCategory, ToolFulfillmentMode } from "@/types/database";
 
 const DEFAULT_IMEI_INSTRUCTIONS =
   "Dial *#06# on the phone\nOr Settings → About → IMEI";
@@ -20,21 +19,27 @@ const DEFAULT_IMEI_PLACEHOLDER = "Enter 15-digit IMEI (dial *#06# on the phone)"
 
 interface ToolFormProps {
   tool?: Tool;
+  categories: ToolCategory[];
+  defaultCategoryId?: string;
   onSubmit?: (data: Record<string, unknown>) => void | Promise<void>;
 }
 
-export function ToolForm({ tool, onSubmit }: ToolFormProps) {
+export function ToolForm({ tool, categories, defaultCategoryId, onSubmit }: ToolFormProps) {
+  const initialCategoryId =
+    tool?.category_id ?? defaultCategoryId ?? categories[0]?.id ?? "";
+
   const [showAdvanced, setShowAdvanced] = useState(Boolean(tool));
   const [form, setForm] = useState({
+    category_id: initialCategoryId,
     fulfillment_mode: (tool?.fulfillment_mode ?? "manual") as ToolFulfillmentMode,
     name: tool?.name ?? "",
-    slug: tool?.slug ?? "",
     description: tool?.description ?? "",
     download_url: tool?.download_url ?? "",
     external_service_name: tool?.external_service_name ?? "",
     external_service_id: tool?.external_service_id ?? "",
     retail_price: tool?.retail_price?.toString() ?? "",
     wholesale_cost: tool?.wholesale_cost?.toString() ?? "0",
+    sort_order: tool?.sort_order?.toString() ?? "0",
     identifier_label: tool?.identifier_label ?? "IMEI",
     identifier_instructions: tool?.identifier_instructions ?? DEFAULT_IMEI_INSTRUCTIONS,
     identifier_placeholder: tool?.identifier_placeholder ?? DEFAULT_IMEI_PLACEHOLDER,
@@ -47,13 +52,7 @@ export function ToolForm({ tool, onSubmit }: ToolFormProps) {
   const isManual = form.fulfillment_mode === "manual";
 
   function update(field: string, value: string | boolean) {
-    setForm((prev) => {
-      const next = { ...prev, [field]: value };
-      if (field === "name" && !tool && typeof value === "string") {
-        next.slug = slugify(value);
-      }
-      return next;
-    });
+    setForm((prev) => ({ ...prev, [field]: value }));
   }
 
   function updateDirectApi(field: string, value: string | boolean) {
@@ -77,16 +76,23 @@ export function ToolForm({ tool, onSubmit }: ToolFormProps) {
       const wholesale = parseFloat(form.wholesale_cost);
       const wholesaleCost = Number.isFinite(wholesale) && wholesale >= 0 ? wholesale : 0;
 
+      if (!form.category_id) {
+        throw new Error("Select the tool this device belongs to");
+      }
+
+      const sortOrder = parseInt(form.sort_order, 10);
+
       const base = {
+        category_id: form.category_id,
         fulfillment_mode: form.fulfillment_mode,
         name: form.name.trim(),
-        slug: form.slug.trim() || slugify(form.name),
         description: form.description.trim(),
-        download_url: form.download_url.trim(),
+        download_url: form.download_url.trim() || null,
         external_service_name: form.external_service_name.trim() || null,
         external_service_id: form.external_service_id.trim() || null,
         retail_price: retail,
         wholesale_cost: wholesaleCost,
+        sort_order: Number.isFinite(sortOrder) ? sortOrder : 0,
         identifier_label: form.identifier_label.trim() || "IMEI",
         identifier_instructions: form.identifier_instructions.trim() || DEFAULT_IMEI_INSTRUCTIONS,
         identifier_placeholder: form.identifier_placeholder.trim() || DEFAULT_IMEI_PLACEHOLDER,
@@ -115,15 +121,45 @@ export function ToolForm({ tool, onSubmit }: ToolFormProps) {
     }
   }
 
+  if (categories.length === 0) {
+    return (
+      <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-4 text-sm text-amber-200">
+        Add a tool first, then add device variations under it.
+      </div>
+    );
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-zinc-300 mb-2">Tool</label>
+          <select
+            value={form.category_id}
+            onChange={(e) => update("category_id", e.target.value)}
+            required
+            className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white focus:border-cyan-400/50 focus:outline-none focus:ring-2 focus:ring-cyan-400/20"
+          >
+            <option value="" className="bg-zinc-900">
+              Select tool…
+            </option>
+            {categories.map((category) => (
+              <option key={category.id} value={category.id} className="bg-zinc-900">
+                {category.name}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-zinc-500 mt-1.5">
+            The tool name customers pick in the sidebar
+          </p>
+        </div>
         <Input
-          label="Tool name"
+          label="Device name"
           value={form.name}
           onChange={(e) => update("name", e.target.value)}
-          placeholder="Phantom Unlock Pro"
+          placeholder="iPhone 13 · No Signal"
           required
+          hint="Specific model or variant — e.g. iPad Air 4gen, iPhone X"
         />
         <Textarea
           label="Description"
@@ -136,7 +172,14 @@ export function ToolForm({ tool, onSubmit }: ToolFormProps) {
           value={form.download_url}
           onChange={(e) => update("download_url", e.target.value)}
           placeholder="https://..."
-          hint="Free download URL shown to customers"
+          hint="Free download for this device — each device can have its own link"
+        />
+        <Input
+          label="Sort order"
+          type="number"
+          value={form.sort_order}
+          onChange={(e) => update("sort_order", e.target.value)}
+          hint="Order within the tool list (lower first)"
         />
         <Input
           label={`Activation price (${getCurrencyLabel()})`}
@@ -177,14 +220,6 @@ export function ToolForm({ tool, onSubmit }: ToolFormProps) {
 
         {showAdvanced && (
           <div className="mt-4 space-y-6 pl-1">
-            <Input
-              label="URL slug"
-              value={form.slug}
-              onChange={(e) => update("slug", e.target.value)}
-              placeholder="phantom-unlock"
-              hint="Auto-generated from name — used in /tools/your-slug"
-            />
-
             <Input
               label={`Wholesale cost (${getCurrencyLabel()})`}
               type="number"
@@ -300,7 +335,7 @@ export function ToolForm({ tool, onSubmit }: ToolFormProps) {
         ) : (
           <>
             <Plus className="h-4 w-4" />
-            Add tool
+            Add device
           </>
         )}
       </Button>

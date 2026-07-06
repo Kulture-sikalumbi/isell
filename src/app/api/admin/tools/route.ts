@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/server";
+import { buildDeviceSlug } from "@/lib/tool-slug";
+import { slugify } from "@/lib/utils";
 
 function isManualFulfillment(mode: unknown) {
   return (mode as string) !== "direct_api";
@@ -15,15 +17,37 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const manual = isManualFulfillment(body.fulfillment_mode);
+    const name = (body.name as string)?.trim();
+    const categoryId = (body.category_id as string) || null;
+
+    if (!name) {
+      return NextResponse.json({ error: "Device name is required" }, { status: 400 });
+    }
 
     const supabase = createServiceClient();
     if (!supabase) {
       return NextResponse.json({ error: "Database not configured" }, { status: 503 });
     }
 
+    let slug = typeof body.slug === "string" ? body.slug.trim() : "";
+    if (!slug) {
+      if (categoryId) {
+        const { data: category } = await supabase
+          .from("tool_categories")
+          .select("slug")
+          .eq("id", categoryId)
+          .single();
+        slug = buildDeviceSlug(category?.slug ?? "", name);
+      } else {
+        slug = slugify(name);
+      }
+    }
+
     const toolData: Record<string, unknown> = {
-      slug: body.slug as string,
-      name: body.name as string,
+      category_id: categoryId,
+      sort_order: Number.isFinite(Number(body.sort_order)) ? Number(body.sort_order) : 0,
+      slug,
+      name,
       description: (body.description as string) || null,
       download_url: (body.download_url as string) || null,
       fulfillment_mode: (body.fulfillment_mode as string) || "manual",

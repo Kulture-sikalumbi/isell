@@ -72,7 +72,7 @@ export function AdminDepositsTable({ initialDeposits }: AdminDepositsTableProps)
               <th className="px-6 py-4 font-medium">Customer</th>
               <th className="px-6 py-4 font-medium">Amount</th>
               <th className="px-6 py-4 font-medium">Method</th>
-              <th className="px-6 py-4 font-medium">Transaction ID</th>
+              <th className="px-6 py-4 font-medium">TID</th>
               <th className="px-6 py-4 font-medium">Reference</th>
               <th className="px-6 py-4 font-medium">Submitted</th>
               <th className="px-6 py-4 font-medium">Actions</th>
@@ -117,7 +117,7 @@ export function AdminDepositsTable({ initialDeposits }: AdminDepositsTableProps)
                       size="sm"
                       disabled={loadingId === d.id || !d.transaction_id}
                       onClick={() => handleAction(d.id, "confirm")}
-                      title={!d.transaction_id ? "Customer has not submitted transaction ID yet" : undefined}
+                      title={!d.transaction_id ? "Customer has not submitted TID yet" : undefined}
                     >
                       {loadingId === d.id ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />

@@ -450,7 +450,7 @@ export function DepositForm({ merchants, currency }: DepositFormProps) {
                 </InstructionStep>
                 <InstructionStep n={ussd ? 5 : 4}>
                   Tap <strong className="text-white">Confirm deposit</strong> below and enter your
-                  transaction ID
+                  TID (Transaction ID)
                 </InstructionStep>
               </ol>
             </div>
@@ -508,13 +508,13 @@ export function DepositForm({ merchants, currency }: DepositFormProps) {
 
           <Input
             variant="emphasized"
-            label="Transaction ID (Txn ID from SMS)"
-            placeholder="The long number in your payment confirmation text"
+            label="TID (Transaction ID from SMS)"
+            placeholder="Paste the Transaction ID from your payment SMS"
             value={transactionId}
             onChange={(e) => setTransactionId(e.target.value)}
             required
             autoFocus
-            hint="Required — only available after a successful payment"
+            hint="Required — the TID only appears after a successful payment"
           />
 
           <Input

@@ -45,7 +45,7 @@ export function buildWelcomeEmailHtml(input: {
               <tr>
                 <td style="padding:12px 0;border-bottom:1px solid #f4f4f5;">
                   <p style="margin:0;font-size:13px;color:#71717a;font-weight:600;">2 · Top up your wallet</p>
-                  <p style="margin:4px 0 0;font-size:14px;color:#3f3f46;line-height:1.5;">Add funds via <strong>MTN</strong> or <strong>Airtel Money</strong>. Pay our merchant number, then submit your transaction ID once.</p>
+                  <p style="margin:4px 0 0;font-size:14px;color:#3f3f46;line-height:1.5;">Add funds via <strong>MTN</strong> or <strong>Airtel Money</strong>. Pay our merchant number, then submit your <strong>TID</strong> (Transaction ID) once.</p>
                 </td>
               </tr>
               <tr>

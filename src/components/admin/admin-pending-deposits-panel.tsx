@@ -103,9 +103,9 @@ export function AdminPendingDepositsPanel({
               <p className="text-xs text-zinc-500 mt-1">
                 {methodLabels[d.method]}
                 {d.transaction_id ? (
-                  <> · Txn <span className="font-mono text-zinc-400">{d.transaction_id}</span></>
+                  <> · TID <span className="font-mono text-zinc-400">{d.transaction_id}</span></>
                 ) : (
-                  <span className="text-amber-400"> · Awaiting transaction ID</span>
+                  <span className="text-amber-400"> · Awaiting TID</span>
                 )}
               </p>
               {(d.sender_phone || d.sender_name) && (
@@ -125,7 +125,7 @@ export function AdminPendingDepositsPanel({
                 size="sm"
                 disabled={loadingId === d.id || !d.transaction_id}
                 onClick={() => handleAction(d.id, "confirm")}
-                title={!d.transaction_id ? "Customer has not submitted transaction ID yet" : undefined}
+                title={!d.transaction_id ? "Customer has not submitted TID yet" : undefined}
               >
                 {loadingId === d.id ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />

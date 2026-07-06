@@ -14,17 +14,25 @@ export function ToolsEmptyState({ admin }: ToolsEmptyStateProps) {
       <p className="text-zinc-300 font-medium mb-2">No tools available yet</p>
       <p className="text-sm text-zinc-500 max-w-md mx-auto mb-6">
         {admin
-          ? "Add your first tool from the admin panel. Seed data can also be loaded via the Supabase migration."
+          ? "Add a tool first, then add devices with their own prices."
           : "Check back soon — new tools are being added."}
       </p>
       {admin && (
-        <Link
-          href="/admin/tools/new"
-          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-500 px-5 py-2.5 text-sm font-medium text-white hover:brightness-110 transition-all"
-        >
-          <Plus className="h-4 w-4" />
-          Add First Tool
-        </Link>
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <Link
+            href="/admin/categories/new"
+            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-medium text-zinc-200 hover:bg-white/10 transition-all"
+          >
+            <Plus className="h-4 w-4" />
+            Add tool
+          </Link>
+          <Link
+            href="/admin/categories"
+            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-500 px-5 py-2.5 text-sm font-medium text-white hover:brightness-110 transition-all"
+          >
+            Go to catalog
+          </Link>
+        </div>
       )}
     </div>
   );

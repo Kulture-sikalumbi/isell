@@ -1,14 +1,16 @@
-import { ToolsCatalog } from "@/components/tools/tools-catalog";
+import Link from "next/link";
+import { CategoryToolsCatalog } from "@/components/tools/category-tools-catalog";
 import { getCurrentProfile } from "@/lib/auth";
-import { getTools } from "@/lib/data";
-import { toStorefrontTools } from "@/lib/storefront-tool";
+import { getActiveCategoriesWithTools } from "@/lib/data";
 
 export const metadata = {
   title: "Tools — iSell Unlocks",
 };
 
 export default async function ToolsPage() {
-  const tools = toStorefrontTools(await getTools());
+  const categories = (await getActiveCategoriesWithTools()).filter(
+    (category) => category.tools.length > 0
+  );
   const profile = await getCurrentProfile();
   const isAdmin = profile?.role === "admin";
 
@@ -18,11 +20,11 @@ export default async function ToolsPage() {
         <div className="mb-8 sm:mb-10">
           <h1 className="text-3xl sm:text-4xl font-bold mb-2 sm:mb-3">All Tools</h1>
           <p className="text-zinc-400 max-w-lg text-sm sm:text-base">
-            Download any tool for free. Purchase activation when you need full access.
+            Pick a tool, then choose your device. Download free — pay only to activate.
           </p>
         </div>
 
-        <ToolsCatalog tools={tools} isAdmin={isAdmin} />
+        <CategoryToolsCatalog categories={categories} isAdmin={isAdmin} />
       </div>
     </section>
   );

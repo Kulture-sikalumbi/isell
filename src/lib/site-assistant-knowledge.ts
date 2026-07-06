@@ -43,7 +43,7 @@ Prices show as **K** (Zambian Kwacha). Quote the single activation price from th
 
 ## Wallet & payments flow
 1. Sign in → [/auth/login](/auth/login)
-2. Add funds → [/dashboard?tab=wallet](/dashboard?tab=wallet) — choose MTN/Airtel, pay merchant, submit **transaction ID** from SMS
+2. Add funds → [/dashboard?tab=wallet](/dashboard?tab=wallet) — choose MTN/Airtel, pay merchant, submit **TID** from SMS
 3. Browse tools → [/tools](/tools)
 4. Open tool → enter device ID (IMEI etc.) → **Pay from wallet**
 5. Wait on page for activation key OR check [/dashboard?tab=activations](/dashboard?tab=activations)
@@ -53,7 +53,7 @@ Prices show as **K** (Zambian Kwacha). Quote the single activation price from th
 1. Choose amount → pick MTN or Airtel (instructions load briefly)
 2. **Pay on your phone first** using the steps shown
 3. Tap **Confirm deposit** — answer yes only if you already sent money to the merchant number
-4. Enter transaction ID from SMS + submit once
+4. Enter TID from SMS + submit once
 5. Status **Processing** until admin confirms — inbox notification when credited
 
 ## Activations help

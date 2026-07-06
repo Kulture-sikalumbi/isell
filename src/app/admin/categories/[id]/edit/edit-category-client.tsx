@@ -2,34 +2,33 @@
 
 import { useRouter } from "next/navigation";
 import { AdminShell } from "@/components/admin/admin-sidebar";
-import { ToolForm } from "@/components/admin/tool-form";
-import type { Tool, ToolCategory } from "@/types/database";
+import { CategoryForm } from "@/components/admin/category-form";
+import type { ToolCategory } from "@/types/database";
 
-interface EditToolPageProps {
-  tool: Tool;
-  categories: ToolCategory[];
+interface EditCategoryPageProps {
+  category: ToolCategory;
 }
 
-export function EditToolPage({ tool, categories }: EditToolPageProps) {
+export function EditCategoryPage({ category }: EditCategoryPageProps) {
   const router = useRouter();
 
   async function handleSubmit(data: Record<string, unknown>) {
-    const res = await fetch(`/api/admin/tools/${tool.id}`, {
+    const res = await fetch(`/api/admin/categories/${category.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
     const result = await res.json();
     if (!res.ok) {
-      throw new Error(result.error || "Failed to save tool");
+      throw new Error(result.error || "Failed to save category");
     }
     router.push("/admin/categories");
   }
 
   return (
-    <AdminShell title="Edit device" description={`Editing ${tool.name}`}>
+    <AdminShell title="Edit tool" description={`Editing ${category.name}`}>
       <div className="glass rounded-2xl p-4 sm:p-8 max-w-3xl">
-        <ToolForm tool={tool} categories={categories} onSubmit={handleSubmit} />
+        <CategoryForm category={category} onSubmit={handleSubmit} />
       </div>
     </AdminShell>
   );

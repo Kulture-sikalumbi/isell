@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   }
 
   if (!transactionId) {
-    return NextResponse.json({ error: "Transaction ID is required" }, { status: 400 });
+    return NextResponse.json({ error: "TID is required" }, { status: 400 });
   }
 
   const merchants = getMerchantDetails();

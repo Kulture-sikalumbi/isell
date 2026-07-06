@@ -224,7 +224,7 @@ export async function confirmDeposit(depositId: string, adminNote?: string) {
     return { ok: false, error: "Deposit already processed" };
   }
   if (!deposit.transaction_id?.trim()) {
-    return { ok: false, error: "Customer has not submitted transaction ID yet" };
+    return { ok: false, error: "Customer has not submitted TID yet" };
   }
 
   const { data, error } = await supabase.rpc("confirm_wallet_deposit", {
@@ -448,7 +448,7 @@ export async function submitDepositTransactionId(
   if (!supabase) return { ok: false, error: "Database not configured" };
 
   const trimmedTxn = input.transactionId.trim();
-  if (!trimmedTxn) return { ok: false, error: "Transaction ID is required" };
+  if (!trimmedTxn) return { ok: false, error: "TID is required" };
 
   const senderPhone = input.senderPhone?.trim() || null;
   const senderName = input.senderName?.trim() || null;
@@ -465,7 +465,7 @@ export async function submitDepositTransactionId(
     return { ok: false, error: "This deposit was already processed" };
   }
   if (deposit.transaction_id) {
-    return { ok: false, error: "Transaction ID already submitted" };
+    return { ok: false, error: "TID already submitted" };
   }
 
   const { error } = await supabase
