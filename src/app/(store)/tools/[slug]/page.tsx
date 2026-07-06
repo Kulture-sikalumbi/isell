@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Download, ListOrdered, Shield } from "lucide-react";
+import { ArrowLeft, Download, ListOrdered, Shield, Clock } from "lucide-react";
+import { ActivationEtaBadge } from "@/components/tools/activation-eta-badge";
+import { formatActivationEtaLong } from "@/lib/activation-time";
 import { getCurrentUser } from "@/lib/auth";
 import { CheckoutForm } from "@/components/tools/checkout-form";
 import { SignInGate } from "@/components/tools/sign-in-gate";
@@ -56,7 +58,10 @@ export default async function ToolDetailPage({ params }: ToolDetailPageProps) {
               {tool.category && (
                 <Badge variant="default">{tool.category.name}</Badge>
               )}
-              <Badge variant="info">Instant Activation</Badge>
+              <ActivationEtaBadge
+                value={tool.activation_time_value}
+                unit={tool.activation_time_unit}
+              />
             </div>
             <h1 className="text-3xl sm:text-4xl font-bold mb-4">{tool.name}</h1>
             <p className="text-zinc-400 leading-relaxed mb-8">{tool.description}</p>
@@ -69,6 +74,10 @@ export default async function ToolDetailPage({ params }: ToolDetailPageProps) {
                 </span>
               </div>
               <div className="glow-line" />
+              <div className="flex items-center gap-3 text-sm text-zinc-400">
+                <Clock className="h-4 w-4 text-amber-400 shrink-0" />
+                {formatActivationEtaLong(tool.activation_time_value, tool.activation_time_unit)}
+              </div>
               <div className="flex items-center gap-3 text-sm text-zinc-400">
                 <Shield className="h-4 w-4 text-cyan-400" />
                 Hardware-bound to your {identifierLabel}

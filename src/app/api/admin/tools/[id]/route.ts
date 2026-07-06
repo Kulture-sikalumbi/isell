@@ -6,6 +6,21 @@ interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
+function parseActivationTimeBody(body: Record<string, unknown>) {
+  const value = Number(body.activation_time_value);
+  const unit = body.activation_time_unit as string | null;
+
+  if (!Number.isFinite(value) || value <= 0 || !unit) {
+    return { activation_time_value: null, activation_time_unit: null };
+  }
+
+  if (unit !== "minutes" && unit !== "hours" && unit !== "days") {
+    return { activation_time_value: null, activation_time_unit: null };
+  }
+
+  return { activation_time_value: Math.round(value), activation_time_unit: unit };
+}
+
 function isManualFulfillment(mode: unknown) {
   return (mode as string) !== "direct_api";
 }
@@ -31,6 +46,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     name: body.name,
     description: body.description || null,
     download_url: body.download_url || null,
+    ...parseActivationTimeBody(body),
     fulfillment_mode: body.fulfillment_mode || "manual",
     external_service_id: body.external_service_id || null,
     external_service_name: body.external_service_name || null,

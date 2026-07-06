@@ -11,6 +11,10 @@ import {
   buildDirectApiPayload,
 } from "@/components/admin/tool-form-direct-api";
 import { getCurrencyLabel } from "@/lib/currency";
+import {
+  ACTIVATION_TIME_UNIT_OPTIONS,
+  parseActivationTimeFields,
+} from "@/lib/activation-time";
 import type { Tool, ToolCategory, ToolFulfillmentMode } from "@/types/database";
 
 const DEFAULT_IMEI_INSTRUCTIONS =
@@ -40,6 +44,8 @@ export function ToolForm({ tool, categories, defaultCategoryId, onSubmit }: Tool
     retail_price: tool?.retail_price?.toString() ?? "",
     wholesale_cost: tool?.wholesale_cost?.toString() ?? "0",
     sort_order: tool?.sort_order?.toString() ?? "0",
+    activation_time_value: tool?.activation_time_value?.toString() ?? "",
+    activation_time_unit: tool?.activation_time_unit ?? "hours",
     identifier_label: tool?.identifier_label ?? "IMEI",
     identifier_instructions: tool?.identifier_instructions ?? DEFAULT_IMEI_INSTRUCTIONS,
     identifier_placeholder: tool?.identifier_placeholder ?? DEFAULT_IMEI_PLACEHOLDER,
@@ -81,6 +87,10 @@ export function ToolForm({ tool, categories, defaultCategoryId, onSubmit }: Tool
       }
 
       const sortOrder = parseInt(form.sort_order, 10);
+      const activationTime = parseActivationTimeFields(
+        form.activation_time_value,
+        form.activation_time_unit
+      );
 
       const base = {
         category_id: form.category_id,
@@ -93,6 +103,7 @@ export function ToolForm({ tool, categories, defaultCategoryId, onSubmit }: Tool
         retail_price: retail,
         wholesale_cost: wholesaleCost,
         sort_order: Number.isFinite(sortOrder) ? sortOrder : 0,
+        ...activationTime,
         identifier_label: form.identifier_label.trim() || "IMEI",
         identifier_instructions: form.identifier_instructions.trim() || DEFAULT_IMEI_INSTRUCTIONS,
         identifier_placeholder: form.identifier_placeholder.trim() || DEFAULT_IMEI_PLACEHOLDER,
@@ -191,6 +202,35 @@ export function ToolForm({ tool, categories, defaultCategoryId, onSubmit }: Tool
           required
           hint="What the customer pays from their wallet"
         />
+        <div>
+          <label className="block text-sm font-medium text-zinc-300 mb-2">
+            Activation time
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              type="number"
+              min="1"
+              value={form.activation_time_value}
+              onChange={(e) => update("activation_time_value", e.target.value)}
+              placeholder="e.g. 5"
+              hint="Leave empty for instant"
+            />
+            <div>
+              <select
+                value={form.activation_time_unit}
+                onChange={(e) => update("activation_time_unit", e.target.value)}
+                className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white focus:border-cyan-400/50 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 mt-0"
+              >
+                {ACTIVATION_TIME_UNIT_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value} className="bg-zinc-900">
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-zinc-500 mt-1.5">Shown to customers at checkout</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <label className="flex items-center gap-3 cursor-pointer">

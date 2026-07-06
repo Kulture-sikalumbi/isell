@@ -4,6 +4,21 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { buildDeviceSlug } from "@/lib/tool-slug";
 import { slugify } from "@/lib/utils";
 
+function parseActivationTimeBody(body: Record<string, unknown>) {
+  const value = Number(body.activation_time_value);
+  const unit = body.activation_time_unit as string | null;
+
+  if (!Number.isFinite(value) || value <= 0 || !unit) {
+    return { activation_time_value: null, activation_time_unit: null };
+  }
+
+  if (unit !== "minutes" && unit !== "hours" && unit !== "days") {
+    return { activation_time_value: null, activation_time_unit: null };
+  }
+
+  return { activation_time_value: Math.round(value), activation_time_unit: unit };
+}
+
 function isManualFulfillment(mode: unknown) {
   return (mode as string) !== "direct_api";
 }
@@ -50,6 +65,7 @@ export async function POST(request: Request) {
       name,
       description: (body.description as string) || null,
       download_url: (body.download_url as string) || null,
+      ...parseActivationTimeBody(body),
       fulfillment_mode: (body.fulfillment_mode as string) || "manual",
       external_service_id: (body.external_service_id as string) || null,
       external_service_name: (body.external_service_name as string) || null,

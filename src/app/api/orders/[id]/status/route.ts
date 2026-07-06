@@ -42,5 +42,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     awaitingAdmin: payment.fulfillment_status === "awaiting",
     fulfilled: payment.fulfillment_status === "fulfilled",
     activation: activation ?? null,
+    activationTimeValue: payment.tool?.activation_time_value ?? null,
+    activationTimeUnit: payment.tool?.activation_time_unit ?? null,
   });
 }

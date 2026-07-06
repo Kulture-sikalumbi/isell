@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ActivationCard } from "@/components/dashboard/activation-card";
 import { subscribeToActivation } from "@/lib/realtime";
-import type { Activation } from "@/types/database";
+import { formatActivationEtaWaiting } from "@/lib/activation-time";
+import type { Activation, ActivationTimeUnit } from "@/types/database";
 
 interface OrderStatus {
   paymentId: string;
@@ -17,6 +18,8 @@ interface OrderStatus {
   awaitingAdmin: boolean;
   fulfilled: boolean;
   activation: Activation | null;
+  activationTimeValue: number | null;
+  activationTimeUnit: ActivationTimeUnit | null;
 }
 
 interface ActivationWaitingPanelProps {
@@ -130,9 +133,11 @@ export function ActivationWaitingPanel({ paymentId, onDone }: ActivationWaitingP
         <p className="text-xs font-mono text-zinc-500 mb-6">{status.hardwareId}</p>
 
         <p className="text-sm text-zinc-400 leading-relaxed mb-4">
-          {isManualWait
-            ? "Payment received. An admin is preparing your activation key — this usually takes a few minutes."
-            : "We're contacting the activation server. This usually takes a few seconds."}
+          {formatActivationEtaWaiting(
+            status.activationTimeValue,
+            status.activationTimeUnit,
+            isManualWait
+          )}
         </p>
 
         <div className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-left text-sm text-zinc-400 mb-6 space-y-2">

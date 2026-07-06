@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, Cpu } from "lucide-react";
+import { ActivationEtaBadge } from "@/components/tools/activation-eta-badge";
 import { Badge } from "@/components/ui/badge";
 import type { StorefrontTool } from "@/lib/storefront-tool";
 import { formatCurrency } from "@/lib/utils";
@@ -76,7 +77,11 @@ export function VariationToolRow({ tool, highlight }: VariationToolRowProps) {
           )}
         </div>
 
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex flex-col items-end gap-2 shrink-0 sm:flex-row sm:items-center sm:gap-3">
+          <ActivationEtaBadge
+            value={tool.activation_time_value}
+            unit={tool.activation_time_unit}
+          />
           <Badge variant="warning" className="text-xs font-semibold px-3 py-1">
             {formatCurrency(tool.checkout_price)}
           </Badge>

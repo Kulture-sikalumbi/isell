@@ -24,6 +24,8 @@ export interface ToolCategory {
   updated_at: string;
 }
 
+export type ActivationTimeUnit = "minutes" | "hours" | "days";
+
 export interface Tool {
   id: string;
   slug: string;
@@ -32,6 +34,8 @@ export interface Tool {
   download_url: string | null;
   category_id: string | null;
   sort_order: number;
+  activation_time_value: number | null;
+  activation_time_unit: ActivationTimeUnit | null;
   retail_price: number;
   wholesale_cost: number;
   fulfillment_mode: ToolFulfillmentMode;

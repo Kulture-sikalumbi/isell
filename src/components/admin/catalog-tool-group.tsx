@@ -3,6 +3,7 @@ import { ExternalLink, Pencil, Plus } from "lucide-react";
 import { CategoryActions } from "@/components/admin/category-actions";
 import { ToolActions } from "@/components/admin/tool-actions";
 import { Badge } from "@/components/ui/badge";
+import { formatActivationEtaShort } from "@/lib/activation-time";
 import { formatCurrency } from "@/lib/utils";
 import type { ToolCategory } from "@/types/database";
 import type { ToolWithCategory } from "@/types/database";
@@ -76,6 +77,7 @@ export function CatalogToolGroup({ category, devices }: CatalogToolGroupProps) {
               <tr className="border-b border-white/5 text-left text-zinc-500">
                 <th className="px-4 sm:px-6 py-3 font-medium">Device</th>
                 <th className="px-4 sm:px-6 py-3 font-medium">Price</th>
+                <th className="px-4 sm:px-6 py-3 font-medium">Activation</th>
                 <th className="px-4 sm:px-6 py-3 font-medium">Mode</th>
                 <th className="px-4 sm:px-6 py-3 font-medium">Status</th>
                 <th className="px-4 sm:px-6 py-3 font-medium">Actions</th>
@@ -92,6 +94,12 @@ export function CatalogToolGroup({ category, devices }: CatalogToolGroupProps) {
                   </td>
                   <td className="px-4 sm:px-6 py-3 text-white">
                     {formatCurrency(device.retail_price)}
+                  </td>
+                  <td className="px-4 sm:px-6 py-3 text-zinc-300 capitalize">
+                    {formatActivationEtaShort(
+                      device.activation_time_value,
+                      device.activation_time_unit
+                    )}
                   </td>
                   <td className="px-4 sm:px-6 py-3">
                     <Badge variant={device.fulfillment_mode === "manual" ? "info" : "default"}>

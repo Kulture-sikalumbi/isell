@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ShieldCheck, Zap } from "lucide-react";
+import { ShieldCheck, Zap, Clock } from "lucide-react";
 import Link from "next/link";
 import { ActivationWaitingPanel } from "@/components/dashboard/activation-waiting-panel";
 import { PaymentMethodsRow } from "@/components/payments/payment-method-icons";
@@ -12,6 +12,7 @@ import {
   getCustomerIdentifierLabel,
   getCustomerIdentifierPlaceholder,
 } from "@/lib/identifier-label";
+import { formatActivationEtaLong } from "@/lib/activation-time";
 import type { StorefrontTool } from "@/lib/storefront-tool";
 import { formatCurrency } from "@/lib/utils";
 import { useConnectivityOptional } from "@/components/layout/connectivity-provider";
@@ -116,6 +117,11 @@ export function CheckoutForm({
           </Link>
         </div>
       )}
+
+      <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-100/90 flex items-start gap-2">
+        <Clock className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+        <span>{formatActivationEtaLong(tool.activation_time_value, tool.activation_time_unit)}</span>
+      </div>
 
       <Input
         label={getCustomerIdentifierLabel(tool.identifier_label)}
