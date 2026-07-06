@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/auth";
-import { isValidPlatformFeePercent } from "@/lib/platform-fee";
 import { createServiceClient } from "@/lib/supabase/server";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
+}
+
+function isManualFulfillment(mode: unknown) {
+  return (mode as string) !== "direct_api";
 }
 
 export async function PATCH(request: Request, { params }: RouteParams) {
@@ -15,42 +18,43 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
   const { id } = await params;
   const body = await request.json();
-  const feePercent = Number(body.platform_fee_percent);
-  if (!isValidPlatformFeePercent(feePercent)) {
-    return NextResponse.json(
-      { error: "Activation service fee % is required (0–100)" },
-      { status: 400 }
-    );
-  }
+  const manual = isManualFulfillment(body.fulfillment_mode);
 
   const supabase = createServiceClient();
-
   if (!supabase) {
-    return NextResponse.json({ error: "Database not configured" }, { status: 500 });
+    return NextResponse.json({ error: "Database not configured" }, { status: 503 });
+  }
+
+  const updates: Record<string, unknown> = {
+    slug: body.slug,
+    name: body.name,
+    description: body.description || null,
+    download_url: body.download_url || null,
+    fulfillment_mode: body.fulfillment_mode || "manual",
+    external_service_id: body.external_service_id || null,
+    external_service_name: body.external_service_name || null,
+    retail_price: body.retail_price,
+    wholesale_cost: body.wholesale_cost,
+    identifier_label: body.identifier_label,
+    identifier_instructions: body.identifier_instructions || null,
+    identifier_placeholder: body.identifier_placeholder || null,
+    is_active: body.is_active ?? true,
+  };
+
+  if (manual) {
+    updates.developer_api_url = null;
+    updates.activation_type_id = null;
+    updates.developer_name = null;
+  } else {
+    updates.developer_api_url = body.developer_api_url || null;
+    updates.activation_type_id = body.activation_type_id || null;
+    updates.developer_name = body.developer_name || null;
+    updates.api_config = body.api_config ?? {};
   }
 
   const { data, error } = await supabase
     .from("tools")
-    .update({
-      slug: body.slug,
-      name: body.name,
-      description: body.description || null,
-      download_url: body.download_url || null,
-      fulfillment_mode: body.fulfillment_mode || "manual",
-      developer_api_url: body.developer_api_url || null,
-      activation_type_id: body.activation_type_id || null,
-      external_service_id: body.external_service_id || null,
-      external_service_name: body.external_service_name || null,
-      developer_name: body.developer_name || null,
-      retail_price: body.retail_price,
-      wholesale_cost: body.wholesale_cost,
-      platform_fee_percent: feePercent,
-      identifier_label: body.identifier_label,
-      identifier_instructions: body.identifier_instructions || null,
-      identifier_placeholder: body.identifier_placeholder || null,
-      api_config: body.api_config ?? {},
-      is_active: body.is_active ?? true,
-    })
+    .update(updates)
     .eq("id", id)
     .select()
     .single();

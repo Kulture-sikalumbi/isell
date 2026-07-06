@@ -21,7 +21,7 @@ export default function NewToolPage() {
   }
 
   return (
-    <AdminShell title="Add New Tool" description="Configure tool and developer API settings">
+    <AdminShell title="Add New Tool" description="Name, price, and download link — everything else is optional">
       <div className="glass rounded-2xl p-4 sm:p-8 max-w-3xl">
         <ToolForm onSubmit={handleSubmit} />
       </div>

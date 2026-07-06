@@ -25,11 +25,10 @@ export async function buildAdminAssistantContext(): Promise<string> {
   const readyDeposits = pendingDeposits.filter((d) => d.transaction_id);
 
   const toolList = tools
-    .map((t) => {
-      const pct =
-        t.platform_fee_percent != null ? ` — activation fee ${t.platform_fee_percent}%` : "";
-      return `- **${t.name}** (${t.slug}) — ${formatSiteCurrency(t.retail_price, currency)} — ${t.fulfillment_mode} — ${t.is_active ? "active" : "inactive"}${pct}`;
-    })
+    .map(
+      (t) =>
+        `- **${t.name}** (${t.slug}) — ${formatSiteCurrency(t.retail_price, currency)} — ${t.fulfillment_mode} — ${t.is_active ? "active" : "inactive"}`
+    )
     .join("\n");
 
   const depositList =

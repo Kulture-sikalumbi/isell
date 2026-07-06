@@ -29,14 +29,11 @@ export function getDefaultPlatformFeePercent(): number {
   return getSuggestedPlatformFeePercent();
 }
 
-/** Effective % for a tool — only from admin-set tools.platform_fee_percent. */
-export function getToolPlatformFeePercent(tool?: {
+/** Site-wide activation fee % — set via PLATFORM_FEE_PERCENT on Azure (not per-tool in admin). */
+export function getToolPlatformFeePercent(_tool?: {
   platform_fee_percent?: number | null;
 }): number {
-  if (tool?.platform_fee_percent == null) return 0;
-  const p = Number(tool.platform_fee_percent);
-  if (!Number.isFinite(p) || p < 0 || p > 100) return 0;
-  return p;
+  return getSuggestedPlatformFeePercent();
 }
 
 /** Fee amount in currency units, rounded to 2 decimal places. Activation purchase only. */
