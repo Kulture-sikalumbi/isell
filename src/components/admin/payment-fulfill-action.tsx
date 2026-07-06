@@ -10,6 +10,7 @@ import {
   type AdminPaymentRow,
 } from "@/lib/payment-fulfillment";
 import { getCustomerIdentifierLabel } from "@/lib/identifier-label";
+import { useNavigationLoading } from "@/components/layout/navigation-progress";
 
 interface PaymentFulfillActionProps {
   payment: AdminPaymentRow;
@@ -17,6 +18,7 @@ interface PaymentFulfillActionProps {
 
 export function PaymentFulfillAction({ payment }: PaymentFulfillActionProps) {
   const router = useRouter();
+  const { stopLoading } = useNavigationLoading();
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [code, setCode] = useState("");
@@ -69,6 +71,7 @@ export function PaymentFulfillAction({ payment }: PaymentFulfillActionProps) {
       setError(err instanceof Error ? err.message : "Failed");
     } finally {
       setLoading(false);
+      stopLoading();
     }
   }
 

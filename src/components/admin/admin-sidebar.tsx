@@ -44,7 +44,7 @@ const sections: NavSection[] = [
   {
     title: "Attention",
     links: [
-      { href: "/admin", label: "Overview", icon: LayoutDashboard, badgeKey: "totalAttention" },
+      { href: "/admin", label: "Dashboard", icon: LayoutDashboard, badgeKey: "totalAttention" },
       { href: "/admin/inbox", label: "Inbox", icon: Bell, badgeKey: "unreadNotifications" },
       { href: "/admin/deposits", label: "Deposits", icon: Wallet, badgeKey: "pendingDeposits" },
       { href: "/admin/payments", label: "Orders to fulfill", icon: CreditCard, badgeKey: "awaitingOrders" },

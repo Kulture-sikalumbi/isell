@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Trash2 } from "lucide-react";
 import { AlertDialog, ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useNavigationLoading } from "@/components/layout/navigation-progress";
 
 interface CategoryActionsProps {
   categoryId: string;
@@ -12,6 +13,7 @@ interface CategoryActionsProps {
 
 export function CategoryActions({ categoryId, categoryName }: CategoryActionsProps) {
   const router = useRouter();
+  const { runWithLoading } = useNavigationLoading();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [alertOpen, setAlertOpen] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
@@ -23,11 +25,13 @@ export function CategoryActions({ categoryId, categoryName }: CategoryActionsPro
     setError(null);
 
     try {
-      const res = await fetch(`/api/admin/categories/${categoryId}`, { method: "DELETE" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Delete failed");
-      setConfirmOpen(false);
-      router.refresh();
+      await runWithLoading(async () => {
+        const res = await fetch(`/api/admin/categories/${categoryId}`, { method: "DELETE" });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Delete failed");
+        setConfirmOpen(false);
+        router.refresh();
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Delete failed";
       setError(message);

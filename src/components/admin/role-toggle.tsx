@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { AlertDialog, ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useNavigationLoading } from "@/components/layout/navigation-progress";
 import type { UserRole } from "@/types/database";
 
 interface RoleToggleProps {
@@ -15,6 +16,7 @@ interface RoleToggleProps {
 
 export function RoleToggle({ userId, currentRole, email, disabled }: RoleToggleProps) {
   const router = useRouter();
+  const { runWithLoading } = useNavigationLoading();
   const [role, setRole] = useState(currentRole);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingRole, setPendingRole] = useState<UserRole | null>(null);
@@ -37,19 +39,21 @@ export function RoleToggle({ userId, currentRole, email, disabled }: RoleToggleP
     setError(null);
 
     try {
-      const res = await fetch(`/api/admin/users/${userId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role: pendingRole }),
+      await runWithLoading(async () => {
+        const res = await fetch(`/api/admin/users/${userId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ role: pendingRole }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to update role");
+
+        setRole(pendingRole);
+        setConfirmOpen(false);
+        setPendingRole(null);
+        router.refresh();
       });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to update role");
-
-      setRole(pendingRole);
-      setConfirmOpen(false);
-      setPendingRole(null);
-      router.refresh();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Update failed";
       setError(message);

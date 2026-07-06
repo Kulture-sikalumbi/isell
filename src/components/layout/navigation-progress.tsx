@@ -1,16 +1,37 @@
 "use client";
 
 import { usePathname, useSearchParams } from "next/navigation";
-import { Suspense, createContext, useCallback, useContext, useEffect, useState } from "react";
+import {
+  Suspense,
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { GlobalLoadingOverlay } from "@/components/layout/global-loading-overlay";
+
+const LOADING_SAFETY_MS = 12_000;
 
 interface NavigationContextValue {
+  isLoading: boolean;
+  /** @deprecated use startLoading */
   isNavigating: boolean;
+  startLoading: () => void;
+  stopLoading: () => void;
   startNavigation: () => void;
+  runWithLoading: <T>(fn: () => Promise<T>) => Promise<T>;
 }
 
 const NavigationContext = createContext<NavigationContextValue>({
+  isLoading: false,
   isNavigating: false,
+  startLoading: () => {},
+  stopLoading: () => {},
   startNavigation: () => {},
+  runWithLoading: async (fn) => fn(),
 });
 
 export function useNavigationLoading() {
@@ -28,44 +49,107 @@ export function NavigationProgressProvider({ children }: { children: React.React
 function NavigationProgressInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [isNavigating, setIsNavigating] = useState(false);
+  const [loadingCount, setLoadingCount] = useState(0);
+  const safetyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const startNavigation = useCallback(() => setIsNavigating(true), []);
+  const clearSafetyTimer = useCallback(() => {
+    if (safetyTimerRef.current) {
+      clearTimeout(safetyTimerRef.current);
+      safetyTimerRef.current = null;
+    }
+  }, []);
+
+  const startLoading = useCallback(() => {
+    setLoadingCount((c) => c + 1);
+    clearSafetyTimer();
+    safetyTimerRef.current = setTimeout(() => {
+      setLoadingCount(0);
+    }, LOADING_SAFETY_MS);
+  }, [clearSafetyTimer]);
+
+  const stopLoading = useCallback(() => {
+    setLoadingCount((c) => Math.max(0, c - 1));
+    clearSafetyTimer();
+  }, [clearSafetyTimer]);
+
+  const startNavigation = startLoading;
+
+  const runWithLoading = useCallback(
+    async <T,>(fn: () => Promise<T>): Promise<T> => {
+      startLoading();
+      try {
+        return await fn();
+      } finally {
+        stopLoading();
+      }
+    },
+    [startLoading, stopLoading]
+  );
+
+  const isLoading = loadingCount > 0;
 
   useEffect(() => {
-    setIsNavigating(false);
-  }, [pathname, searchParams]);
+    setLoadingCount(0);
+    clearSafetyTimer();
+  }, [pathname, searchParams, clearSafetyTimer]);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       const target = e.target as HTMLElement | null;
-      const anchor = target?.closest("a");
-      if (!anchor) return;
+      if (!target) return;
 
-      const href = anchor.getAttribute("href");
-      if (!href || href.startsWith("#") || anchor.target === "_blank") return;
-      if (href.startsWith("http") && !href.startsWith(window.location.origin)) return;
+      const anchor = target.closest("a");
+      if (anchor) {
+        const href = anchor.getAttribute("href");
+        if (!href || href.startsWith("#") || anchor.target === "_blank") return;
+        if (href.startsWith("http") && !href.startsWith(window.location.origin)) return;
+        if (anchor.hasAttribute("download")) return;
 
-      const url = new URL(href, window.location.origin);
-      const nextPath = url.pathname;
-      const nextSearch = url.search;
-      const currentSearch = window.location.search;
+        const url = new URL(href, window.location.origin);
+        const nextPath = url.pathname;
+        const nextSearch = url.search;
+        const currentSearch = window.location.search;
 
-      if (nextPath !== pathname || nextSearch !== currentSearch) {
-        setIsNavigating(true);
+        if (nextPath !== pathname || nextSearch !== currentSearch) {
+          startLoading();
+        }
+        return;
+      }
+
+      if (target.closest("[data-global-loading]")) {
+        startLoading();
       }
     }
 
     document.addEventListener("click", handleClick, true);
-    return () => document.removeEventListener("click", handleClick, true);
-  }, [pathname]);
+
+    function handleSubmit() {
+      startLoading();
+    }
+
+    document.addEventListener("submit", handleSubmit, true);
+
+    return () => {
+      document.removeEventListener("click", handleClick, true);
+      document.removeEventListener("submit", handleSubmit, true);
+    };
+  }, [pathname, startLoading]);
+
+  const value = useMemo(
+    () => ({
+      isLoading,
+      isNavigating: isLoading,
+      startLoading,
+      stopLoading,
+      startNavigation,
+      runWithLoading,
+    }),
+    [isLoading, startLoading, stopLoading, startNavigation, runWithLoading]
+  );
 
   return (
-    <NavigationContext.Provider value={{ isNavigating, startNavigation }}>
-      <div
-        className={`nav-progress-bar ${isNavigating ? "nav-progress-bar--active" : ""}`}
-        aria-hidden
-      />
+    <NavigationContext.Provider value={value}>
+      <GlobalLoadingOverlay visible={isLoading} />
       {children}
     </NavigationContext.Provider>
   );

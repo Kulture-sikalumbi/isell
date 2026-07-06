@@ -15,6 +15,7 @@ import {
 import type { StorefrontTool } from "@/lib/storefront-tool";
 import { formatCurrency } from "@/lib/utils";
 import { useConnectivityOptional } from "@/components/layout/connectivity-provider";
+import { useNavigationLoading } from "@/components/layout/navigation-progress";
 import { offlineAwareFetch, offlineMessage } from "@/lib/offline-fetch";
 
 interface CheckoutFormProps {
@@ -33,6 +34,7 @@ export function CheckoutForm({
   currency = getSiteCurrency(),
 }: CheckoutFormProps) {
   const connectivity = useConnectivityOptional();
+  const { stopLoading } = useNavigationLoading();
   const [hardwareId, setHardwareId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -48,6 +50,7 @@ export function CheckoutForm({
     if (connectivity && !connectivity.isOnline) {
       setError("You're offline. Reconnect to checkout — you're still signed in.");
       setLoading(false);
+      stopLoading();
       return;
     }
 
@@ -79,6 +82,7 @@ export function CheckoutForm({
       setError(offlineMessage(err));
     } finally {
       setLoading(false);
+      stopLoading();
     }
   }
 

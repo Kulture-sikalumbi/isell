@@ -33,12 +33,14 @@ export function Button({
   children,
   loading = false,
   disabled,
+  type = "button",
   ...props
 }: ButtonProps) {
   const isDisabled = disabled || loading;
 
   return (
     <button
+      type={type}
       className={cn(
         "inline-flex items-center justify-center gap-2 font-medium transition-all duration-200",
         "active:scale-[0.97] touch-manipulation",
