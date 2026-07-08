@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ReceiptDownloadButton } from "@/components/dashboard/receipt-download-button";
 import { getCustomerIdentifierLabel } from "@/lib/identifier-label";
+import { formatOrderNumber } from "@/lib/order-number";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { getSiteCurrency } from "@/lib/currency";
 import type { Activation, Payment } from "@/types/database";
@@ -62,7 +63,7 @@ export function OrderCard({ payment, activation }: OrderCardProps) {
             {payment.tool?.name ?? "Tool order"}
           </h3>
           <p className="text-xs text-zinc-500 mt-1 font-mono">
-            Invoice #{payment.provider_reference ?? payment.id.slice(0, 8)}
+            Order #{formatOrderNumber(payment)}
             {isWallet && (
               <span className="text-cyan-500/80 ml-2">· Paid from wallet</span>
             )}
@@ -142,7 +143,7 @@ export function OrderCard({ payment, activation }: OrderCardProps) {
         <div className="mt-4 pt-4 border-t border-white/5">
           <ReceiptDownloadButton
             paymentId={payment.id}
-            receiptNumber={payment.provider_reference ?? payment.id.slice(0, 8)}
+            receiptNumber={formatOrderNumber(payment)}
           />
         </div>
       )}

@@ -1,11 +1,12 @@
 import { Badge } from "@/components/ui/badge";
-import { PaymentFulfillAction } from "@/components/admin/payment-fulfill-action";
+import { PaymentOrderActions } from "@/components/admin/payment-order-actions";
 import {
   adminPaymentStatus,
   paymentNeedsFulfillment,
   sortPaymentsForAdmin,
   type AdminPaymentRow,
 } from "@/lib/payment-fulfillment";
+import { formatOrderNumber } from "@/lib/order-number";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { Payment } from "@/types/database";
 
@@ -41,6 +42,7 @@ export function PaymentsTable({ payments, showActions = false }: PaymentsTablePr
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-white/5 text-left text-zinc-500">
+                <th className="px-6 py-4 font-medium">Order #</th>
                 <th className="px-6 py-4 font-medium">Tool</th>
                 <th className="px-6 py-4 font-medium">Customer</th>
                 <th className="px-6 py-4 font-medium">IMEI / ID</th>
@@ -64,10 +66,11 @@ export function PaymentsTable({ payments, showActions = false }: PaymentsTablePr
                         : "hover:bg-white/[0.02]"
                     }`}
                   >
+                    <td className="px-6 py-4 font-mono text-xs text-cyan-300/90 whitespace-nowrap">
+                      {formatOrderNumber(payment)}
+                    </td>
                     <td className="px-6 py-4">
-                      <div className="font-medium text-white">
-                        {payment.tool?.name ?? "—"}
-                      </div>
+                      <div className="text-white">{payment.tool?.name ?? "—"}</div>
                       {payment.tool?.external_service_name && (
                         <div className="text-xs text-zinc-500 mt-0.5">
                           → {payment.tool.external_service_name}
@@ -96,7 +99,7 @@ export function PaymentsTable({ payments, showActions = false }: PaymentsTablePr
                     </td>
                     {showActions && (
                       <td className="px-6 py-4 align-top">
-                        <PaymentFulfillAction payment={payment} />
+                        <PaymentOrderActions payment={payment} />
                       </td>
                     )}
                   </tr>

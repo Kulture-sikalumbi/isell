@@ -2,6 +2,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { alertAdminNewOrder } from "@/lib/admin-alerts";
 import { sendAdminOrderEmail } from "@/lib/email";
 import { formatSiteCurrency, resolveDisplayCurrency } from "@/lib/currency";
+import { formatOrderNumber } from "@/lib/order-number";
 import type { Payment, Tool } from "@/types/database";
 
 export async function notifyAdminNewOrder(payment: Payment & { tool?: Tool }) {
@@ -12,7 +13,8 @@ export async function notifyAdminNewOrder(payment: Payment & { tool?: Tool }) {
   const currency = resolveDisplayCurrency(payment.currency);
   const amountLabel = formatSiteCurrency(Number(payment.amount), currency);
   const title = `New order: ${tool.name}`;
-  const message = `${payment.tool.identifier_label ?? "ID"} ${payment.hardware_id} — ${amountLabel}. Reference: ${payment.provider_reference ?? payment.id}`;
+  const orderRef = formatOrderNumber(payment);
+  const message = `${payment.tool.identifier_label ?? "ID"} ${payment.hardware_id} — ${amountLabel}. Order: ${orderRef}`;
 
   await supabase.from("admin_notifications").insert({
     type: "new_order",
@@ -28,7 +30,7 @@ export async function notifyAdminNewOrder(payment: Payment & { tool?: Tool }) {
       toolName: tool.name,
       hardwareId: payment.hardware_id,
       amount: amountLabel,
-      reference: payment.provider_reference ?? payment.id,
+      reference: orderRef,
       appUrl,
     }),
     alertAdminNewOrder({
@@ -36,7 +38,7 @@ export async function notifyAdminNewOrder(payment: Payment & { tool?: Tool }) {
       hardwareId: payment.hardware_id,
       amount: Number(payment.amount),
       currency,
-      reference: payment.provider_reference ?? payment.id,
+      reference: orderRef,
       appUrl,
     }),
   ]);

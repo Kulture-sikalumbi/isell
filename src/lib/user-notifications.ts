@@ -118,6 +118,25 @@ export async function notifyDepositConfirmed(input: {
   });
 }
 
+export async function notifyOrderRefunded(input: {
+  userId: string;
+  orderNumber: string;
+  amount: number;
+  currency: string;
+  toolName: string;
+  note?: string;
+}) {
+  const amountLabel = formatSiteCurrency(input.amount, input.currency);
+  const reason = input.note?.trim() ? ` Reason: ${input.note.trim()}` : "";
+  await notifyUser({
+    userId: input.userId,
+    type: "order_refunded",
+    title: `Order ${input.orderNumber} refunded`,
+    message: `Your order for ${input.toolName} was rejected. ${amountLabel} was returned to your wallet.${reason}`,
+    link: "/dashboard?tab=wallet",
+  });
+}
+
 export async function notifySupportReply(input: {
   userId: string;
   preview: string;

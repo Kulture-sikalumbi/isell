@@ -40,7 +40,23 @@ export function readToolsCache(): AssistantToolsCache | null {
 
 export function writeToolsCache(cache: AssistantToolsCache) {
   if (typeof window === "undefined") return;
-  localStorage.setItem(ASSISTANT_STORAGE_KEYS.toolsCache, JSON.stringify(cache));
+  // Keep the assistant cache small so we never block Supabase auth token writes
+  // (Supabase uses localStorage key like `sb-...-auth-token`).
+  const safe: AssistantToolsCache = {
+    ...cache,
+    tools: Array.isArray(cache.tools) ? cache.tools.slice(0, 300) : [],
+  };
+
+  try {
+    localStorage.setItem(ASSISTANT_STORAGE_KEYS.toolsCache, JSON.stringify(safe));
+  } catch {
+    // If storage quota is exceeded, drop our cache first (auth must win).
+    try {
+      localStorage.removeItem(ASSISTANT_STORAGE_KEYS.toolsCache);
+    } catch {
+      /* ignore */
+    }
+  }
 }
 
 export function isBubbleDismissed(): boolean {

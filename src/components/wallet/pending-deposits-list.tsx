@@ -15,10 +15,13 @@ const methodLabels = {
 
 function statusMeta(deposit: WalletDeposit) {
   if (deposit.status === "pending") {
+    const isMtnApi = deposit.provider === "mtn_momo";
     return {
-      label: "Processing",
+      label: isMtnApi ? "Awaiting MTN approval" : "Processing",
       variant: "info" as const,
-      hint: "Admin is verifying your payment. Balance updates after confirmation.",
+      hint: isMtnApi
+        ? "Approve the request on your phone. Wallet updates automatically after MTN confirms."
+        : "Admin is verifying your payment. Balance updates after confirmation.",
     };
   }
   if (deposit.status === "confirmed") {
@@ -38,7 +41,7 @@ function statusMeta(deposit: WalletDeposit) {
 export function PendingDepositsList({ deposits }: PendingDepositsListProps) {
   const relevant = deposits.filter(
     (d) =>
-      (d.status === "pending" && d.transaction_id) ||
+      d.status === "pending" ||
       d.status === "rejected"
   );
 

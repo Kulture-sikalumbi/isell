@@ -68,9 +68,12 @@ export interface Payment {
   currency: string;
   provider: string | null;
   provider_reference: string | null;
+  order_number: string;
   status: PaymentStatus;
   fulfillment_status: FulfillmentStatus | null;
   platform_fee: number;
+  refund_note: string | null;
+  refunded_at: string | null;
   created_at: string;
   completed_at: string | null;
   tool?: Tool;
@@ -94,6 +97,10 @@ export interface WalletDeposit {
   currency: string;
   method: DepositMethod;
   transaction_id: string | null;
+  provider: string | null;
+  provider_reference: string | null;
+  provider_status: string | null;
+  provider_payload: Record<string, unknown> | null;
   sender_phone: string | null;
   sender_name: string | null;
   reference: string;

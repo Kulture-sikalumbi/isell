@@ -105,7 +105,6 @@ export async function getPendingWalletDeposits(userId: string): Promise<WalletDe
     .select("*")
     .eq("user_id", userId)
     .eq("status", "pending")
-    .not("transaction_id", "is", null)
     .order("created_at", { ascending: false })
     .limit(20);
 
@@ -301,10 +300,57 @@ export async function purchaseWithWallet(input: {
     error?: string;
     payment_id?: string;
     reference?: string;
+    order_number?: string;
     balance?: number;
     fulfillment_mode?: string;
     required?: number;
   };
+
+  return result;
+}
+
+export async function refundWalletPayment(paymentId: string, adminNote?: string) {
+  const supabase = createServiceClient();
+  if (!supabase) return { ok: false, error: "Database not configured" };
+
+  const { data: payment } = await supabase
+    .from("payments")
+    .select("user_id, order_number, amount, platform_fee, currency, tool:tools(name)")
+    .eq("id", paymentId)
+    .single();
+
+  if (!payment) return { ok: false, error: "Order not found" };
+
+  const { data, error } = await supabase.rpc("refund_wallet_payment", {
+    p_payment_id: paymentId,
+    p_admin_note: adminNote ?? null,
+  });
+
+  if (error) return { ok: false, error: error.message };
+
+  const result = data as {
+    ok: boolean;
+    error?: string;
+    balance?: number;
+    refund_amount?: number;
+    order_number?: string;
+  };
+
+  if (!result.ok) return { ok: false, error: result.error || "Refund failed" };
+
+  if (payment.user_id) {
+    const toolName =
+      (payment.tool as { name?: string } | null)?.name ?? "activation";
+    const { notifyOrderRefunded } = await import("@/lib/user-notifications");
+    await notifyOrderRefunded({
+      userId: payment.user_id,
+      orderNumber: result.order_number ?? payment.order_number,
+      amount: Number(result.refund_amount ?? payment.amount) + Number(payment.platform_fee ?? 0),
+      currency: payment.currency,
+      toolName,
+      note: adminNote,
+    });
+  }
 
   return result;
 }
@@ -431,6 +477,100 @@ export async function createDepositIntent(input: {
   if (error || !data) return null;
 
   return data;
+}
+
+export async function getDepositByIdForUser(depositId: string, userId: string) {
+  const supabase = createServiceClient();
+  if (!supabase) return null;
+
+  const { data } = await supabase
+    .from("wallet_deposits")
+    .select("*")
+    .eq("id", depositId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  return data as WalletDeposit | null;
+}
+
+export async function setDepositProviderReference(input: {
+  depositId: string;
+  provider: string;
+  providerReference?: string | null;
+  providerStatus?: string;
+  providerPayload?: Record<string, unknown>;
+}) {
+  const supabase = createServiceClient();
+  if (!supabase) return { ok: false, error: "Database not configured" };
+
+  const { data, error } = await supabase
+    .from("wallet_deposits")
+    .update({
+      provider: input.provider,
+      provider_reference: input.providerReference ?? null,
+      provider_status: input.providerStatus ?? "PENDING",
+      provider_payload: input.providerPayload ?? null,
+    })
+    .eq("id", input.depositId)
+    .eq("status", "pending")
+    .select("*")
+    .maybeSingle();
+
+  if (error) return { ok: false, error: error.message };
+  if (!data) return { ok: false, error: "Deposit not found or already processed" };
+  return { ok: true, deposit: data as WalletDeposit };
+}
+
+export async function updateDepositProviderStatus(input: {
+  depositId: string;
+  providerStatus: string;
+  providerPayload?: Record<string, unknown>;
+}) {
+  const supabase = createServiceClient();
+  if (!supabase) return { ok: false, error: "Database not configured" };
+
+  const updates: Record<string, unknown> = {
+    provider_status: input.providerStatus,
+  };
+  if (input.providerPayload) {
+    updates.provider_payload = input.providerPayload;
+  }
+
+  const { data, error } = await supabase
+    .from("wallet_deposits")
+    .update(updates)
+    .eq("id", input.depositId)
+    .select("*")
+    .maybeSingle();
+
+  if (error) return { ok: false, error: error.message };
+  if (!data) return { ok: false, error: "Deposit not found" };
+  return { ok: true, deposit: data as WalletDeposit };
+}
+
+export async function confirmDepositFromProvider(depositId: string, providerNote?: string) {
+  const supabase = createServiceClient();
+  if (!supabase) return { ok: false, error: "Database not configured" };
+
+  const { data } = await supabase
+    .from("wallet_deposits")
+    .select("status")
+    .eq("id", depositId)
+    .maybeSingle();
+
+  if (!data) return { ok: false, error: "Deposit not found" };
+  if (data.status === "confirmed") return { ok: true, alreadyConfirmed: true };
+  if (data.status !== "pending") return { ok: false, error: "Deposit cannot be confirmed" };
+
+  const { data: result, error } = await supabase.rpc("confirm_wallet_deposit", {
+    p_deposit_id: depositId,
+    p_admin_note: providerNote ?? "Auto-confirmed from provider callback",
+  });
+  if (error) return { ok: false, error: error.message };
+
+  const typed = result as { ok: boolean; error?: string; balance?: number };
+  if (!typed.ok) return { ok: false, error: typed.error || "Failed to confirm deposit" };
+  return { ok: true, balance: typed.balance };
 }
 
 export async function submitDepositTransactionId(

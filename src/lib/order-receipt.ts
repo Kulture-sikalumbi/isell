@@ -1,4 +1,5 @@
 import { formatSiteCurrency, getCurrencyLabel, resolveDisplayCurrency } from "@/lib/currency";
+import { formatOrderNumber } from "@/lib/order-number";
 import { getCustomerIdentifierLabel } from "@/lib/identifier-label";
 import { formatDate } from "@/lib/utils";
 import type { Activation, Payment } from "@/types/database";
@@ -47,7 +48,7 @@ export function buildOrderReceiptData(input: {
   else if (payment.fulfillment_status === "fulfilled") fulfillmentLabel = "Activation delivered";
 
   return {
-    receiptNumber: payment.provider_reference ?? payment.id.slice(0, 8).toUpperCase(),
+    receiptNumber: formatOrderNumber(payment),
     paymentId: payment.id,
     issuedAt: formatDate(payment.created_at),
     paidAt: payment.completed_at ? formatDate(payment.completed_at) : null,

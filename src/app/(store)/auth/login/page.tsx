@@ -12,6 +12,8 @@ function LoginContent() {
   const error = searchParams.get("error");
   const reason = searchParams.get("reason");
 
+  const sessionExpired = reason === "session_expired";
+
   return (
     <section className="pt-28 pb-20 flex items-center justify-center min-h-[70vh]">
       <div className="w-full max-w-md px-6">
@@ -26,7 +28,13 @@ function LoginContent() {
         </div>
 
         <div className="glass rounded-2xl p-8">
-          {error && (
+          {sessionExpired && (
+            <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 px-4 py-3 text-sm text-amber-200 mb-5">
+              Your session ended due to inactivity. Please sign in again.
+            </div>
+          )}
+
+          {error && !sessionExpired && (
             <div className="rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-3 text-sm text-red-400 mb-5">
               Sign-in failed. Please try again.
               {reason && (

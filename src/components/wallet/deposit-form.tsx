@@ -82,6 +82,18 @@ function DepositSuccessModal({
 
   if (!open || !mounted) return null;
 
+  const isMtnApi = deposit.provider === "mtn_momo";
+  const isConfirmed = deposit.status === "confirmed";
+  const isRejected = deposit.status === "rejected";
+  const badgeVariant = isRejected ? "danger" : isConfirmed ? "success" : isMtnApi ? "info" : "warning";
+  const badgeLabel = isRejected
+    ? "Payment failed"
+    : isConfirmed
+      ? "Wallet credited"
+      : isMtnApi
+        ? "Processing with MTN"
+        : "Awaiting admin verification";
+
   return createPortal(
     <div
       className="fixed inset-0 z-[250] overflow-y-auto overscroll-contain"
@@ -112,16 +124,19 @@ function DepositSuccessModal({
 
           <CheckCircle2 className="h-14 w-14 text-emerald-400 mx-auto" />
           <h3 id="deposit-success-title" className="text-lg sm:text-xl font-semibold text-white">
-            Deposit submitted
+            {isRejected ? "Deposit was not completed" : isMtnApi ? "MTN request started" : "Deposit submitted"}
           </h3>
-          <Badge variant="warning">Awaiting admin verification</Badge>
+          <Badge variant={badgeVariant}>{badgeLabel}</Badge>
           <p className="text-sm text-zinc-400">
             Reference{" "}
             <span className="font-mono text-white">{deposit.reference}</span>
           </p>
           <p className="text-sm text-zinc-500 leading-relaxed">
-            Admin will verify your payment and credit your wallet. You&apos;ll get an inbox
-            notification when it&apos;s confirmed.
+            {isRejected
+              ? "MTN did not complete this payment. You can try again with the same amount."
+              : isMtnApi
+                ? "Approve the payment prompt on your phone. Your wallet is credited automatically after MTN confirms."
+                : "Admin will verify your payment and credit your wallet. You&apos;ll get an inbox notification when it&apos;s confirmed."}
           </p>
           <Button type="button" variant="secondary" className="w-full" onClick={onMakeAnother}>
             Make another deposit
@@ -249,6 +264,7 @@ export function DepositForm({ merchants, currency }: DepositFormProps) {
   const [method, setMethod] = useState<DepositMethod | null>(null);
   const [amount, setAmount] = useState("");
   const [transactionId, setTransactionId] = useState("");
+  const [mtnPhoneNumber, setMtnPhoneNumber] = useState("");
   const [senderPhone, setSenderPhone] = useState("");
   const [senderName, setSenderName] = useState("");
   const [loading, setLoading] = useState(false);
@@ -264,6 +280,31 @@ export function DepositForm({ merchants, currency }: DepositFormProps) {
   const merchantNumber = method ? merchantFor(method, merchants) : "";
   const methodMeta = methods.find((m) => m.id === method);
 
+  useEffect(() => {
+    if (!submittedDeposit || submittedDeposit.provider !== "mtn_momo") return;
+    if (submittedDeposit.status !== "pending") return;
+
+    let cancelled = false;
+    const timer = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/wallet/deposit/${submittedDeposit.id}`);
+        const data = await res.json();
+        if (!res.ok || cancelled || !data.deposit) return;
+        setSubmittedDeposit(data.deposit as WalletDeposit);
+        if ((data.deposit as WalletDeposit).status !== "pending") {
+          router.refresh();
+        }
+      } catch {
+        // Silent retry while user keeps modal open.
+      }
+    }, 6000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [router, submittedDeposit]);
+
   async function selectMethod(selected: DepositMethod) {
     if (!amount || parsedAmount < 1) {
       setError("Enter how much you want to deposit first");
@@ -271,7 +312,7 @@ export function DepositForm({ merchants, currency }: DepositFormProps) {
     }
 
     const number = merchantFor(selected, merchants);
-    if (!number) {
+    if (selected !== "mtn" && !number) {
       setError(`${methodLabel(selected)} merchant number is not set up yet. Contact admin.`);
       return;
     }
@@ -307,16 +348,25 @@ export function DepositForm({ merchants, currency }: DepositFormProps) {
     setError("");
 
     try {
-      const res = await offlineAwareFetch("/api/wallet/deposit", {
+      const endpoint = method === "mtn" ? "/api/mtn/deposit" : "/api/wallet/deposit";
+      const payload =
+        method === "mtn"
+          ? {
+              amount: parsedAmount,
+              phone_number: mtnPhoneNumber,
+            }
+          : {
+              amount: parsedAmount,
+              method,
+              transaction_id: transactionId,
+              sender_phone: senderPhone,
+              sender_name: senderName,
+            };
+
+      const res = await offlineAwareFetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amount: parsedAmount,
-          method,
-          transaction_id: transactionId,
-          sender_phone: senderPhone,
-          sender_name: senderName,
-        }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to submit deposit");
@@ -344,6 +394,7 @@ export function DepositForm({ merchants, currency }: DepositFormProps) {
     setSubmittedDeposit(null);
     setAmount("");
     setTransactionId("");
+    setMtnPhoneNumber("");
     setSenderPhone("");
     setSenderName("");
     setPaymentConfirmed(false);
@@ -366,6 +417,52 @@ export function DepositForm({ merchants, currency }: DepositFormProps) {
   if (step === "pay" && method) {
     const label = methodLabel(method);
     const ussd = methodMeta?.ussd;
+
+    if (method === "mtn") {
+      return (
+        <form onSubmit={handleSubmitDeposit} className="space-y-6">
+          <div className="flex items-center gap-3">
+            <MtnMoMoIcon className="h-10 w-10 text-[10px]" />
+            <div>
+              <h3 className="font-semibold text-white">Deposit with MTN MoMo API</h3>
+              <p className="text-sm text-zinc-500">
+                {formatCurrency(parsedAmount, currency)} will be requested on your phone.
+              </p>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-cyan-500/25 bg-cyan-500/10 px-4 py-3 text-sm text-cyan-100">
+            Enter your MTN number, then approve the payment prompt from MTN on your device.
+          </div>
+
+          <Input
+            variant="emphasized"
+            label="MTN phone number"
+            placeholder="e.g. 0970105334"
+            value={mtnPhoneNumber}
+            onChange={(e) => setMtnPhoneNumber(e.target.value)}
+            required
+            autoFocus
+            hint="Use the number with enough balance to complete this deposit"
+          />
+
+          {error && (
+            <div className="rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-3 text-sm text-red-400">
+              {error}
+            </div>
+          )}
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button type="button" variant="secondary" onClick={resetForm}>
+              Back — change amount
+            </Button>
+            <Button type="submit" size="lg" className="flex-1" loading={loading} disabled={!mtnPhoneNumber.trim()}>
+              Send MTN payment prompt
+            </Button>
+          </div>
+        </form>
+      );
+    }
 
     if (!paymentConfirmed) {
       return (
@@ -618,7 +715,7 @@ export function DepositForm({ merchants, currency }: DepositFormProps) {
           {methods.map((m) => {
             const number = merchantFor(m.id, merchants);
             const isLoading = loadingMethod === m.id;
-            const disabled = Boolean(loadingMethod) || !number;
+            const disabled = Boolean(loadingMethod) || (m.id !== "mtn" && !number);
 
             return (
               <button
