@@ -76,9 +76,11 @@ export async function GET(request: NextRequest) {
 
   let destination = safeNext;
   if (user) {
-    void sendWelcomeEmailIfNeeded(user.id).catch((err) =>
-      console.error("[welcome-email]", err)
-    );
+    try {
+      await sendWelcomeEmailIfNeeded(user.id);
+    } catch (err) {
+      console.error("[welcome-email]", err);
+    }
 
     const { data: profile } = await supabase
       .from("profiles")

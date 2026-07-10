@@ -9,9 +9,11 @@ export async function GET(request: Request) {
     return NextResponse.json({ path: "/auth/login" }, { status: 401 });
   }
 
-  void sendWelcomeEmailIfNeeded(user.id).catch((err) =>
-    console.error("[welcome-email]", err)
-  );
+  try {
+    await sendWelcomeEmailIfNeeded(user.id);
+  } catch (err) {
+    console.error("[welcome-email]", err);
+  }
 
   const profile = await getCurrentProfile();
   const { searchParams } = new URL(request.url);
