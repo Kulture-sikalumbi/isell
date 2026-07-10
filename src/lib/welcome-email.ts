@@ -2,16 +2,53 @@ import { sendWelcomeEmail } from "@/lib/email";
 import { createServiceClient } from "@/lib/supabase/server";
 import { notifyUser } from "@/lib/user-notifications";
 
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+interface WelcomeAuthHint {
+  email?: string;
+  fullName?: string;
+}
+
+async function loadWelcomeProfile(userId: string, hint?: WelcomeAuthHint) {
+  const supabase = createServiceClient();
+  if (!supabase) return null;
+
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("email, full_name, role, welcome_email_sent_at")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (profile) return profile;
+
+    if (attempt < 5) await sleep(300);
+  }
+
+  const email = hint?.email?.trim();
+  if (!email) return null;
+
+  const fullName = hint?.fullName?.trim() || null;
+
+  return {
+    email,
+    full_name: fullName,
+    role: "user" as const,
+    welcome_email_sent_at: null,
+  };
+}
+
 /** Send welcome email + in-app tip once per customer account. Skips admins. */
-export async function sendWelcomeEmailIfNeeded(userId: string): Promise<boolean> {
+export async function sendWelcomeEmailIfNeeded(
+  userId: string,
+  hint?: WelcomeAuthHint
+): Promise<boolean> {
   const supabase = createServiceClient();
   if (!supabase || !userId) return false;
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("email, full_name, role, welcome_email_sent_at")
-    .eq("id", userId)
-    .maybeSingle();
+  const profile = await loadWelcomeProfile(userId, hint);
 
   if (
     !profile ||
@@ -23,7 +60,7 @@ export async function sendWelcomeEmailIfNeeded(userId: string): Promise<boolean>
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  const customerName = profile.full_name?.trim() || null;
+  const customerName = profile.full_name?.trim() || hint?.fullName?.trim() || null;
   const email = profile.email.trim();
 
   const sent = await sendWelcomeEmail({

@@ -12,7 +12,8 @@ interface SendEmailInput {
 
 export async function sendEmail(input: SendEmailInput): Promise<boolean> {
   const apiKey = process.env.RESEND_API_KEY?.trim();
-  const from = process.env.EMAIL_FROM?.trim() || "iSell Unlocks <onboarding@resend.dev>";
+  const rawFrom = process.env.EMAIL_FROM?.trim() || "onboarding@resend.dev";
+  const from = rawFrom.includes("<") ? rawFrom : `iSell Unlocks <${rawFrom}>`;
   const recipients = (Array.isArray(input.to) ? input.to : [input.to]).filter(Boolean);
 
   if (recipients.length === 0) {

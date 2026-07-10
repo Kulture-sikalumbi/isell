@@ -77,8 +77,13 @@ export function GoogleSignInButton({
         return;
       }
 
+      await supabase.auth.getSession();
+
       try {
-        const res = await fetch(`/api/auth/post-login?next=${encodeURIComponent(next)}`);
+        const res = await fetch(`/api/auth/post-login?next=${encodeURIComponent(next)}`, {
+          credentials: "include",
+          cache: "no-store",
+        });
         const data = await res.json();
         window.location.href = data.path || next;
       } catch {
