@@ -315,7 +315,9 @@ export async function refundWalletPayment(paymentId: string, adminNote?: string)
 
   const { data: payment } = await supabase
     .from("payments")
-    .select("user_id, order_number, amount, platform_fee, currency, tool:tools(name)")
+    .select(
+      "user_id, order_number, hardware_id, amount, platform_fee, currency, tool:tools(name, identifier_label)"
+    )
     .eq("id", paymentId)
     .single();
 
@@ -338,9 +340,9 @@ export async function refundWalletPayment(paymentId: string, adminNote?: string)
 
   if (!result.ok) return { ok: false, error: result.error || "Refund failed" };
 
-  if (payment.user_id) {
-    const toolName =
-      (payment.tool as { name?: string } | null)?.name ?? "activation";
+  if (payment.user_id && adminNote?.trim()) {
+    const tool = payment.tool as { name?: string; identifier_label?: string } | null;
+    const toolName = tool?.name ?? "activation";
     const { notifyOrderRefunded } = await import("@/lib/user-notifications");
     await notifyOrderRefunded({
       userId: payment.user_id,
@@ -348,7 +350,9 @@ export async function refundWalletPayment(paymentId: string, adminNote?: string)
       amount: Number(result.refund_amount ?? payment.amount) + Number(payment.platform_fee ?? 0),
       currency: payment.currency,
       toolName,
-      note: adminNote,
+      hardwareId: payment.hardware_id,
+      identifierLabel: tool?.identifier_label,
+      note: adminNote.trim(),
     });
   }
 

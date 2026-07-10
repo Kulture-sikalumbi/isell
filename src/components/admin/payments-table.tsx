@@ -33,7 +33,7 @@ export function PaymentsTable({ payments, showActions = false }: PaymentsTablePr
       {showActions && needsCount > 0 && (
         <p className="text-sm text-amber-200/90">
           <strong>{needsCount}</strong> order{needsCount !== 1 ? "s" : ""} waiting for an activation
-          key — use <strong>Send key</strong> in the Action column.
+          key — use <strong>Send key</strong> or <strong>Reject order</strong> in the Action column.
         </p>
       )}
 

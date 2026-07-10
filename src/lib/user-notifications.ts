@@ -1,5 +1,5 @@
 import { getUserEmail } from "@/lib/auth";
-import { sendActivationReadyEmail } from "@/lib/email";
+import { sendActivationReadyEmail, sendOrderRejectedEmail } from "@/lib/email";
 import { formatSiteCurrency } from "@/lib/currency";
 import { createServiceClient } from "@/lib/supabase/server";
 
@@ -124,16 +124,46 @@ export async function notifyOrderRefunded(input: {
   amount: number;
   currency: string;
   toolName: string;
-  note?: string;
+  hardwareId: string;
+  identifierLabel?: string;
+  note: string;
 }) {
   const amountLabel = formatSiteCurrency(input.amount, input.currency);
-  const reason = input.note?.trim() ? ` Reason: ${input.note.trim()}` : "";
+  const reason = input.note.trim();
+
   await notifyUser({
     userId: input.userId,
     type: "order_refunded",
-    title: `Order ${input.orderNumber} refunded`,
-    message: `Your order for ${input.toolName} was rejected. ${amountLabel} was returned to your wallet.${reason}`,
-    link: "/dashboard?tab=wallet",
+    title: `Order ${input.orderNumber} rejected`,
+    message: `Your order for ${input.toolName} was rejected. ${amountLabel} was returned to your wallet.\n\nReason: ${reason}`,
+    link: "/dashboard?tab=orders",
+  });
+
+  const email = await getUserEmail(input.userId);
+  if (!email) return;
+
+  const supabase = createServiceClient();
+  let customerName: string | null = null;
+  if (supabase) {
+    const { data } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", input.userId)
+      .single();
+    customerName = data?.full_name ?? null;
+  }
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  await sendOrderRejectedEmail({
+    to: email,
+    orderNumber: input.orderNumber,
+    toolName: input.toolName,
+    hardwareId: input.hardwareId,
+    identifierLabel: input.identifierLabel,
+    refundAmount: amountLabel,
+    reason,
+    appUrl,
+    customerName,
   });
 }
 

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Check, Copy, KeyRound, Loader2 } from "lucide-react";
+import { Check, Copy, KeyRound, Loader2, Wallet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ReceiptDownloadButton } from "@/components/dashboard/receipt-download-button";
@@ -47,6 +47,7 @@ export function OrderCard({ payment, activation }: OrderCardProps) {
   const displayCurrency = getSiteCurrency();
   const isAwaiting = payment.fulfillment_status === "awaiting";
   const hasKey = Boolean(activation?.activation_code);
+  const isRefunded = payment.status === "refunded";
 
   function copyCode() {
     if (!activation?.activation_code) return;
@@ -86,6 +87,31 @@ export function OrderCard({ payment, activation }: OrderCardProps) {
           </p>
         </div>
       </div>
+
+      {isRefunded && (
+        <div className="mt-4 rounded-xl border border-zinc-500/25 bg-zinc-500/5 p-4">
+          <div className="flex items-start gap-3">
+            <Wallet className="h-5 w-5 text-zinc-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-zinc-200">Order rejected — wallet refunded</p>
+              <p className="text-sm text-zinc-400 mt-1">
+                <strong className="text-white font-medium">
+                  {formatCurrency(totalPaid, displayCurrency)}
+                </strong>{" "}
+                was returned to your wallet.
+              </p>
+              {payment.refund_note && (
+                <p className="text-sm text-zinc-500 mt-2 rounded-lg bg-black/30 border border-white/5 px-3 py-2 leading-relaxed">
+                  <span className="text-zinc-600 text-xs uppercase tracking-wide block mb-1">
+                    Reason
+                  </span>
+                  {payment.refund_note}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {hasKey && activation && (
         <div className="mt-4 rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-4">

@@ -25,7 +25,7 @@ export function adminPaymentStatus(payment: AdminPaymentRow): {
 } {
   if (payment.status === "pending") return { label: "Pending payment", variant: "warning" };
   if (payment.status === "failed") return { label: "Failed", variant: "danger" };
-  if (payment.status === "refunded") return { label: "Refunded", variant: "default" };
+  if (payment.status === "refunded") return { label: "Rejected & refunded", variant: "default" };
 
   if (paymentNeedsFulfillment(payment)) {
     return { label: "Needs activation key", variant: "warning" };

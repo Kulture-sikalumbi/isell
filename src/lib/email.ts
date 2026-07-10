@@ -1,5 +1,6 @@
 import { getAdminEmails } from "@/lib/auth";
 import { buildActivationReadyEmailHtml } from "@/lib/activation-email-template";
+import { buildOrderRejectedEmailHtml } from "@/lib/order-rejected-email-template";
 import { buildWelcomeEmailHtml } from "@/lib/welcome-email-template";
 import { getCustomerIdentifierLabel } from "@/lib/identifier-label";
 
@@ -104,6 +105,33 @@ export async function sendActivationReadyEmail(input: {
       hardwareId: input.hardwareId,
       identifierLabel: getCustomerIdentifierLabel(input.identifierLabel),
       activationCode: input.activationCode,
+      appUrl: input.appUrl,
+      customerName: input.customerName,
+    }),
+  });
+}
+
+export async function sendOrderRejectedEmail(input: {
+  to: string;
+  orderNumber: string;
+  toolName: string;
+  hardwareId: string;
+  identifierLabel?: string;
+  refundAmount: string;
+  reason: string;
+  appUrl: string;
+  customerName?: string | null;
+}) {
+  return sendEmail({
+    to: input.to,
+    subject: `Order ${input.orderNumber} rejected — refund issued`,
+    html: buildOrderRejectedEmailHtml({
+      orderNumber: input.orderNumber,
+      toolName: input.toolName,
+      hardwareId: input.hardwareId,
+      identifierLabel: getCustomerIdentifierLabel(input.identifierLabel),
+      refundAmount: input.refundAmount,
+      reason: input.reason,
       appUrl: input.appUrl,
       customerName: input.customerName,
     }),

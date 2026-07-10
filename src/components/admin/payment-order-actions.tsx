@@ -1,18 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Ban } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { RejectOrderModal } from "@/components/admin/reject-order-modal";
 import {
   paymentNeedsFulfillment,
   type AdminPaymentRow,
 } from "@/lib/payment-fulfillment";
-import { canRejectOrder, formatOrderNumber } from "@/lib/order-number";
-import { getCustomerIdentifierLabel } from "@/lib/identifier-label";
-import { formatCurrency } from "@/lib/utils";
-import { useNavigationLoading } from "@/components/layout/navigation-progress";
+import { canRejectOrder } from "@/lib/order-number";
 import { PaymentFulfillAction } from "@/components/admin/payment-fulfill-action";
 
 interface PaymentOrderActionsProps {
@@ -22,10 +18,15 @@ interface PaymentOrderActionsProps {
 export function PaymentOrderActions({ payment }: PaymentOrderActionsProps) {
   if (payment.status === "refunded") {
     return (
-      <div className="space-y-1">
-        <span className="text-xs text-zinc-500">Refunded</span>
+      <div className="space-y-1.5 max-w-[220px]">
+        <span className="inline-flex items-center gap-1 text-xs font-medium text-zinc-400">
+          <Ban className="h-3 w-3" />
+          Rejected & refunded
+        </span>
         {payment.refund_note && (
-          <p className="text-[11px] text-zinc-600 max-w-[200px] leading-snug">{payment.refund_note}</p>
+          <p className="text-[11px] text-zinc-500 leading-snug rounded-lg bg-black/30 border border-white/5 px-2.5 py-2">
+            &ldquo;{payment.refund_note}&rdquo;
+          </p>
         )}
       </div>
     );
@@ -41,7 +42,7 @@ export function PaymentOrderActions({ payment }: PaymentOrderActionsProps) {
   }
 
   if (canRejectOrder(payment)) {
-    return <RejectOrderButton payment={payment} label="Reject & refund" />;
+    return <RejectOrderButton payment={payment} label="Reject order" />;
   }
 
   return <span className="text-xs text-zinc-500">Delivered</span>;
@@ -54,38 +55,7 @@ function RejectOrderButton({
   payment: AdminPaymentRow;
   label?: string;
 }) {
-  const router = useRouter();
-  const { stopLoading } = useNavigationLoading();
   const [open, setOpen] = useState(false);
-  const [note, setNote] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  const refundTotal =
-    Number(payment.amount) + Number(payment.platform_fee ?? 0);
-
-  async function handleReject() {
-    setLoading(true);
-    setError("");
-
-    try {
-      const res = await fetch(`/api/admin/payments/${payment.id}/reject`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ note }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to reject order");
-      setOpen(false);
-      setNote("");
-      router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to reject order");
-    } finally {
-      setLoading(false);
-      stopLoading();
-    }
-  }
 
   return (
     <>
@@ -93,51 +63,14 @@ function RejectOrderButton({
         type="button"
         size="sm"
         variant="ghost"
-        className="gap-1.5 text-red-300 hover:text-red-200 hover:bg-red-500/10"
+        className="gap-1.5 text-red-300 hover:text-red-200 hover:bg-red-500/10 border border-transparent hover:border-red-500/20"
         onClick={() => setOpen(true)}
       >
         <Ban className="h-3.5 w-3.5" />
         {label}
       </Button>
 
-      <ConfirmDialog
-        open={open}
-        onOpenChange={setOpen}
-        title="Reject order and refund wallet?"
-        variant="danger"
-        confirmLabel="Reject & refund"
-        loading={loading}
-        error={error}
-        onConfirm={handleReject}
-        description={
-          <div className="space-y-3">
-            <p>
-              Order <strong className="text-white font-mono">{formatOrderNumber(payment)}</strong> for{" "}
-              <strong className="text-white">{payment.tool?.name}</strong> will be cancelled.
-            </p>
-            <p>
-              <strong className="text-white">
-                {formatCurrency(refundTotal, payment.currency)}
-              </strong>{" "}
-              will be returned to the customer&apos;s wallet.
-            </p>
-            <p className="text-xs text-zinc-500">
-              {getCustomerIdentifierLabel(payment.tool?.identifier_label)}:{" "}
-              <span className="font-mono text-zinc-400">{payment.hardware_id}</span>
-            </p>
-            <label className="block text-left">
-              <span className="text-xs text-zinc-500 mb-1.5 block">Reason (optional)</span>
-              <textarea
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                rows={2}
-                placeholder="e.g. Wrong device ID, unable to activate"
-                className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus:border-red-500/40 focus:outline-none resize-none"
-              />
-            </label>
-          </div>
-        }
-      />
+      <RejectOrderModal payment={payment} open={open} onOpenChange={setOpen} />
     </>
   );
 }

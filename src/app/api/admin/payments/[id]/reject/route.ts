@@ -16,6 +16,20 @@ export async function POST(request: Request, { params }: RouteParams) {
   const body = await request.json().catch(() => ({}));
   const note = (body.note as string)?.trim();
 
+  if (!note || note.length < 3) {
+    return NextResponse.json(
+      { error: "A rejection reason is required (at least 3 characters)." },
+      { status: 400 }
+    );
+  }
+
+  if (note.length > 500) {
+    return NextResponse.json(
+      { error: "Rejection reason must be 500 characters or less." },
+      { status: 400 }
+    );
+  }
+
   const result = await refundWalletPayment(id, note);
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 400 });

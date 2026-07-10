@@ -59,7 +59,7 @@ export function UserNotificationsInbox({ notifications }: UserNotificationsInbox
                   <p className="font-medium text-white">{n.title}</p>
                   {!n.read_at && <Badge variant="info">New</Badge>}
                 </div>
-                <p className="text-sm text-zinc-400">{n.message}</p>
+                <p className="text-sm text-zinc-400 whitespace-pre-line leading-relaxed">{n.message}</p>
                 <p className="text-xs text-zinc-600 mt-2">{formatDate(n.created_at)}</p>
               </div>
               <div className="flex gap-2">
