@@ -1,6 +1,7 @@
 import { sendWelcomeEmail } from "@/lib/email";
 import { createServiceClient } from "@/lib/supabase/server";
 import { notifyUser } from "@/lib/user-notifications";
+import { getServerEmailEnv } from "@/lib/runtime-env";
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -59,7 +60,7 @@ export async function sendWelcomeEmailIfNeeded(
     return false;
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const appUrl = getServerEmailEnv().appUrl || "http://localhost:3000";
   const customerName = profile.full_name?.trim() || hint?.fullName?.trim() || null;
   const email = profile.email.trim();
 

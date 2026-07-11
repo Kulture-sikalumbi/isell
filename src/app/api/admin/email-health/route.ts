@@ -3,6 +3,8 @@ import { getAdminUser } from "@/lib/auth";
 import { sendEmail } from "@/lib/email";
 import { getEmailConfigStatus } from "@/lib/email-health";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const admin = await getAdminUser();
   if (!admin) {
@@ -23,13 +25,20 @@ export async function POST() {
     return NextResponse.json(
       {
         error: "Email is not fully configured on this server",
+        hint: !status.resendConfigured
+          ? "RESEND_API_KEY is missing at runtime — add it in Azure App Settings AND GitHub Actions secrets, then redeploy."
+          : !status.serviceRoleConfigured
+            ? "SUPABASE_SERVICE_ROLE_KEY is missing on the server."
+            : !status.emailFrom
+              ? "EMAIL_FROM is missing on the server."
+              : "NEXT_PUBLIC_APP_URL is missing on the server.",
         ...status,
       },
       { status: 400 }
     );
   }
 
-  const sent = await sendEmail({
+  const result = await sendEmail({
     to: admin.email,
     subject: "iSell Unlocks — production email test",
     html: `
@@ -38,10 +47,10 @@ export async function POST() {
     `,
   });
 
-  if (!sent) {
+  if (!result.ok) {
     return NextResponse.json(
       {
-        error: "Resend rejected the send — check Azure logs for [email] Failed",
+        error: result.skipped || result.error || "Resend rejected the send",
         ...status,
       },
       { status: 502 }

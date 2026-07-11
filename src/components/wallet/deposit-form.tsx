@@ -7,7 +7,8 @@ import { CheckCircle2, Copy, ChevronRight, Loader2, Smartphone, X } from "lucide
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { AirtelMoneyIcon, MtnMoMoIcon } from "@/components/payments/payment-method-icons";
+import { BinancePayIcon, AirtelMoneyIcon, MtnMoMoIcon, UsdtTrc20Icon } from "@/components/payments/payment-method-icons";
+import { depositMethodLabel, isManualCryptoDeposit } from "@/lib/deposit-methods";
 import { getCurrencyLabel } from "@/lib/currency";
 import { cn, formatCurrency } from "@/lib/utils";
 import { useConnectivityOptional } from "@/components/layout/connectivity-provider";
@@ -17,7 +18,8 @@ import type { DepositMethod, WalletDeposit } from "@/types/database";
 interface MerchantDetails {
   mtn: string;
   airtel: string;
-  binance: string;
+  binancePayId: string;
+  usdtTrc20Address: string;
   currency: string;
 }
 
@@ -29,27 +31,36 @@ interface DepositFormProps {
 interface MethodOption {
   id: DepositMethod;
   label: string;
-  icon?: "mtn" | "airtel";
+  icon?: "mtn" | "airtel" | "binance" | "usdt";
   ussd?: string;
 }
 
 const methods: MethodOption[] = [
   { id: "mtn", label: "MTN MoMo", icon: "mtn", ussd: "*115#" },
   { id: "airtel", label: "Airtel Money", icon: "airtel", ussd: "*115#" },
+  { id: "binance", label: "Binance Pay", icon: "binance" },
+  { id: "usdt_trc20", label: "USDT (TRC20)", icon: "usdt" },
 ];
 
 const AMOUNT_PRESETS = [10, 50, 100, 200, 350] as const;
 
+function MethodIcon({ icon }: { icon?: MethodOption["icon"] }) {
+  if (icon === "mtn") return <MtnMoMoIcon className="h-10 w-10 shrink-0 text-[10px]" />;
+  if (icon === "airtel") return <AirtelMoneyIcon className="h-10 w-10 shrink-0 text-[8px]" />;
+  if (icon === "binance") return <BinancePayIcon className="h-10 w-10 shrink-0 text-[9px]" />;
+  if (icon === "usdt") return <UsdtTrc20Icon className="h-10 w-10 shrink-0 text-[8px]" />;
+  return null;
+}
+
 function merchantFor(method: DepositMethod, merchants: MerchantDetails) {
   if (method === "airtel") return merchants.airtel;
-  if (method === "binance") return merchants.binance;
+  if (method === "binance") return merchants.binancePayId;
+  if (method === "usdt_trc20") return merchants.usdtTrc20Address;
   return merchants.mtn;
 }
 
 function methodLabel(method: DepositMethod) {
-  if (method === "airtel") return "Airtel Money";
-  if (method === "binance") return "Binance Pay";
-  return "MTN MoMo";
+  return depositMethodLabel(method);
 }
 
 const METHOD_PREPARE_MS = 750;
@@ -219,8 +230,7 @@ function DepositConfirmModal({
           </h3>
           <p className="mt-3 text-sm text-zinc-400 leading-relaxed break-words">
             Have you already sent{" "}
-            <strong className="text-white">{formatCurrency(amount, currency)}</strong> to merchant
-            number{" "}
+            <strong className="text-white">{formatCurrency(amount, currency)}</strong> to{" "}
             <strong className="font-mono text-cyan-300 break-all">{merchantNumber}</strong> via{" "}
             <strong className="text-white">{label}</strong>?
           </p>
@@ -464,6 +474,8 @@ export function DepositForm({ merchants, currency }: DepositFormProps) {
       );
     }
 
+    const isCrypto = isManualCryptoDeposit(method);
+
     if (!paymentConfirmed) {
       return (
         <>
@@ -488,67 +500,136 @@ export function DepositForm({ merchants, currency }: DepositFormProps) {
 
           <div className="space-y-6">
             <div className="flex items-center gap-3">
-              {methodMeta?.icon === "mtn" && <MtnMoMoIcon className="h-10 w-10 text-[10px]" />}
-              {methodMeta?.icon === "airtel" && <AirtelMoneyIcon className="h-10 w-10 text-[8px]" />}
+              <MethodIcon icon={methodMeta?.icon} />
               <div>
                 <h3 className="font-semibold text-white">Deposit with {label}</h3>
                 <p className="text-sm text-zinc-500">
-                  Pay on your phone first — then tap <strong className="text-zinc-300">Confirm deposit</strong>
+                  {isCrypto
+                    ? "Complete the transfer first — then tap Confirm deposit"
+                    : "Pay on your phone first — then tap Confirm deposit"}
                 </p>
               </div>
             </div>
 
             {paymentReminder && (
               <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
-                Please finish the payment on your phone first. Send{" "}
+                Please finish the payment first. Send{" "}
                 <strong className="text-white">{formatCurrency(parsedAmount, currency)}</strong> to{" "}
-                <strong className="font-mono">{merchantNumber}</strong>, then tap Confirm deposit.
+                <strong className="font-mono break-all">{merchantNumber}</strong>, then tap Confirm deposit.
               </div>
             )}
 
             <div className="rounded-xl border border-amber-500/25 bg-amber-500/5 px-4 py-3 text-sm text-amber-200/90">
               <strong className="text-amber-100">Important:</strong> Only tap{" "}
-              <strong className="text-white">Confirm deposit</strong> after {label} confirms your
-              transfer and you receive the SMS.
+              <strong className="text-white">Confirm deposit</strong> after your payment{" "}
+              {isCrypto ? "is completed on-chain or in Binance" : "succeeds and you receive the SMS"}.
             </div>
 
             <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/5 p-5 space-y-4">
               <p className="text-sm font-medium text-cyan-200 flex items-center gap-2">
                 <Smartphone className="h-4 w-4" />
-                Pay on your phone
+                {isCrypto ? "Payment instructions" : "Pay on your phone"}
               </p>
 
               <ol className="space-y-4">
-                {ussd && (
+                {method === "binance" && (
+                  <>
+                    <InstructionStep n={1}>
+                      Open <strong className="text-white">Binance</strong> → Pay → Send
+                    </InstructionStep>
+                    <InstructionStep n={2}>
+                      Send to Binance Pay user ID{" "}
+                      <strong className="font-mono text-white">{merchantNumber}</strong>
+                      <button
+                        type="button"
+                        onClick={copyMerchant}
+                        className="ml-2 text-xs text-cyan-400 hover:text-cyan-300 inline-flex items-center gap-1"
+                      >
+                        <Copy className="h-3 w-3" />
+                        {copiedMerchant ? "Copied" : "Copy"}
+                      </button>
+                    </InstructionStep>
+                    <InstructionStep n={3}>
+                      Send the equivalent of{" "}
+                      <strong className="text-white">{formatCurrency(parsedAmount, currency)}</strong>{" "}
+                      (admin credits your wallet after verification)
+                    </InstructionStep>
+                    <InstructionStep n={4}>
+                      Save the <strong className="text-white">order / transaction ID</strong> from Binance
+                    </InstructionStep>
+                    <InstructionStep n={5}>
+                      Tap <strong className="text-white">Confirm deposit</strong> below and paste that ID
+                    </InstructionStep>
+                  </>
+                )}
+
+                {method === "usdt_trc20" && (
+                  <>
+                    <InstructionStep n={1}>
+                      Open your crypto wallet and choose <strong className="text-white">USDT</strong>
+                    </InstructionStep>
+                    <InstructionStep n={2}>
+                      Network must be <strong className="text-white">TRC20 (TRON)</strong> only — other networks will be lost
+                    </InstructionStep>
+                    <InstructionStep n={3}>
+                      Send USDT to{" "}
+                      <strong className="font-mono text-white break-all">{merchantNumber}</strong>
+                      <button
+                        type="button"
+                        onClick={copyMerchant}
+                        className="ml-2 text-xs text-cyan-400 hover:text-cyan-300 inline-flex items-center gap-1"
+                      >
+                        <Copy className="h-3 w-3" />
+                        {copiedMerchant ? "Copied" : "Copy"}
+                      </button>
+                    </InstructionStep>
+                    <InstructionStep n={4}>
+                      Send USDT equivalent to{" "}
+                      <strong className="text-white">{formatCurrency(parsedAmount, currency)}</strong> wallet credit
+                    </InstructionStep>
+                    <InstructionStep n={5}>
+                      Copy the blockchain <strong className="text-white">TxID / transaction hash</strong> after it confirms
+                    </InstructionStep>
+                    <InstructionStep n={6}>
+                      Tap <strong className="text-white">Confirm deposit</strong> below and paste the TxID
+                    </InstructionStep>
+                  </>
+                )}
+
+                {!isCrypto && ussd && (
                   <InstructionStep n={1}>
                     Dial <strong className="font-mono text-white">{ussd}</strong>
                   </InstructionStep>
                 )}
-                <InstructionStep n={ussd ? 2 : 1}>
-                  Select <strong className="text-white">Send Money</strong>
-                </InstructionStep>
-                <InstructionStep n={ussd ? 3 : 2}>
-                  Send{" "}
-                  <strong className="text-white">{formatCurrency(parsedAmount, currency)}</strong>{" "}
-                  to{" "}
-                  <strong className="font-mono text-white">{merchantNumber}</strong>
-                  <button
-                    type="button"
-                    onClick={copyMerchant}
-                    className="ml-2 text-xs text-cyan-400 hover:text-cyan-300 inline-flex items-center gap-1"
-                  >
-                    <Copy className="h-3 w-3" />
-                    {copiedMerchant ? "Copied" : "Copy"}
-                  </button>
-                </InstructionStep>
-                <InstructionStep n={ussd ? 4 : 3}>
-                  Wait until payment <strong className="text-white">succeeds</strong> — keep the
-                  confirmation SMS from <strong className="text-white">{label}</strong>
-                </InstructionStep>
-                <InstructionStep n={ussd ? 5 : 4}>
-                  Tap <strong className="text-white">Confirm deposit</strong> below and enter your
-                  TID (Transaction ID)
-                </InstructionStep>
+                {!isCrypto && (
+                  <>
+                    <InstructionStep n={ussd ? 2 : 1}>
+                      Select <strong className="text-white">Send Money</strong>
+                    </InstructionStep>
+                    <InstructionStep n={ussd ? 3 : 2}>
+                      Send{" "}
+                      <strong className="text-white">{formatCurrency(parsedAmount, currency)}</strong>{" "}
+                      to{" "}
+                      <strong className="font-mono text-white">{merchantNumber}</strong>
+                      <button
+                        type="button"
+                        onClick={copyMerchant}
+                        className="ml-2 text-xs text-cyan-400 hover:text-cyan-300 inline-flex items-center gap-1"
+                      >
+                        <Copy className="h-3 w-3" />
+                        {copiedMerchant ? "Copied" : "Copy"}
+                      </button>
+                    </InstructionStep>
+                    <InstructionStep n={ussd ? 4 : 3}>
+                      Wait until payment <strong className="text-white">succeeds</strong> — keep the
+                      confirmation SMS from <strong className="text-white">{label}</strong>
+                    </InstructionStep>
+                    <InstructionStep n={ussd ? 5 : 4}>
+                      Tap <strong className="text-white">Confirm deposit</strong> below and enter your
+                      TID (Transaction ID)
+                    </InstructionStep>
+                  </>
+                )}
               </ol>
             </div>
 
@@ -580,8 +661,7 @@ export function DepositForm({ merchants, currency }: DepositFormProps) {
     return (
       <form onSubmit={handleSubmitDeposit} className="space-y-6">
         <div className="flex items-center gap-3">
-          {methodMeta?.icon === "mtn" && <MtnMoMoIcon className="h-10 w-10 text-[10px]" />}
-          {methodMeta?.icon === "airtel" && <AirtelMoneyIcon className="h-10 w-10 text-[8px]" />}
+          <MethodIcon icon={methodMeta?.icon} />
           <div>
             <h3 className="font-semibold text-white">Finish your deposit</h3>
             <p className="text-sm text-zinc-500">
@@ -591,46 +671,86 @@ export function DepositForm({ merchants, currency }: DepositFormProps) {
         </div>
 
         <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/5 px-4 py-3 text-sm text-emerald-200/90">
-          <strong className="text-emerald-100">Great!</strong> Enter the details from your payment
-          SMS to finish your deposit.
+          <strong className="text-emerald-100">Great!</strong>{" "}
+          {isCrypto
+            ? "Enter your payment reference so admin can verify and credit your wallet."
+            : "Enter the details from your payment SMS to finish your deposit."}
         </div>
 
         <div className="rounded-xl border-2 border-cyan-500/30 bg-black/50 p-5 sm:p-6 space-y-5 shadow-lg shadow-black/20">
           <div>
             <p className="font-semibold text-white text-sm">Payment details</p>
             <p className="text-xs text-zinc-400 mt-1">
-              These must match the payment you just made on your phone
+              These must match the payment you just completed
             </p>
           </div>
 
           <Input
             variant="emphasized"
-            label="TID (Transaction ID from SMS)"
-            placeholder="Paste the Transaction ID from your payment SMS"
+            label={
+              method === "usdt_trc20"
+                ? "TxID (transaction hash)"
+                : method === "binance"
+                  ? "Binance order / transaction ID"
+                  : "TID (Transaction ID from SMS)"
+            }
+            placeholder={
+              method === "usdt_trc20"
+                ? "Paste the TRC20 transaction hash"
+                : method === "binance"
+                  ? "Paste the ID from your Binance Pay receipt"
+                  : "Paste the Transaction ID from your payment SMS"
+            }
             value={transactionId}
             onChange={(e) => setTransactionId(e.target.value)}
             required
             autoFocus
-            hint="Required — the TID only appears after a successful payment"
+            hint="Required — only available after a successful payment"
           />
 
-          <Input
-            variant="emphasized"
-            label="Phone number you sent from"
-            placeholder="e.g. 0970105334"
-            value={senderPhone}
-            onChange={(e) => setSenderPhone(e.target.value)}
-            hint="Your MTN or Airtel number that made the payment"
-          />
+          {method === "binance" && (
+            <Input
+              variant="emphasized"
+              label="Your Binance username (optional)"
+              placeholder="e.g. your_binance_id"
+              value={senderName}
+              onChange={(e) => setSenderName(e.target.value)}
+              hint="Helps admin match your payment faster"
+            />
+          )}
 
-          <Input
-            variant="emphasized"
-            label="Your name on the MoMo account"
-            placeholder="e.g. John Banda"
-            value={senderName}
-            onChange={(e) => setSenderName(e.target.value)}
-            hint="Exactly as it appears on your mobile money account"
-          />
+          {method === "usdt_trc20" && (
+            <Input
+              variant="emphasized"
+              label="Your sending wallet address (optional)"
+              placeholder="TRON address you sent from"
+              value={senderPhone}
+              onChange={(e) => setSenderPhone(e.target.value)}
+              hint="Optional — helps admin verify on-chain"
+            />
+          )}
+
+          {!isCrypto && (
+            <>
+              <Input
+                variant="emphasized"
+                label="Phone number you sent from"
+                placeholder="e.g. 0970105334"
+                value={senderPhone}
+                onChange={(e) => setSenderPhone(e.target.value)}
+                hint="Your MTN or Airtel number that made the payment"
+              />
+
+              <Input
+                variant="emphasized"
+                label="Your name on the MoMo account"
+                placeholder="e.g. John Banda"
+                value={senderName}
+                onChange={(e) => setSenderName(e.target.value)}
+                hint="Exactly as it appears on your mobile money account"
+              />
+            </>
+          )}
         </div>
 
         {error && (
@@ -732,10 +852,7 @@ export function DepositForm({ merchants, currency }: DepositFormProps) {
                       : "border-white/10 bg-white/[0.03] text-white hover:border-cyan-500/30 hover:bg-cyan-500/5"
                 )}
               >
-                {m.icon === "mtn" && <MtnMoMoIcon className="h-10 w-10 shrink-0 text-[10px]" />}
-                {m.icon === "airtel" && (
-                  <AirtelMoneyIcon className="h-10 w-10 shrink-0 text-[8px]" />
-                )}
+                <MethodIcon icon={m.icon} />
                 <div className="flex-1 min-w-0">
                   <p className="font-medium">Pay with {m.label}</p>
                   {isLoading ? (
@@ -747,7 +864,11 @@ export function DepositForm({ merchants, currency }: DepositFormProps) {
                     <p className="text-xs text-amber-400/80 mt-0.5">Not available — contact admin</p>
                   ) : (
                     <p className="text-xs text-zinc-500 mt-0.5">
-                      Pay on your phone, then confirm deposit
+                      {m.id === "mtn"
+                        ? "Approve payment on your phone"
+                        : m.id === "binance" || m.id === "usdt_trc20"
+                          ? "Pay then submit reference for admin verification"
+                          : "Pay on your phone, then confirm deposit"}
                     </p>
                   )}
                 </div>

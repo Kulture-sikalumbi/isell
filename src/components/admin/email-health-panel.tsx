@@ -6,11 +6,19 @@ import { Button } from "@/components/ui/button";
 
 interface EmailHealth {
   resendConfigured: boolean;
+  resendKeyLength?: number;
   emailFrom: string | null;
   emailFromFormatted: string;
   appUrl: string | null;
   serviceRoleConfigured: boolean;
   ready: boolean;
+  detectedKeyNames?: string[];
+  hint?: string;
+  emailConfigSource?: {
+    resendApiKey: string;
+    emailFrom: string;
+    appUrl: string;
+  };
 }
 
 export function EmailHealthPanel() {
@@ -46,7 +54,7 @@ export function EmailHealthPanel() {
     try {
       const res = await fetch("/api/admin/email-health", { method: "POST" });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Test email failed");
+      if (!res.ok) throw new Error(data.hint ? `${data.error} — ${data.hint}` : data.error || "Test email failed");
       setMessage(`Test email sent to ${data.sentTo}. Check inbox and spam.`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Test email failed");
@@ -78,12 +86,28 @@ export function EmailHealthPanel() {
           Checking server config…
         </div>
       ) : health ? (
-        <ul className="space-y-2 text-sm mb-4">
-          <StatusRow ok={health.resendConfigured} label="RESEND_API_KEY on server" />
-          <StatusRow ok={Boolean(health.emailFrom)} label={`EMAIL_FROM (${health.emailFrom ?? "missing"})`} />
-          <StatusRow ok={health.serviceRoleConfigured} label="SUPABASE_SERVICE_ROLE_KEY on server" />
-          <StatusRow ok={Boolean(health.appUrl)} label={`NEXT_PUBLIC_APP_URL (${health.appUrl ?? "missing"})`} />
-        </ul>
+        <>
+          <ul className="space-y-2 text-sm mb-4">
+            <StatusRow
+              ok={health.resendConfigured}
+              label={`RESEND_API_KEY on server${health.resendKeyLength ? ` (${health.resendKeyLength} chars)` : ""}`}
+            />
+            <StatusRow ok={Boolean(health.emailFrom)} label={`EMAIL_FROM (${health.emailFrom ?? "missing"})`} />
+            <StatusRow ok={health.serviceRoleConfigured} label="SUPABASE_SERVICE_ROLE_KEY on server" />
+            <StatusRow ok={Boolean(health.appUrl)} label={`NEXT_PUBLIC_APP_URL (${health.appUrl ?? "missing"})`} />
+          </ul>
+          {health.detectedKeyNames && health.detectedKeyNames.length > 0 && (
+            <p className="text-[11px] text-zinc-500 mb-4 break-all">
+              Server sees env keys: {health.detectedKeyNames.join(", ")}
+            </p>
+          )}
+          {health.emailConfigSource && (
+            <p className="text-[11px] text-amber-300/90 mb-4">
+              Config source — Resend key: {health.emailConfigSource.resendApiKey}, From:{" "}
+              {health.emailConfigSource.emailFrom}, App URL: {health.emailConfigSource.appUrl}
+            </p>
+          )}
+        </>
       ) : null}
 
       {error && (

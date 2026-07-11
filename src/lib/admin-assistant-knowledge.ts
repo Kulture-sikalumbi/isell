@@ -88,9 +88,11 @@ You know LIVE operational data below. Guide the admin to the right page, summari
 - Ledger cash tracked: ${formatSiteCurrency(accounting.balance, currency)}
 - Record withdrawals & reconcile at [/admin/ledger](/admin/ledger)
 
-## Merchant MoMo numbers (for reference)
+## Merchant payment details (for reference)
 - MTN: ${merchants.mtn || "not set"}
 - Airtel: ${merchants.airtel || "not set"}
+- Binance Pay user ID: ${merchants.binancePayId || "not set"}
+- USDT TRC20 address: ${merchants.usdtTrc20Address || "not set"}
 
 ## Deposits ready to confirm
 ${depositList}

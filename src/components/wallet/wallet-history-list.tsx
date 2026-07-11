@@ -5,14 +5,10 @@ import Link from "next/link";
 import { AlertCircle, Clock, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { DEPOSIT_METHOD_LABELS } from "@/lib/deposit-methods";
 import type { WalletDeposit, WalletTransaction } from "@/types/database";
 
-const methodLabels: Record<WalletDeposit["method"], string> = {
-  mtn: "MTN",
-  airtel: "Airtel",
-  binance: "Binance",
-  other: "Other",
-};
+const methodLabels = DEPOSIT_METHOD_LABELS;
 
 const typeLabels: Record<string, string> = {
   deposit: "Deposit",

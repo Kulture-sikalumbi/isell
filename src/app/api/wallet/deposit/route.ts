@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser, getCurrentProfile } from "@/lib/auth";
-import { createDepositRequest, getMerchantDetails } from "@/lib/wallet";
+import { createDepositRequest, getMerchantDetails, merchantDestinationFor } from "@/lib/wallet";
 import type { DepositMethod } from "@/types/database";
 
-const validMethods: DepositMethod[] = ["mtn", "airtel", "binance", "other"];
+const validMethods: DepositMethod[] = ["mtn", "airtel", "binance", "usdt_trc20", "other"];
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
@@ -31,16 +31,9 @@ export async function POST(request: Request) {
   }
 
   const merchants = getMerchantDetails();
-  const merchantNumber =
-    method === "mtn"
-      ? merchants.mtn
-      : method === "airtel"
-        ? merchants.airtel
-        : method === "binance"
-          ? merchants.binance
-          : "";
+  const merchantNumber = merchantDestinationFor(method, merchants);
 
-  if (method !== "other" && !merchantNumber) {
+  if (method !== "other" && method !== "mtn" && !merchantNumber) {
     return NextResponse.json(
       { error: "Merchant number not configured yet. Contact admin." },
       { status: 503 }

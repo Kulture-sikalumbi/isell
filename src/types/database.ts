@@ -80,7 +80,7 @@ export interface Payment {
 }
 
 export type DepositStatus = "pending" | "confirmed" | "rejected";
-export type DepositMethod = "mtn" | "airtel" | "binance" | "other";
+export type DepositMethod = "mtn" | "airtel" | "binance" | "usdt_trc20" | "other";
 export type WalletTxType = "deposit" | "purchase" | "platform_fee" | "refund" | "adjustment";
 
 export interface UserWallet {

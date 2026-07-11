@@ -11,14 +11,30 @@ import type {
   UserWallet,
 } from "@/types/database";
 
+import { runtimeEnv } from "@/lib/runtime-env";
+
 export function getMerchantDetails() {
   const currency = getSiteCurrency();
   return {
-    mtn: process.env.MERCHANT_MTN_NUMBER?.trim() || "",
-    airtel: process.env.MERCHANT_AIRTEL_NUMBER?.trim() || "",
-    binance: process.env.MERCHANT_BINANCE_ID?.trim() || "",
+    mtn: runtimeEnv("MERCHANT_MTN_NUMBER") || "",
+    airtel: runtimeEnv("MERCHANT_AIRTEL_NUMBER") || "",
+    binancePayId:
+      runtimeEnv("MERCHANT_BINANCE_PAY_ID") ||
+      runtimeEnv("MERCHANT_BINANCE_ID") ||
+      "",
+    usdtTrc20Address: runtimeEnv("MERCHANT_USDT_TRC20_ADDRESS") || "",
     currency,
   };
+}
+
+export function merchantDestinationFor(
+  method: DepositMethod,
+  merchants: ReturnType<typeof getMerchantDetails>
+): string {
+  if (method === "airtel") return merchants.airtel;
+  if (method === "binance") return merchants.binancePayId;
+  if (method === "usdt_trc20") return merchants.usdtTrc20Address;
+  return merchants.mtn;
 }
 
 export async function getOrCreateWallet(userId: string): Promise<UserWallet | null> {

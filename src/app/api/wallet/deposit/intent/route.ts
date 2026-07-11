@@ -3,7 +3,7 @@ import { getCurrentProfile, getCurrentUser } from "@/lib/auth";
 import { createDepositIntent } from "@/lib/wallet";
 import type { DepositMethod } from "@/types/database";
 
-const validMethods: DepositMethod[] = ["mtn", "airtel", "binance", "other"];
+const validMethods: DepositMethod[] = ["mtn", "airtel", "binance", "usdt_trc20", "other"];
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();

@@ -27,13 +27,13 @@ export async function buildSiteAssistantContext(input?: {
     ? `
 ## User wallet (signed in)
 - Balance: ${formatSiteCurrency(input.walletBalance ?? 0, currency)}
-- Add funds: [/dashboard?tab=wallet](/dashboard?tab=wallet) via MTN or Airtel
-- Merchant numbers configured: MTN ${merchants.mtn || "ask admin"}, Airtel ${merchants.airtel || "ask admin"}
+- Add funds: [/dashboard?tab=wallet](/dashboard?tab=wallet) via MTN, Airtel, Binance Pay, or USDT (TRC20)
+- Payment details configured: MTN ${merchants.mtn || "ask admin"}, Airtel ${merchants.airtel || "ask admin"}, Binance Pay ID ${merchants.binancePayId || "ask admin"}, USDT TRC20 ${merchants.usdtTrc20Address ? "configured" : "ask admin"}
 ${input.pendingDeposits ? `- Pending deposits awaiting admin: ${input.pendingDeposits}` : ""}
 `
     : `
 ## Wallet (sign in required)
-Prepaid wallet — deposit via MTN/Airtel, then pay instantly for activations. Sign in at [/auth/login](/auth/login) first.
+Prepaid wallet — deposit via MTN, Airtel, Binance Pay, or USDT (TRC20), then pay instantly for activations. Sign in at [/auth/login](/auth/login) first.
 `;
 
   return `${SITE_ASSISTANT_BASE}

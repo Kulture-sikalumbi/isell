@@ -32,6 +32,34 @@ export function AirtelMoneyIcon({ className }: IconProps) {
   );
 }
 
+export function BinancePayIcon({ className }: IconProps) {
+  return (
+    <div
+      className={cn(
+        "flex h-9 w-9 items-center justify-center rounded-lg bg-[#F0B90B] text-[9px] font-black text-[#1E2329] shadow-sm",
+        className
+      )}
+      title="Binance Pay"
+    >
+      BNB
+    </div>
+  );
+}
+
+export function UsdtTrc20Icon({ className }: IconProps) {
+  return (
+    <div
+      className={cn(
+        "flex h-9 w-9 items-center justify-center rounded-lg bg-[#26A17B] text-[8px] font-bold text-white shadow-sm",
+        className
+      )}
+      title="USDT TRC20"
+    >
+      USDT
+    </div>
+  );
+}
+
 export function WalletPayIcon({ className }: IconProps) {
   return (
     <div

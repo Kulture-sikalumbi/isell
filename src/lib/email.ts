@@ -11,18 +11,26 @@ interface SendEmailInput {
   html: string;
 }
 
-export async function sendEmail(input: SendEmailInput): Promise<boolean> {
+export interface SendEmailResult {
+  ok: boolean;
+  error?: string;
+  skipped?: string;
+}
+
+export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult> {
   const { apiKey, from } = getServerEmailEnv();
   const recipients = (Array.isArray(input.to) ? input.to : [input.to]).filter(Boolean);
 
   if (recipients.length === 0) {
+    const skipped = "no recipients";
     console.info("[email] Skipped (no recipients):", input.subject);
-    return false;
+    return { ok: false, skipped };
   }
 
   if (!apiKey) {
+    const skipped = "RESEND_API_KEY missing on server";
     console.info("[email] Skipped (no RESEND_API_KEY):", input.subject, "→", recipients.join(", "));
-    return false;
+    return { ok: false, skipped };
   }
 
   try {
@@ -41,14 +49,16 @@ export async function sendEmail(input: SendEmailInput): Promise<boolean> {
     });
 
     if (!res.ok) {
-      console.error("[email] Failed:", await res.text());
-      return false;
+      const body = await res.text();
+      console.error("[email] Failed:", body);
+      return { ok: false, error: body };
     }
 
-    return true;
+    return { ok: true };
   } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[email] Error:", err);
-    return false;
+    return { ok: false, error: message };
   }
 }
 
@@ -63,7 +73,7 @@ export async function sendEmailToAdmins(input: {
     return false;
   }
 
-  return sendEmail({ ...input, to: admins });
+  return sendEmail({ ...input, to: admins }).then((r) => r.ok);
 }
 
 export async function sendAdminOrderEmail(input: {
@@ -96,7 +106,7 @@ export async function sendActivationReadyEmail(input: {
   appUrl: string;
   customerName?: string | null;
 }) {
-  return sendEmail({
+  const result = await sendEmail({
     to: input.to,
     subject: `Your activation key is ready — ${input.toolName}`,
     html: buildActivationReadyEmailHtml({
@@ -109,6 +119,7 @@ export async function sendActivationReadyEmail(input: {
       customerName: input.customerName,
     }),
   });
+  return result.ok;
 }
 
 export async function sendOrderRejectedEmail(input: {
@@ -122,7 +133,7 @@ export async function sendOrderRejectedEmail(input: {
   appUrl: string;
   customerName?: string | null;
 }) {
-  return sendEmail({
+  const result = await sendEmail({
     to: input.to,
     subject: `Order ${input.orderNumber} rejected — refund issued`,
     html: buildOrderRejectedEmailHtml({
@@ -136,14 +147,15 @@ export async function sendOrderRejectedEmail(input: {
       customerName: input.customerName,
     }),
   });
+  return result.ok;
 }
 
 export async function sendWelcomeEmail(input: {
   to: string;
   customerName?: string | null;
   appUrl: string;
-}) {
-  return sendEmail({
+}): Promise<boolean> {
+  const result = await sendEmail({
     to: input.to,
     subject: "Welcome to iSell Unlocks — here's how to get started",
     html: buildWelcomeEmailHtml({
@@ -151,4 +163,5 @@ export async function sendWelcomeEmail(input: {
       appUrl: input.appUrl,
     }),
   });
+  return result.ok;
 }

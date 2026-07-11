@@ -1,14 +1,10 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import { sendEmailToAdmins } from "@/lib/email";
 import { formatSiteCurrency } from "@/lib/currency";
+import { DEPOSIT_METHOD_LABELS } from "@/lib/deposit-methods";
 import type { DepositMethod } from "@/types/database";
 
-const methodLabels: Record<DepositMethod, string> = {
-  mtn: "MTN Mobile Money",
-  airtel: "Airtel Money",
-  binance: "Binance Pay",
-  other: "Other",
-};
+const methodLabels = DEPOSIT_METHOD_LABELS;
 
 export async function notifyAdminNewDeposit(input: {
   depositId: string;
@@ -53,8 +49,8 @@ export async function notifyAdminNewDeposit(input: {
       <p><strong>Method:</strong> ${methodLabels[input.method]}</p>
       <p><strong>Reference:</strong> ${input.reference}</p>
       <p><strong>TID:</strong> ${input.transactionId}</p>
-      ${input.senderPhone ? `<p><strong>Sender phone:</strong> ${input.senderPhone}</p>` : ""}
-      ${input.senderName ? `<p><strong>MoMo account name:</strong> ${input.senderName}</p>` : ""}
+      ${input.senderPhone ? `<p><strong>${input.method === "usdt_trc20" ? "Sender wallet" : "Sender phone"}:</strong> ${input.senderPhone}</p>` : ""}
+      ${input.senderName ? `<p><strong>${input.method === "binance" ? "Binance username" : "Sender name"}:</strong> ${input.senderName}</p>` : ""}
       <p><a href="${appUrl}/admin/deposits">Confirm in admin →</a></p>
     `,
   });

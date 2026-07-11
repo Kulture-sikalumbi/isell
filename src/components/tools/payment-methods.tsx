@@ -28,6 +28,12 @@ export function PaymentMethods() {
             />
           </div>
         ))}
+        <div
+          className="flex h-11 items-center justify-center rounded-lg border border-[#26A17B]/40 bg-[#26A17B]/10 px-3 py-1.5"
+          title="USDT TRC20"
+        >
+          <span className="text-xs font-semibold text-[#26A17B]">USDT TRC20</span>
+        </div>
       </div>
     </div>
   );

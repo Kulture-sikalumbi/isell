@@ -38,6 +38,9 @@ jobs:
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
+          if [ -z "$RESEND_API_KEY" ]; then
+            echo "::warning::RESEND_API_KEY is empty in GitHub Actions secrets — emails may fail in production until this is set."
+          fi
           npm ci
           npm run build
           test -f build/BUILD_ID

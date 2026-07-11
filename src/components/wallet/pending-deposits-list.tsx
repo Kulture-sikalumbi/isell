@@ -1,17 +1,13 @@
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { DEPOSIT_METHOD_LABELS } from "@/lib/deposit-methods";
 import type { WalletDeposit } from "@/types/database";
 
 interface PendingDepositsListProps {
   deposits: WalletDeposit[];
 }
 
-const methodLabels = {
-  mtn: "MTN",
-  airtel: "Airtel",
-  binance: "Binance",
-  other: "Other",
-};
+const methodLabels = DEPOSIT_METHOD_LABELS;
 
 function statusMeta(deposit: WalletDeposit) {
   if (deposit.status === "pending") {

@@ -7,6 +7,7 @@ import { Check, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { DEPOSIT_METHOD_LABELS } from "@/lib/deposit-methods";
 import type { WalletDeposit } from "@/types/database";
 
 interface AdminPendingDepositsPanelProps {
@@ -16,12 +17,7 @@ interface AdminPendingDepositsPanelProps {
   compact?: boolean;
 }
 
-const methodLabels = {
-  mtn: "MTN",
-  airtel: "Airtel",
-  binance: "Binance",
-  other: "Other",
-};
+const methodLabels = DEPOSIT_METHOD_LABELS;
 
 export function AdminPendingDepositsPanel({
   deposits: initialDeposits,
