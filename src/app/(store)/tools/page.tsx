@@ -1,5 +1,5 @@
 import { CategoryToolsCatalog } from "@/components/tools/category-tools-catalog";
-import { getCurrentProfile } from "@/lib/auth";
+import { getCurrentProfile, getCurrentUser } from "@/lib/auth";
 import { getActiveCategoriesWithTools } from "@/lib/data";
 
 export const metadata = {
@@ -13,8 +13,10 @@ export default async function ToolsPage({
 }) {
   const { category: categorySlug } = await searchParams;
   const categories = await getActiveCategoriesWithTools();
+  const user = await getCurrentUser();
   const profile = await getCurrentProfile();
   const isAdmin = profile?.role === "admin";
+  const isLoggedIn = Boolean(user);
   const activeCategory = categorySlug
     ? categories.find((c) => c.slug === categorySlug && c.slug !== "general")
     : null;
@@ -33,7 +35,7 @@ export default async function ToolsPage({
           <div className="mb-6" aria-hidden />
         )}
 
-        <CategoryToolsCatalog categories={categories} isAdmin={isAdmin} />
+        <CategoryToolsCatalog categories={categories} isAdmin={isAdmin} isLoggedIn={isLoggedIn} />
       </div>
     </section>
   );

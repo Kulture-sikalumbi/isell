@@ -2,12 +2,13 @@ import Link from "next/link";
 import { ArrowRight, Cpu } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { StorefrontTool } from "@/lib/storefront-tool";
+import { ToolPrice } from "@/components/tools/tool-price";
 import { getCustomerIdentifierLabel } from "@/lib/identifier-label";
-import { formatCurrency } from "@/lib/utils";
 
 interface ToolCardProps {
   tool: StorefrontTool;
   highlight?: string;
+  isLoggedIn?: boolean;
 }
 
 const accentColors = [
@@ -35,7 +36,7 @@ function HighlightText({ text, highlight }: { text: string; highlight?: string }
   );
 }
 
-export function ToolCard({ tool, highlight }: ToolCardProps) {
+export function ToolCard({ tool, highlight, isLoggedIn = false }: ToolCardProps) {
   const colorIndex =
     tool.name.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) %
     accentColors.length;
@@ -65,10 +66,14 @@ export function ToolCard({ tool, highlight }: ToolCardProps) {
 
         <div className="flex items-center justify-between pt-4 border-t border-white/5">
           <div>
-            <span className="text-xl font-bold text-white">
-              {formatCurrency(tool.checkout_price)}
-            </span>
-            <span className="text-xs text-zinc-500 ml-2">one-time</span>
+            <ToolPrice
+              amount={tool.checkout_price}
+              isLoggedIn={isLoggedIn}
+              loginNext={`/tools/${tool.slug}`}
+            />
+            {isLoggedIn && (
+              <span className="text-xs text-zinc-500 ml-2">one-time</span>
+            )}
           </div>
           <div className="flex items-center gap-1 text-sm text-cyan-400 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
             Activate

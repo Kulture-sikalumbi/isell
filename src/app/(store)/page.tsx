@@ -50,7 +50,7 @@ export default async function HomePage() {
           ) : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {tools.slice(0, 4).map((tool) => (
-                <ToolCard key={tool.id} tool={tool} />
+                <ToolCard key={tool.id} tool={tool} isLoggedIn={Boolean(user)} />
               ))}
             </div>
           )}

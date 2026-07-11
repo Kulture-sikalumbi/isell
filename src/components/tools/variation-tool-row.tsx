@@ -3,12 +3,13 @@ import { ArrowRight, Cpu } from "lucide-react";
 import { ActivationEtaBadge } from "@/components/tools/activation-eta-badge";
 import { Badge } from "@/components/ui/badge";
 import type { StorefrontTool } from "@/lib/storefront-tool";
-import { formatCurrency } from "@/lib/utils";
+import { ToolPrice } from "@/components/tools/tool-price";
 import { cn } from "@/lib/utils";
 
 interface VariationToolRowProps {
   tool: StorefrontTool;
   highlight?: string;
+  isLoggedIn?: boolean;
 }
 
 const accentColors = [
@@ -36,7 +37,7 @@ function HighlightText({ text, highlight }: { text: string; highlight?: string }
   );
 }
 
-export function VariationToolRow({ tool, highlight }: VariationToolRowProps) {
+export function VariationToolRow({ tool, highlight, isLoggedIn = false }: VariationToolRowProps) {
   const colorIndex =
     tool.name.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) %
     accentColors.length;
@@ -82,9 +83,13 @@ export function VariationToolRow({ tool, highlight }: VariationToolRowProps) {
             value={tool.activation_time_value}
             unit={tool.activation_time_unit}
           />
-          <Badge variant="warning" className="text-xs font-semibold px-3 py-1">
-            {formatCurrency(tool.checkout_price)}
-          </Badge>
+          <ToolPrice
+            amount={tool.checkout_price}
+            isLoggedIn={isLoggedIn}
+            loginNext={`/tools/${tool.slug}`}
+            variant="badge"
+            className="text-xs px-3 py-1"
+          />
           <ArrowRight className="h-4 w-4 text-zinc-600 group-hover:text-cyan-400 transition-colors hidden sm:block" />
         </div>
       </div>

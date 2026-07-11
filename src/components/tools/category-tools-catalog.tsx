@@ -11,9 +11,10 @@ import type { ToolCategoryWithTools } from "@/lib/data";
 interface CategoryToolsCatalogProps {
   categories: ToolCategoryWithTools[];
   isAdmin?: boolean;
+  isLoggedIn?: boolean;
 }
 
-function CategoryToolsCatalogInner({ categories, isAdmin }: CategoryToolsCatalogProps) {
+function CategoryToolsCatalogInner({ categories, isAdmin, isLoggedIn = false }: CategoryToolsCatalogProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const categoryParam = searchParams.get("category");
@@ -218,7 +219,7 @@ function CategoryToolsCatalogInner({ categories, isAdmin }: CategoryToolsCatalog
               key={tool.id}
               style={{ animationDelay: `${Math.min(i * 40, 240)}ms` }}
             >
-              <VariationToolRow tool={tool} highlight={deviceQuery} />
+              <VariationToolRow tool={tool} highlight={deviceQuery} isLoggedIn={isLoggedIn} />
             </div>
           ))}
         </div>

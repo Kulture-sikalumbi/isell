@@ -4,6 +4,7 @@ import { buildOrderRejectedEmailHtml } from "@/lib/order-rejected-email-template
 import { buildWelcomeEmailHtml } from "@/lib/welcome-email-template";
 import { getCustomerIdentifierLabel } from "@/lib/identifier-label";
 import { getServerEmailEnv } from "@/lib/runtime-env";
+import { sendViaResendHttps } from "@/lib/resend-client";
 
 interface SendEmailInput {
   to: string | string[];
@@ -33,6 +34,24 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
     return { ok: false, skipped };
   }
 
+  const payload = {
+    from,
+    to: recipients,
+    subject: input.subject,
+    html: input.html,
+  };
+
+  const httpsResult = await sendViaResendHttps({
+    apiKey,
+    ...payload,
+  });
+
+  if (httpsResult.ok) {
+    return { ok: true };
+  }
+
+  console.error("[email] HTTPS send failed:", httpsResult.error);
+
   try {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -40,25 +59,20 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        from,
-        to: recipients,
-        subject: input.subject,
-        html: input.html,
-      }),
+      body: JSON.stringify(payload),
     });
 
     if (!res.ok) {
       const body = await res.text();
-      console.error("[email] Failed:", body);
-      return { ok: false, error: body };
+      console.error("[email] Fetch fallback failed:", body);
+      return { ok: false, error: body || httpsResult.error };
     }
 
     return { ok: true };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
-    console.error("[email] Error:", err);
-    return { ok: false, error: message };
+    console.error("[email] Fetch error:", err);
+    return { ok: false, error: message || httpsResult.error };
   }
 }
 

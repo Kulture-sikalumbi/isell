@@ -12,7 +12,7 @@ import { getToolBySlug } from "@/lib/data";
 import { getWalletBalance } from "@/lib/wallet";
 import { getSiteCurrency } from "@/lib/currency";
 import { getCustomerIdentifierLabel } from "@/lib/identifier-label";
-import { formatCurrency } from "@/lib/utils";
+import { ToolPrice } from "@/components/tools/tool-price";
 
 interface ToolDetailPageProps {
   params: Promise<{ slug: string }>;
@@ -67,11 +67,15 @@ export default async function ToolDetailPage({ params }: ToolDetailPageProps) {
             <p className="text-zinc-400 leading-relaxed mb-8">{tool.description}</p>
 
             <div className="glass rounded-2xl p-6 space-y-4 mb-8">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-4">
                 <span className="text-sm text-zinc-400">Activation Price</span>
-                <span className="text-2xl font-bold text-white">
-                  {formatCurrency(storefrontTool.checkout_price, currency)}
-                </span>
+                <ToolPrice
+                  amount={storefrontTool.checkout_price}
+                  currency={currency}
+                  isLoggedIn={Boolean(user)}
+                  loginNext={`/tools/${tool.slug}`}
+                  variant="large"
+                />
               </div>
               <div className="glow-line" />
               <div className="flex items-center gap-3 text-sm text-zinc-400">
