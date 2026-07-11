@@ -3,6 +3,7 @@ import { buildActivationReadyEmailHtml } from "@/lib/activation-email-template";
 import { buildOrderRejectedEmailHtml } from "@/lib/order-rejected-email-template";
 import { buildWelcomeEmailHtml } from "@/lib/welcome-email-template";
 import { getCustomerIdentifierLabel } from "@/lib/identifier-label";
+import { getServerEmailEnv } from "@/lib/runtime-env";
 
 interface SendEmailInput {
   to: string | string[];
@@ -11,9 +12,7 @@ interface SendEmailInput {
 }
 
 export async function sendEmail(input: SendEmailInput): Promise<boolean> {
-  const apiKey = process.env.RESEND_API_KEY?.trim();
-  const rawFrom = process.env.EMAIL_FROM?.trim() || "onboarding@resend.dev";
-  const from = rawFrom.includes("<") ? rawFrom : `iSell Unlocks <${rawFrom}>`;
+  const { apiKey, from } = getServerEmailEnv();
   const recipients = (Array.isArray(input.to) ? input.to : [input.to]).filter(Boolean);
 
   if (recipients.length === 0) {

@@ -32,6 +32,11 @@ jobs:
           NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
           NEXT_PUBLIC_SITE_CURRENCY: ${{ secrets.NEXT_PUBLIC_SITE_CURRENCY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          # Server secrets — also set on Azure App Service; included here so Next.js
+          # build does not bake undefined into server bundles.
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           npm ci
           npm run build

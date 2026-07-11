@@ -1,6 +1,7 @@
 import { createServerClient as createSupabaseServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
+import { runtimeEnv } from "@/lib/runtime-env";
 
 /** Cookie-based client for authenticated user sessions */
 export async function createAuthClient() {
@@ -31,10 +32,10 @@ export async function createAuthClient() {
 
 /** Service role client for webhooks, admin APIs, and server data fetching */
 export function createServiceClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const url = runtimeEnv("NEXT_PUBLIC_SUPABASE_URL");
   const key =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    runtimeEnv("SUPABASE_SERVICE_ROLE_KEY") ||
+    runtimeEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
 
   if (!url || !key) return null;
 
