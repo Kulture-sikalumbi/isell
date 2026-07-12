@@ -13,8 +13,8 @@ import type {
 
 import { runtimeEnv } from "@/lib/runtime-env";
 
-export function getMerchantDetails() {
-  const currency = getSiteCurrency();
+export function getMerchantDetails(currency?: string) {
+  const resolvedCurrency = currency?.trim().toUpperCase() || getSiteCurrency();
   return {
     mtn: runtimeEnv("MERCHANT_MTN_NUMBER") || "",
     airtel: runtimeEnv("MERCHANT_AIRTEL_NUMBER") || "",
@@ -23,7 +23,7 @@ export function getMerchantDetails() {
       runtimeEnv("MERCHANT_BINANCE_ID") ||
       "",
     usdtTrc20Address: runtimeEnv("MERCHANT_USDT_TRC20_ADDRESS") || "",
-    currency,
+    currency: resolvedCurrency,
   };
 }
 
@@ -37,7 +37,10 @@ export function merchantDestinationFor(
   return merchants.mtn;
 }
 
-export async function getOrCreateWallet(userId: string): Promise<UserWallet | null> {
+export async function getOrCreateWallet(
+  userId: string,
+  currency?: string
+): Promise<UserWallet | null> {
   const supabase = createServiceClient();
   if (!supabase) return null;
 
@@ -51,7 +54,7 @@ export async function getOrCreateWallet(userId: string): Promise<UserWallet | nu
 
   const { data: created, error } = await supabase
     .from("user_wallets")
-    .insert({ user_id: userId, currency: getSiteCurrency() })
+    .insert({ user_id: userId, currency: currency?.trim().toUpperCase() || getSiteCurrency() })
     .select()
     .single();
 
@@ -68,8 +71,8 @@ export async function getOrCreateWallet(userId: string): Promise<UserWallet | nu
   return created;
 }
 
-export async function getWalletBalance(userId: string): Promise<number> {
-  const wallet = await getOrCreateWallet(userId);
+export async function getWalletBalance(userId: string, currency?: string): Promise<number> {
+  const wallet = await getOrCreateWallet(userId, currency);
   return wallet ? Number(wallet.balance) : 0;
 }
 
@@ -174,6 +177,7 @@ export async function createDepositRequest(input: {
   senderName?: string;
   userEmail?: string;
   userName?: string;
+  currency?: string;
 }) {
   const supabase = createServiceClient();
   if (!supabase) return null;
@@ -188,7 +192,7 @@ export async function createDepositRequest(input: {
   const senderName = input.senderName?.trim() || null;
 
   const reference = `DEP-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-  const merchants = getMerchantDetails();
+  const merchants = getMerchantDetails(input.currency);
 
   const { data, error } = await supabase
     .from("wallet_deposits")
@@ -293,6 +297,7 @@ export async function purchaseWithWallet(input: {
   userId: string;
   tool: Tool;
   hardwareId: string;
+  currency?: string;
 }) {
   const supabase = createServiceClient();
   if (!supabase) return { ok: false, error: "Database not configured" };
@@ -306,7 +311,7 @@ export async function purchaseWithWallet(input: {
     p_hardware_id: input.hardwareId.trim(),
     p_tool_price: price,
     p_platform_fee: platformFee,
-    p_currency: getSiteCurrency(),
+    p_currency: input.currency?.trim().toUpperCase() || getSiteCurrency(),
   });
 
   if (error) return { ok: false, error: error.message };
@@ -413,6 +418,7 @@ export async function getPlatformFeeStats(): Promise<{
 
 export async function getAdminAttentionCounts(): Promise<{
   pendingDeposits: number;
+  pendingWithdrawals: number;
   awaitingOrders: number;
   unreadNotifications: number;
   unreadMessages: number;
@@ -422,6 +428,7 @@ export async function getAdminAttentionCounts(): Promise<{
   if (!supabase) {
     return {
       pendingDeposits: 0,
+      pendingWithdrawals: 0,
       awaitingOrders: 0,
       unreadNotifications: 0,
       unreadMessages: 0,
@@ -429,9 +436,13 @@ export async function getAdminAttentionCounts(): Promise<{
     };
   }
 
-  const [depositsRes, ordersRes, notifRes, messagesRes] = await Promise.all([
+  const [depositsRes, withdrawalsRes, ordersRes, notifRes, messagesRes] = await Promise.all([
     supabase
       .from("wallet_deposits")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending"),
+    supabase
+      .from("wallet_withdrawals")
       .select("id", { count: "exact", head: true })
       .eq("status", "pending"),
     supabase
@@ -451,16 +462,23 @@ export async function getAdminAttentionCounts(): Promise<{
   ]);
 
   const pendingDeposits = depositsRes.count ?? 0;
+  const pendingWithdrawals = withdrawalsRes.count ?? 0;
   const awaitingOrders = ordersRes.count ?? 0;
   const unreadNotifications = notifRes.count ?? 0;
   const unreadMessages = messagesRes.count ?? 0;
 
   return {
     pendingDeposits,
+    pendingWithdrawals,
     awaitingOrders,
     unreadNotifications,
     unreadMessages,
-    totalAttention: pendingDeposits + awaitingOrders + unreadNotifications + unreadMessages,
+    totalAttention:
+      pendingDeposits +
+      pendingWithdrawals +
+      awaitingOrders +
+      unreadNotifications +
+      unreadMessages,
   };
 }
 
@@ -470,6 +488,7 @@ export async function createDepositIntent(input: {
   method: DepositMethod;
   userEmail?: string;
   userName?: string;
+  currency?: string;
 }) {
   const supabase = createServiceClient();
   if (!supabase) return null;
@@ -478,7 +497,7 @@ export async function createDepositIntent(input: {
   if (!amount || amount <= 0) return null;
 
   const reference = `DEP-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-  const merchants = getMerchantDetails();
+  const merchants = getMerchantDetails(input.currency);
 
   const { data, error } = await supabase
     .from("wallet_deposits")

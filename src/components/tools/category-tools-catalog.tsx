@@ -13,9 +13,17 @@ interface CategoryToolsCatalogProps {
   categories: ToolCategoryWithTools[];
   isAdmin?: boolean;
   isLoggedIn?: boolean;
+  displayCurrency: string;
+  fxRate?: number | null;
 }
 
-function CategoryToolsCatalogInner({ categories, isAdmin, isLoggedIn = false }: CategoryToolsCatalogProps) {
+function CategoryToolsCatalogInner({
+  categories,
+  isAdmin,
+  isLoggedIn = false,
+  displayCurrency,
+  fxRate,
+}: CategoryToolsCatalogProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const categoryParam = searchParams.get("category");
@@ -235,6 +243,8 @@ function CategoryToolsCatalogInner({ categories, isAdmin, isLoggedIn = false }: 
                 highlight={deviceQuery}
                 isLoggedIn={isLoggedIn}
                 isAdmin={isAdmin}
+                displayCurrency={displayCurrency}
+                fxRate={fxRate}
               />
             </div>
           ))}

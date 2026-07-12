@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { CheckCircle2, Copy, ChevronRight, Loader2, Smartphone, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,13 +9,13 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { PaymentMethodLogo } from "@/components/payments/payment-method-logo";
 import { AirtelMoneyIcon, MtnMoMoIcon } from "@/components/payments/payment-method-icons";
-import { depositMethodLabel, isManualCryptoDeposit } from "@/lib/deposit-methods";
-import { getCurrencyLabel } from "@/lib/currency";
+import { depositMethodLabel, depositMethodsForCurrency, isManualCryptoDeposit } from "@/lib/deposit-methods";
+import { getCurrencyLabel } from "@/lib/format-currency";
 import { cn, formatCurrency } from "@/lib/utils";
 import { useConnectivityOptional } from "@/components/layout/connectivity-provider";
 import { acquireBodyScrollLock } from "@/lib/body-scroll-lock";
 import { offlineAwareFetch, offlineMessage } from "@/lib/offline-fetch";
-import type { DepositMethod, WalletDeposit } from "@/types/database";
+import type { DepositMethod, UserPaymentMethod, WalletDeposit } from "@/types/database";
 
 interface MerchantDetails {
   mtn: string;
@@ -28,6 +28,7 @@ interface MerchantDetails {
 interface DepositFormProps {
   merchants: MerchantDetails;
   currency: string;
+  savedPaymentMethods?: UserPaymentMethod[];
 }
 
 interface MethodOption {
@@ -37,7 +38,7 @@ interface MethodOption {
   ussd?: string;
 }
 
-const methods: MethodOption[] = [
+const ALL_METHOD_OPTIONS: MethodOption[] = [
   { id: "mtn", label: "MTN MoMo", icon: "mtn", ussd: "*115#" },
   { id: "airtel", label: "Airtel Money", icon: "airtel", ussd: "*115#" },
   { id: "binance", label: "Binance Pay", icon: "binance" },
@@ -263,9 +264,14 @@ function InstructionStep({
   );
 }
 
-export function DepositForm({ merchants, currency }: DepositFormProps) {
+export function DepositForm({ merchants, currency, savedPaymentMethods = [] }: DepositFormProps) {
   const router = useRouter();
   const connectivity = useConnectivityOptional();
+  const methods = useMemo(
+    () =>
+      ALL_METHOD_OPTIONS.filter((m) => depositMethodsForCurrency(currency).includes(m.id)),
+    [currency]
+  );
   const [step, setStep] = useState<"pick" | "pay" | "done">("pick");
   const [method, setMethod] = useState<DepositMethod | null>(null);
   const [amount, setAmount] = useState("");
@@ -285,6 +291,44 @@ export function DepositForm({ merchants, currency }: DepositFormProps) {
   const parsedAmount = Number(amount);
   const merchantNumber = method ? merchantFor(method, merchants) : "";
   const methodMeta = methods.find((m) => m.id === method);
+  const savedMethodForDeposit = method
+    ? savedPaymentMethods.find((m) => m.method === method)
+    : undefined;
+
+  useEffect(() => {
+    if (method && !depositMethodsForCurrency(currency).includes(method)) {
+      setMethod(null);
+      setStep("pick");
+    }
+  }, [currency, method]);
+
+  // Optional convenience only — without saved methods, every field stays manual (unchanged flow).
+  useEffect(() => {
+    if (!method) return;
+
+    if (method === "mtn") {
+      const saved = savedPaymentMethods.find((m) => m.method === "mtn");
+      setMtnPhoneNumber(saved?.account_identifier ?? "");
+      return;
+    }
+
+    const saved = savedPaymentMethods.find((m) => m.method === method);
+    if (!saved) {
+      setSenderPhone("");
+      setSenderName("");
+      return;
+    }
+    if (method === "binance") {
+      setSenderName(saved.account_identifier);
+      setSenderPhone("");
+    } else if (method === "usdt_trc20") {
+      setSenderPhone(saved.account_identifier);
+      setSenderName("");
+    } else {
+      setSenderPhone(saved.account_identifier);
+      setSenderName(saved.account_name ?? "");
+    }
+  }, [method, savedPaymentMethods]);
 
   useEffect(() => {
     if (!submittedDeposit || submittedDeposit.provider !== "mtn_momo") return;
@@ -449,7 +493,11 @@ export function DepositForm({ merchants, currency }: DepositFormProps) {
             onChange={(e) => setMtnPhoneNumber(e.target.value)}
             required
             autoFocus
-            hint="Use the number with enough balance to complete this deposit"
+            hint={
+              savedMethodForDeposit
+                ? "Pre-filled from your saved MTN — change if using a different number"
+                : "Use the number with enough balance to complete this deposit"
+            }
           />
 
           {error && (
@@ -671,6 +719,12 @@ export function DepositForm({ merchants, currency }: DepositFormProps) {
           {isCrypto
             ? "Enter your payment reference so admin can verify and credit your wallet."
             : "Enter the details from your payment SMS to finish your deposit."}
+          {savedMethodForDeposit && (
+            <span className="block mt-1 text-emerald-200/70">
+              Sender details pre-filled from your saved {methodLabel(method)} — change them if you
+              paid from a different account.
+            </span>
+          )}
         </div>
 
         <div className="rounded-xl border-2 border-cyan-500/30 bg-black/50 p-5 sm:p-6 space-y-5 shadow-lg shadow-black/20">

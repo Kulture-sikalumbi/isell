@@ -7,7 +7,7 @@ import { ActivationWaitingPanel } from "@/components/dashboard/activation-waitin
 import { PaymentMethodsRow } from "@/components/payments/payment-method-icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getSiteCurrency } from "@/lib/currency";
+import { getClientDisplayCurrency } from "@/lib/format-currency";
 import {
   getCustomerIdentifierLabel,
   getCustomerIdentifierPlaceholder,
@@ -15,7 +15,7 @@ import {
 import { formatActivationEtaLong } from "@/lib/activation-time";
 import type { StorefrontTool } from "@/lib/storefront-tool";
 import { formatCurrency } from "@/lib/utils";
-import { WALLET_PAYMENT_METHODS_SHORT } from "@/lib/wallet-payment-copy";
+import { walletPaymentMethodsShort } from "@/lib/wallet-payment-copy";
 import { useConnectivityOptional } from "@/components/layout/connectivity-provider";
 import { useNavigationLoading } from "@/components/layout/navigation-progress";
 import { offlineAwareFetch, offlineMessage } from "@/lib/offline-fetch";
@@ -33,7 +33,7 @@ export function CheckoutForm({
   userEmail,
   walletBalance,
   checkoutTotal,
-  currency = getSiteCurrency(),
+  currency = getClientDisplayCurrency(),
 }: CheckoutFormProps) {
   const connectivity = useConnectivityOptional();
   const { stopLoading } = useNavigationLoading();
@@ -100,7 +100,7 @@ export function CheckoutForm({
             <p className="text-xs text-cyan-300/80 uppercase tracking-wide font-medium">Pay with</p>
             <p className="text-sm text-white font-semibold">Prepaid wallet</p>
           </div>
-          <PaymentMethodsRow />
+          <PaymentMethodsRow currency={currency} />
         </div>
         <div className="flex items-center justify-between pt-3 border-t border-white/10">
           <span className="text-sm text-zinc-400">Your balance</span>
@@ -114,7 +114,7 @@ export function CheckoutForm({
         <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 px-4 py-3 text-sm text-amber-300">
           You need {formatCurrency(checkoutTotal - walletBalance, currency)} more.{" "}
           <Link href="/dashboard?tab=wallet" className="underline text-amber-200">
-            Add funds via {WALLET_PAYMENT_METHODS_SHORT}
+            Add funds via {walletPaymentMethodsShort(currency)}
           </Link>
         </div>
       )}

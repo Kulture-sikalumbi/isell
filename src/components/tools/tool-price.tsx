@@ -1,11 +1,15 @@
+"use client";
+
 import Link from "next/link";
 import { LogIn } from "lucide-react";
+import { convertCurrency, getClientDisplayCurrency } from "@/lib/format-currency";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
 interface ToolPriceProps {
   amount: number;
   currency?: string;
+  fxRate?: number | null;
   isLoggedIn: boolean;
   loginNext?: string;
   className?: string;
@@ -16,12 +20,15 @@ interface ToolPriceProps {
 export function ToolPrice({
   amount,
   currency,
+  fxRate,
   isLoggedIn,
   loginNext = "/tools",
   className,
   hintClassName,
   variant = "inline",
 }: ToolPriceProps) {
+  const displayCurrency = (currency ?? getClientDisplayCurrency()).toUpperCase();
+  const displayAmount = convertCurrency(amount, "USD", displayCurrency, fxRate ?? undefined);
   const loginHref = `/auth/login?next=${encodeURIComponent(loginNext)}`;
 
   if (!isLoggedIn) {
@@ -58,7 +65,7 @@ export function ToolPrice({
   if (variant === "large") {
     return (
       <span className={cn("text-2xl font-bold text-white", className)}>
-        {formatCurrency(amount, currency)}
+        {formatCurrency(displayAmount, displayCurrency)}
       </span>
     );
   }
@@ -71,14 +78,14 @@ export function ToolPrice({
           className
         )}
       >
-        {formatCurrency(amount, currency)}
+        {formatCurrency(displayAmount, displayCurrency)}
       </span>
     );
   }
 
   return (
     <span className={cn("text-xl font-bold text-white", className)}>
-      {formatCurrency(amount, currency)}
+      {formatCurrency(displayAmount, displayCurrency)}
     </span>
   );
 }

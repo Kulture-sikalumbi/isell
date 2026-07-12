@@ -2,25 +2,31 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Plus, Wallet, History, ChevronDown } from "lucide-react";
-import { getSiteCurrency } from "@/lib/currency";
-import { WALLET_PAYMENT_METHODS_SHORT } from "@/lib/wallet-payment-copy";
+import { Plus, Wallet, History, ChevronDown, CreditCard } from "lucide-react";
+import { CurrencyMenuButton } from "@/components/currency/currency-menu-button";
+import { CurrencyPickerModal } from "@/components/currency/currency-picker-modal";
+import { getClientDisplayCurrency } from "@/lib/format-currency";
+import type { DisplayCurrency } from "@/lib/display-currency-preference";
+import { walletPaymentMethodsShort } from "@/lib/wallet-payment-copy";
 import { cn, formatCurrency } from "@/lib/utils";
 
 interface WalletHeaderChipProps {
   balance: number;
   currency?: string;
+  displayCurrency?: DisplayCurrency | null;
   className?: string;
   compact?: boolean;
 }
 
 export function WalletHeaderChip({
   balance,
-  currency = getSiteCurrency(),
+  currency = getClientDisplayCurrency(),
+  displayCurrency,
   className,
   compact = false,
 }: WalletHeaderChipProps) {
   const [open, setOpen] = useState(false);
+  const [currencyPickerOpen, setCurrencyPickerOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -35,9 +41,17 @@ export function WalletHeaderChip({
 
   const formatted = formatCurrency(balance, currency);
 
+  const currencyPicker = (
+    <CurrencyPickerModal
+      open={currencyPickerOpen}
+      onClose={() => setCurrencyPickerOpen(false)}
+    />
+  );
+
   if (compact) {
     return (
       <div ref={ref} className={cn("relative flex items-center gap-1.5 min-w-0", className)}>
+        {currencyPicker}
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
@@ -85,6 +99,22 @@ export function WalletHeaderChip({
               <History className="h-4 w-4 text-zinc-400" />
               Transaction history
             </Link>
+            <Link
+              href="/dashboard?tab=wallet#wallet-payment-methods"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-zinc-300 hover:text-white hover:bg-white/5"
+            >
+              <CreditCard className="h-4 w-4 text-violet-400" />
+              Payment methods
+            </Link>
+            <CurrencyMenuButton
+              currentCurrency={displayCurrency ?? (currency as DisplayCurrency)}
+              variant="dropdown"
+              onOpenPicker={() => {
+                setOpen(false);
+                setCurrencyPickerOpen(true);
+              }}
+            />
           </div>
         )}
       </div>
@@ -93,6 +123,7 @@ export function WalletHeaderChip({
 
   return (
     <div ref={ref} className={cn("relative flex items-center gap-2", className)}>
+      {currencyPicker}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -120,7 +151,7 @@ export function WalletHeaderChip({
             className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-zinc-300 hover:text-white hover:bg-white/5"
           >
             <Plus className="h-4 w-4 text-cyan-400" />
-            Add funds via {WALLET_PAYMENT_METHODS_SHORT}
+            Add funds via {walletPaymentMethodsShort(currency)}
           </Link>
           <Link
             href="/dashboard?tab=history"
@@ -130,6 +161,22 @@ export function WalletHeaderChip({
             <History className="h-4 w-4" />
             Transaction history
           </Link>
+          <Link
+            href="/dashboard?tab=wallet#wallet-payment-methods"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-zinc-300 hover:text-white hover:bg-white/5"
+          >
+            <CreditCard className="h-4 w-4 text-violet-400" />
+            Payment methods
+          </Link>
+          <CurrencyMenuButton
+            currentCurrency={displayCurrency ?? (currency as DisplayCurrency)}
+            variant="dropdown"
+            onOpenPicker={() => {
+              setOpen(false);
+              setCurrencyPickerOpen(true);
+            }}
+          />
         </div>
       )}
     </div>

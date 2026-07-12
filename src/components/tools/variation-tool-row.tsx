@@ -11,6 +11,8 @@ interface VariationToolRowProps {
   highlight?: string;
   isLoggedIn?: boolean;
   isAdmin?: boolean;
+  displayCurrency?: string;
+  fxRate?: number | null;
 }
 
 const accentColors = [
@@ -38,7 +40,14 @@ function HighlightText({ text, highlight }: { text: string; highlight?: string }
   );
 }
 
-export function VariationToolRow({ tool, highlight, isLoggedIn = false, isAdmin }: VariationToolRowProps) {
+export function VariationToolRow({
+  tool,
+  highlight,
+  isLoggedIn = false,
+  isAdmin,
+  displayCurrency,
+  fxRate,
+}: VariationToolRowProps) {
   const colorIndex =
     tool.name.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) %
     accentColors.length;
@@ -87,6 +96,8 @@ export function VariationToolRow({ tool, highlight, isLoggedIn = false, isAdmin 
           />
           <ToolPrice
             amount={tool.checkout_price}
+            currency={displayCurrency}
+            fxRate={fxRate}
             isLoggedIn={isLoggedIn}
             loginNext={`/tools/${tool.slug}`}
             variant="badge"

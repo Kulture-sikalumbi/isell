@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Bell,
+  CreditCard,
   Home,
   KeyRound,
   LayoutDashboard,
@@ -24,9 +25,12 @@ import { AdminPanelHeaderChip } from "@/components/layout/admin-panel-header-chi
 import { LiveMerchantHeaderChip } from "@/components/layout/live-merchant-header-chip";
 import { LiveWalletHeaderChip } from "@/components/layout/live-wallet-header-chip";
 import { UserInboxBell } from "@/components/user/user-inbox-bell";
+import { CurrencyMenuButton } from "@/components/currency/currency-menu-button";
+import { CurrencyPickerModal } from "@/components/currency/currency-picker-modal";
 import { ConnectionStatus } from "@/components/layout/connection-status";
 import { useNavigationLoading } from "@/components/layout/navigation-progress";
 import { acquireBodyScrollLock } from "@/lib/body-scroll-lock";
+import type { DisplayCurrency } from "@/lib/display-currency-preference";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 
@@ -38,6 +42,7 @@ export interface SiteNavUser {
   isAdmin: boolean;
   walletBalance?: number;
   walletCurrency?: string;
+  displayCurrency?: DisplayCurrency | null;
   merchantBalance?: number;
   merchantCurrency?: string;
   platformFees?: number;
@@ -69,6 +74,11 @@ const customerMenuLinks: NavItem[] = [
   { href: "/tools", label: "Tools", icon: Wrench },
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard?tab=wallet", label: "Wallet", icon: Wallet },
+  {
+    href: "/dashboard?tab=wallet#wallet-payment-methods",
+    label: "Payment methods",
+    icon: CreditCard,
+  },
   { href: "/dashboard?tab=activations", label: "My activations", icon: KeyRound },
   { href: "/dashboard?tab=inbox", label: "Inbox", icon: Bell },
   { href: "/dashboard?tab=messages", label: "Support", icon: MessageCircle },
@@ -139,14 +149,10 @@ function drawerLinkClass(active: boolean, admin = false) {
   );
 }
 
-export function SiteNav({ user }: SiteNavProps) {
+function SiteNavShell({ user, pathname }: SiteNavProps & { pathname: string }) {
   const [open, setOpen] = useState(false);
-  const pathname = usePathname();
+  const [currencyPickerOpen, setCurrencyPickerOpen] = useState(false);
   const { isNavigating } = useNavigationLoading();
-
-  useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
 
   useEffect(() => {
     if (!open) return;
@@ -164,6 +170,9 @@ export function SiteNav({ user }: SiteNavProps) {
       : guestMenuLinks;
 
   function isLinkActive(href: string) {
+    if (href.includes("#wallet-payment-methods")) {
+      return false;
+    }
     if (href === "/") return pathname === "/";
     if (href.includes("?")) return pathname === href.split("?")[0];
     if (href === "/dashboard") return pathname === "/dashboard";
@@ -204,6 +213,7 @@ export function SiteNav({ user }: SiteNavProps) {
             userId={user.id}
             initialBalance={user.walletBalance}
             currency={user.walletCurrency}
+            displayCurrency={user.displayCurrency}
           />
         )}
         {user && !user.isAdmin && (
@@ -243,6 +253,7 @@ export function SiteNav({ user }: SiteNavProps) {
             userId={user.id}
             initialBalance={user.walletBalance}
             currency={user.walletCurrency}
+            displayCurrency={user.displayCurrency}
             compact
           />
         )}
@@ -270,6 +281,11 @@ export function SiteNav({ user }: SiteNavProps) {
         )}
         {accountMenu}
       </div>
+
+      <CurrencyPickerModal
+        open={currencyPickerOpen}
+        onClose={() => setCurrencyPickerOpen(false)}
+      />
 
       {open && (
         <div className="fixed inset-0 z-[100] flex justify-end">
@@ -330,6 +346,14 @@ export function SiteNav({ user }: SiteNavProps) {
                 </Link>
               ))}
 
+              {user && !user.isAdmin && (
+                <CurrencyMenuButton
+                  currentCurrency={user.displayCurrency}
+                  onNavigate={() => setOpen(false)}
+                  onOpenPicker={() => setCurrencyPickerOpen(true)}
+                />
+              )}
+
               {!user && (
                 <Link
                   href="/auth/login"
@@ -369,4 +393,9 @@ export function SiteNav({ user }: SiteNavProps) {
       )}
     </>
   );
+}
+
+export function SiteNav({ user }: SiteNavProps) {
+  const pathname = usePathname();
+  return <SiteNavShell key={pathname} user={user} pathname={pathname} />;
 }

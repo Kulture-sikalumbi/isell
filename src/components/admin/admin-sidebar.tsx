@@ -15,6 +15,7 @@ import {
   Settings,
   X,
   MoreHorizontal,
+  ArrowDownToLine,
 } from "lucide-react";
 import { AdminHeader } from "@/components/admin/admin-header";
 import { AdminNavBadge, useAdminAttentionCounts } from "@/components/admin/admin-nav-badges";
@@ -23,6 +24,7 @@ import { cn } from "@/lib/utils";
 type BadgeKey =
   | "totalAttention"
   | "pendingDeposits"
+  | "pendingWithdrawals"
   | "awaitingOrders"
   | "unreadNotifications"
   | "unreadMessages"
@@ -47,6 +49,7 @@ const sections: NavSection[] = [
       { href: "/admin", label: "Dashboard", icon: LayoutDashboard, badgeKey: "totalAttention" },
       { href: "/admin/inbox", label: "Inbox", icon: Bell, badgeKey: "unreadNotifications" },
       { href: "/admin/deposits", label: "Deposits", icon: Wallet, badgeKey: "pendingDeposits" },
+      { href: "/admin/withdrawals", label: "Withdrawals", icon: ArrowDownToLine, badgeKey: "pendingWithdrawals" },
       { href: "/admin/payments", label: "Orders to fulfill", icon: CreditCard, badgeKey: "awaitingOrders" },
       { href: "/admin/messages", label: "Customer chat", icon: MessageCircle, badgeKey: "unreadMessages" },
     ],
@@ -58,6 +61,7 @@ const sections: NavSection[] = [
       { href: "/admin/users", label: "Customers", icon: Users, badgeKey: null },
       { href: "/admin/ledger", label: "Accounting", icon: CreditCard, badgeKey: null },
       { href: "/admin/credits", label: "Credits", icon: Package, badgeKey: null },
+        { href: "/admin/settings", label: "Settings", icon: Settings, badgeKey: null },
     ],
   },
 ];
@@ -66,6 +70,7 @@ const mobilePrimary = [
   { href: "/admin", label: "Home", icon: LayoutDashboard, badgeKey: "totalAttention" as const },
   { href: "/admin/inbox", label: "Inbox", icon: Bell, badgeKey: "unreadNotifications" as const },
   { href: "/admin/deposits", label: "Deposits", icon: Wallet, badgeKey: "pendingDeposits" as const },
+  { href: "/admin/withdrawals", label: "Withdraw", icon: ArrowDownToLine, badgeKey: "pendingWithdrawals" as const },
   { href: "/admin/payments", label: "Orders", icon: CreditCard, badgeKey: "awaitingOrders" as const },
   { href: "/admin/messages", label: "Chat", icon: MessageCircle, badgeKey: "unreadMessages" as const },
 ];

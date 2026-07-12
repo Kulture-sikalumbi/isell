@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { subscribeToTables, subscribeToWallet } from "@/lib/realtime";
-import { getSiteCurrency } from "@/lib/currency";
 import { offlineAwareFetch } from "@/lib/offline-fetch";
 
 const WALLET_POLL_MS = 20_000;
@@ -10,9 +9,9 @@ const WALLET_POLL_MS = 20_000;
 export function useLiveWalletBalance(
   userId: string | undefined,
   initialBalance: number,
-  _initialCurrency?: string
+  initialCurrency?: string
 ) {
-  const displayCurrency = getSiteCurrency();
+  const displayCurrency = initialCurrency ?? "USD";
   const [balance, setBalance] = useState(initialBalance);
   const [justUpdated, setJustUpdated] = useState(false);
   const prevBalance = useRef(initialBalance);
@@ -39,14 +38,11 @@ export function useLiveWalletBalance(
   }, [userId, applyBalance]);
 
   useEffect(() => {
-    setBalance(initialBalance);
-    prevBalance.current = initialBalance;
-  }, [initialBalance]);
-
-  useEffect(() => {
     if (!userId) return;
 
-    fetchBalance();
+    const initialFetch = setTimeout(() => {
+      void fetchBalance();
+    }, 0);
 
     const unsubWallet = subscribeToWallet(userId, (row) => {
       applyBalance(row.balance);
@@ -61,6 +57,7 @@ export function useLiveWalletBalance(
     const interval = setInterval(fetchBalance, WALLET_POLL_MS);
 
     return () => {
+      clearTimeout(initialFetch);
       unsubWallet?.();
       unsubTables?.();
       clearInterval(interval);

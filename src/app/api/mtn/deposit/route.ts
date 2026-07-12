@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
+import { getRequestCurrency } from "@/lib/request-currency";
+import {
+  isDepositMethodAllowedForCurrency,
+  mobileMoneyUnavailableMessage,
+} from "@/lib/deposit-methods";
 import { initiateMtnRequestToPay } from "@/lib/mtn-momo";
 import { createDepositIntent, setDepositProviderReference } from "@/lib/wallet";
 
@@ -7,6 +12,11 @@ export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const currency = await getRequestCurrency();
+  if (!isDepositMethodAllowedForCurrency("mtn", currency)) {
+    return NextResponse.json({ error: mobileMoneyUnavailableMessage() }, { status: 400 });
   }
 
   const body = await request.json();
@@ -25,6 +35,7 @@ export async function POST(request: Request) {
     amount,
     method: "mtn",
     userEmail: user.email,
+    currency,
   });
   if (!deposit) {
     return NextResponse.json({ error: "Failed to create deposit intent" }, { status: 500 });

@@ -9,6 +9,8 @@ interface ToolCardProps {
   tool: StorefrontTool;
   highlight?: string;
   isLoggedIn?: boolean;
+  displayCurrency?: string;
+  fxRate?: number | null;
 }
 
 const accentColors = [
@@ -36,7 +38,13 @@ function HighlightText({ text, highlight }: { text: string; highlight?: string }
   );
 }
 
-export function ToolCard({ tool, highlight, isLoggedIn = false }: ToolCardProps) {
+export function ToolCard({
+  tool,
+  highlight,
+  isLoggedIn = false,
+  displayCurrency,
+  fxRate,
+}: ToolCardProps) {
   const colorIndex =
     tool.name.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) %
     accentColors.length;
@@ -68,6 +76,8 @@ export function ToolCard({ tool, highlight, isLoggedIn = false }: ToolCardProps)
           <div>
             <ToolPrice
               amount={tool.checkout_price}
+              currency={displayCurrency}
+              fxRate={fxRate}
               isLoggedIn={isLoggedIn}
               loginNext={`/tools/${tool.slug}`}
             />

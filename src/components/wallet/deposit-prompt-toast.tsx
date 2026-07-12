@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Wallet, X } from "lucide-react";
 import { WalletPaymentMethodIcons } from "@/components/payments/wallet-payment-method-icons";
-import { WALLET_DEPOSIT_BANNER_COPY } from "@/lib/wallet-payment-copy";
+import { walletDepositBannerCopy } from "@/lib/wallet-payment-copy";
 import { useLiveWalletBalance } from "@/hooks/use-live-wallet-balance";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -61,7 +61,7 @@ export function DepositPromptToast({
               Add wallet funds for faster checkout
             </p>
             <p className="mt-1 text-xs text-zinc-400 leading-relaxed">
-              {WALLET_DEPOSIT_BANNER_COPY} Balance:{" "}
+              {walletDepositBannerCopy(currency)} Balance:{" "}
               <span className="font-medium text-zinc-200">{formatCurrency(balance, currency)}</span>
             </p>
 
@@ -73,7 +73,7 @@ export function DepositPromptToast({
                 <Wallet className="h-3.5 w-3.5" />
                 Deposit funds
               </Link>
-              <WalletPaymentMethodIcons size="sm" />
+              <WalletPaymentMethodIcons size="sm" currency={currency} />
             </div>
           </div>
 

@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { getCurrentProfile, getCurrentUser } from "@/lib/auth";
+import { getRequestCurrency } from "@/lib/request-currency";
 import { createDepositIntent } from "@/lib/wallet";
+import {
+  isDepositMethodAllowedForCurrency,
+  mobileMoneyUnavailableMessage,
+} from "@/lib/deposit-methods";
 import type { DepositMethod } from "@/types/database";
 
 const validMethods: DepositMethod[] = ["mtn", "airtel", "binance", "usdt_trc20", "other"];
@@ -24,6 +29,11 @@ export async function POST(request: Request) {
   }
 
   const profile = await getCurrentProfile();
+  const currency = await getRequestCurrency();
+
+  if (!isDepositMethodAllowedForCurrency(method, currency)) {
+    return NextResponse.json({ error: mobileMoneyUnavailableMessage() }, { status: 400 });
+  }
 
   const deposit = await createDepositIntent({
     userId: user.id,
@@ -31,6 +41,7 @@ export async function POST(request: Request) {
     method,
     userEmail: user.email,
     userName: profile?.full_name ?? undefined,
+    currency,
   });
 
   if (!deposit) {

@@ -6,6 +6,7 @@ import type { AdminAttentionCounts } from "@/types/admin-stats";
 
 const empty: AdminAttentionCounts = {
   pendingDeposits: 0,
+  pendingWithdrawals: 0,
   awaitingOrders: 0,
   unreadNotifications: 0,
   unreadMessages: 0,
@@ -31,6 +32,7 @@ export function useLiveAdminStats(initial?: {
       const data = await res.json();
       setCounts({
         pendingDeposits: data.pendingDeposits ?? 0,
+        pendingWithdrawals: data.pendingWithdrawals ?? 0,
         awaitingOrders: data.awaitingOrders ?? 0,
         unreadNotifications: data.unreadNotifications ?? 0,
         unreadMessages: data.unreadMessages ?? 0,
@@ -60,6 +62,7 @@ export function useLiveAdminStats(initial?: {
       "admin-stats",
       [
         "wallet_deposits",
+        "wallet_withdrawals",
         "payments",
         "admin_notifications",
         "support_messages",

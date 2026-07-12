@@ -3,7 +3,10 @@ import { completePaidOrder } from "@/lib/complete-order";
 import { getToolBySlug } from "@/lib/data";
 import { getCheckoutTotal } from "@/lib/platform-fee";
 import { createAuthClient, createServiceClient } from "@/lib/supabase/server";
+import { getRequestCurrency } from "@/lib/request-currency";
 import { getWalletBalance, purchaseWithWallet } from "@/lib/wallet";
+import { convertCurrency } from "@/lib/format-currency";
+import { getUsdToZmwRate } from "@/lib/currency-rates";
 
 export async function POST(request: Request) {
   try {
@@ -42,8 +45,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const totalCost = getCheckoutTotal(tool);
-    const balance = await getWalletBalance(user.id);
+    const currency = await getRequestCurrency();
+    const fxRate = currency === "ZMW" ? await getUsdToZmwRate() : undefined;
+    const totalCost = convertCurrency(getCheckoutTotal(tool), "USD", currency, fxRate);
+    const balance = await getWalletBalance(user.id, currency);
 
     if (balance < totalCost) {
       return NextResponse.json(
@@ -60,6 +65,7 @@ export async function POST(request: Request) {
       userId: user.id,
       tool,
       hardwareId: hardwareId.trim(),
+      currency,
     });
 
     if (!result.ok || !result.payment_id) {

@@ -21,7 +21,9 @@ import {
   getPendingWalletDeposits,
   getOrCreateWallet,
 } from "@/lib/wallet";
-import { getSiteCurrency } from "@/lib/currency";
+import { getUserPaymentMethods } from "@/lib/payment-methods";
+import { getPendingWithdrawalForUser } from "@/lib/withdrawals";
+import { getRequestCurrency } from "@/lib/request-currency";
 import { getUserNotifications, getUnreadUserNotificationCount } from "@/lib/user-notifications";
 
 export const metadata = {
@@ -52,20 +54,22 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       : "orders";
 
   const isWalletArea = tab === "wallet" || tab === "history";
+  const displayCurrency = await getRequestCurrency();
 
-  const [activations, orders, wallet, notifications, inboxUnread, pendingDeposits] =
+  const [activations, orders, wallet, notifications, inboxUnread, pendingDeposits, paymentMethods, pendingWithdrawal] =
     await Promise.all([
-    getActivations(user.id),
-    getUserPayments(user.id),
-    isWalletArea ? getOrCreateWallet(user.id) : Promise.resolve(null),
-    getUserNotifications(user.id),
-    getUnreadUserNotificationCount(user.id),
-    getPendingWalletDeposits(user.id),
+      getActivations(user.id),
+      getUserPayments(user.id),
+      isWalletArea ? getOrCreateWallet(user.id, displayCurrency) : Promise.resolve(null),
+      getUserNotifications(user.id),
+      getUnreadUserNotificationCount(user.id),
+      getPendingWalletDeposits(user.id),
+      isWalletArea ? getUserPaymentMethods(user.id) : Promise.resolve([]),
+      isWalletArea ? getPendingWithdrawalForUser(user.id) : Promise.resolve(null),
   ]);
 
-  const merchants = getMerchantDetails();
+  const merchants = getMerchantDetails(displayCurrency);
   const balance = wallet ? Number(wallet.balance) : 0;
-  const displayCurrency = getSiteCurrency();
 
   const activationByPaymentId = new Map(
     activations
@@ -135,6 +139,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               currency={displayCurrency}
               merchants={merchants}
               pendingDepositCount={pendingDeposits.length}
+              paymentMethods={paymentMethods}
+              pendingWithdrawal={pendingWithdrawal}
             />
           </Suspense>
         ) : tab === "history" && wallet ? (

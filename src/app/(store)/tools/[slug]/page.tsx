@@ -11,9 +11,11 @@ import { Badge } from "@/components/ui/badge";
 import { toStorefrontTool } from "@/lib/storefront-tool";
 import { getToolBySlug } from "@/lib/data";
 import { getWalletBalance } from "@/lib/wallet";
-import { getSiteCurrency } from "@/lib/currency";
 import { getCustomerIdentifierLabel } from "@/lib/identifier-label";
 import { ToolPrice } from "@/components/tools/tool-price";
+import { convertCurrency } from "@/lib/format-currency";
+import { getUsdToZmwRate } from "@/lib/currency-rates";
+import { getRequestCurrency } from "@/lib/request-currency";
 
 interface ToolDetailPageProps {
   params: Promise<{ slug: string }>;
@@ -33,9 +35,11 @@ export default async function ToolDetailPage({ params }: ToolDetailPageProps) {
   if (!tool) notFound();
 
   const userEmail = user?.email ?? "";
-  const walletBalance = user ? await getWalletBalance(user.id) : 0;
   const storefrontTool = toStorefrontTool(tool);
-  const currency = getSiteCurrency();
+  const currency = await getRequestCurrency();
+  const fxRate = currency === "ZMW" ? await getUsdToZmwRate() : undefined;
+  const walletBalance = user ? await getWalletBalance(user.id, currency) : 0;
+  const checkoutTotal = convertCurrency(storefrontTool.checkout_price, "USD", currency, fxRate ?? undefined);
   const identifierLabel = getCustomerIdentifierLabel(tool.identifier_label);
   const windowsUrl = tool.download_url || tool.category?.download_url || null;
   const macUrl = tool.download_url_mac || tool.category?.download_url_mac || null;
@@ -75,6 +79,7 @@ export default async function ToolDetailPage({ params }: ToolDetailPageProps) {
                 <ToolPrice
                   amount={storefrontTool.checkout_price}
                   currency={currency}
+                  fxRate={fxRate}
                   isLoggedIn={Boolean(user)}
                   loginNext={`/tools/${tool.slug}`}
                   variant="large"
@@ -132,7 +137,7 @@ export default async function ToolDetailPage({ params }: ToolDetailPageProps) {
                 tool={storefrontTool}
                 userEmail={userEmail}
                 walletBalance={walletBalance}
-                checkoutTotal={storefrontTool.checkout_price}
+                checkoutTotal={checkoutTotal}
                 currency={currency}
               />
             ) : (

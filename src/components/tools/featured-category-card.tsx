@@ -2,11 +2,14 @@ import Link from "next/link";
 import { ArrowRight, Layers } from "lucide-react";
 import { ToolPrice } from "@/components/tools/tool-price";
 import { cn, formatCurrency } from "@/lib/utils";
+import { convertCurrency } from "@/lib/format-currency";
 import type { ToolCategoryWithTools } from "@/lib/data";
 
 interface FeaturedCategoryCardProps {
   category: ToolCategoryWithTools;
   isLoggedIn?: boolean;
+  displayCurrency: string;
+  fxRate?: number | null;
 }
 
 const accentColors = [
@@ -16,7 +19,12 @@ const accentColors = [
   "from-amber-500/20 to-amber-500/5",
 ];
 
-export function FeaturedCategoryCard({ category, isLoggedIn = false }: FeaturedCategoryCardProps) {
+export function FeaturedCategoryCard({
+  category,
+  isLoggedIn = false,
+  displayCurrency,
+  fxRate,
+}: FeaturedCategoryCardProps) {
   const colorIndex =
     category.name.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) %
     accentColors.length;
@@ -55,11 +63,22 @@ export function FeaturedCategoryCard({ category, isLoggedIn = false }: FeaturedC
             {minPrice != null ? (
               isLoggedIn ? (
                 <>
-                  <span className="text-lg font-bold text-white">{formatCurrency(minPrice)}</span>
+                  <span className="text-lg font-bold text-white">
+                    {formatCurrency(
+                      convertCurrency(minPrice, "USD", displayCurrency, fxRate ?? undefined),
+                      displayCurrency
+                    )}
+                  </span>
                   <span className="text-xs text-zinc-500 ml-2">from</span>
                 </>
               ) : (
-                <ToolPrice amount={minPrice} isLoggedIn={false} loginNext={href} />
+                <ToolPrice
+                  amount={minPrice}
+                  currency={displayCurrency}
+                  fxRate={fxRate}
+                  isLoggedIn={false}
+                  loginNext={href}
+                />
               )
             ) : (
               <span className="text-sm text-zinc-500">Browse devices</span>

@@ -11,6 +11,7 @@ const typeLabels: Record<string, string> = {
   platform_fee: "Service fee",
   refund: "Refund",
   adjustment: "Adjustment",
+  withdrawal: "Withdrawal",
 };
 
 export function WalletTransactionsList({ transactions }: WalletTransactionsListProps) {

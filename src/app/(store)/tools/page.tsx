@@ -1,6 +1,8 @@
 import { CategoryToolsCatalog } from "@/components/tools/category-tools-catalog";
 import { getCurrentProfile, getCurrentUser } from "@/lib/auth";
+import { getUsdToZmwRate } from "@/lib/currency-rates";
 import { getActiveCategoriesWithTools } from "@/lib/data";
+import { getRequestCurrency } from "@/lib/request-currency";
 
 export const metadata = {
   title: "Tools — iSell Unlocks",
@@ -17,6 +19,8 @@ export default async function ToolsPage({
   const profile = await getCurrentProfile();
   const isAdmin = profile?.role === "admin";
   const isLoggedIn = Boolean(user);
+  const displayCurrency = await getRequestCurrency();
+  const fxRate = displayCurrency === "ZMW" ? await getUsdToZmwRate() : null;
   const activeCategory = categorySlug
     ? categories.find((c) => c.slug === categorySlug && c.slug !== "general")
     : null;
@@ -35,7 +39,13 @@ export default async function ToolsPage({
           <div className="mb-6" aria-hidden />
         )}
 
-        <CategoryToolsCatalog categories={categories} isAdmin={isAdmin} isLoggedIn={isLoggedIn} />
+        <CategoryToolsCatalog
+          categories={categories}
+          isAdmin={isAdmin}
+          isLoggedIn={isLoggedIn}
+          displayCurrency={displayCurrency}
+          fxRate={fxRate}
+        />
       </div>
     </section>
   );

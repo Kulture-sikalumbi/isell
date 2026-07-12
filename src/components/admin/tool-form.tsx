@@ -10,7 +10,7 @@ import {
   buildDirectApiFormState,
   buildDirectApiPayload,
 } from "@/components/admin/tool-form-direct-api";
-import { getCurrencyLabel } from "@/lib/currency";
+import { getCurrencyLabel } from "@/lib/format-currency";
 import {
   ACTIVATION_TIME_UNIT_OPTIONS,
   parseActivationTimeFields,

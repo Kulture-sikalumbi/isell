@@ -101,6 +101,14 @@ export function AdminHeader() {
               {counts.pendingDeposits} deposits
             </Link>
           )}
+          {counts.pendingWithdrawals > 0 && (
+            <Link
+              href="/admin/withdrawals"
+              className="shrink-0 inline-flex items-center gap-1 rounded-full bg-violet-500/15 px-2.5 py-1 text-[10px] text-violet-200"
+            >
+              {counts.pendingWithdrawals} withdrawals
+            </Link>
+          )}
           {counts.awaitingOrders > 0 && (
             <Link
               href="/admin/payments"

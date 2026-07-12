@@ -1,16 +1,19 @@
 import Link from "next/link";
 import { getCurrentProfile, getCurrentUser } from "@/lib/auth";
 import { getMerchantAccountingSummary } from "@/lib/ledger";
-import { getSiteCurrency } from "@/lib/currency";
+import { getRequestCurrency } from "@/lib/request-currency";
 import { getUnreadUserNotificationCount } from "@/lib/user-notifications";
 import { getAdminAttentionCounts, getOrCreateWallet } from "@/lib/wallet";
 import { BrandWordmark } from "@/components/brand/brand-wordmark";
 import { SiteNav, type SiteNavUser } from "@/components/layout/site-nav";
+import { normalizeDisplayCurrency } from "@/lib/display-currency-preference";
 
 export async function SiteHeader() {
   const user = await getCurrentUser();
   const profile = await getCurrentProfile();
   const isAdmin = profile?.role === "admin";
+  const displayCurrency = await getRequestCurrency();
+  const profileCurrency = normalizeDisplayCurrency(profile?.display_currency);
 
   let navUser: SiteNavUser | null = null;
 
@@ -46,13 +49,14 @@ export async function SiteHeader() {
       };
     } else {
       const [wallet, inboxUnread] = await Promise.all([
-        getOrCreateWallet(user.id),
+        getOrCreateWallet(user.id, displayCurrency),
         getUnreadUserNotificationCount(user.id),
       ]);
       navUser = {
         ...base,
         walletBalance: wallet ? Number(wallet.balance) : 0,
-        walletCurrency: getSiteCurrency(),
+        walletCurrency: displayCurrency,
+        displayCurrency: profileCurrency ?? (displayCurrency as "ZMW" | "USD"),
         inboxUnread,
       };
     }

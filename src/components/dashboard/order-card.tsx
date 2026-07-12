@@ -9,7 +9,6 @@ import { ReceiptDownloadButton } from "@/components/dashboard/receipt-download-b
 import { getCustomerIdentifierLabel } from "@/lib/identifier-label";
 import { formatOrderNumber } from "@/lib/order-number";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { getSiteCurrency } from "@/lib/currency";
 import type { Activation, Payment } from "@/types/database";
 
 interface OrderCardProps {
@@ -44,7 +43,7 @@ export function OrderCard({ payment, activation }: OrderCardProps) {
   const status = orderStatus(payment);
   const isWallet = payment.provider === "wallet";
   const totalPaid = Number(payment.amount) + Number(payment.platform_fee ?? 0);
-  const displayCurrency = getSiteCurrency();
+  const displayCurrency = payment.currency?.toUpperCase() ?? "USD";
   const isAwaiting = payment.fulfillment_status === "awaiting";
   const hasKey = Boolean(activation?.activation_code);
   const isRefunded = payment.status === "refunded";

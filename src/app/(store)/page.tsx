@@ -9,6 +9,8 @@ import { ToolCard } from "@/components/tools/tool-card";
 import { ToolsEmptyState } from "@/components/tools/tools-empty-state";
 import { getCurrentProfile, getCurrentUser } from "@/lib/auth";
 import { getFeaturedCategoriesWithTools, getTools } from "@/lib/data";
+import { getUsdToZmwRate } from "@/lib/currency-rates";
+import { getRequestCurrency } from "@/lib/request-currency";
 import { toStorefrontTools } from "@/lib/storefront-tool";
 
 export default async function HomePage() {
@@ -20,6 +22,8 @@ export default async function HomePage() {
 
   const featuredCategories = await getFeaturedCategoriesWithTools();
   const fallbackTools = toStorefrontTools(await getTools());
+  const displayCurrency = await getRequestCurrency();
+  const fxRate = displayCurrency === "ZMW" ? await getUsdToZmwRate() : null;
   const showFeatured = featuredCategories.length > 0;
   const displayTools = showFeatured ? [] : fallbackTools.slice(0, 4);
 
@@ -56,6 +60,8 @@ export default async function HomePage() {
                   key={category.id}
                   category={category}
                   isLoggedIn={Boolean(user)}
+                  displayCurrency={displayCurrency}
+                  fxRate={fxRate}
                 />
               ))}
             </div>
@@ -64,7 +70,13 @@ export default async function HomePage() {
           ) : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {displayTools.map((tool) => (
-                <ToolCard key={tool.id} tool={tool} isLoggedIn={Boolean(user)} />
+                <ToolCard
+                  key={tool.id}
+                  tool={tool}
+                  isLoggedIn={Boolean(user)}
+                  displayCurrency={displayCurrency}
+                  fxRate={fxRate}
+                />
               ))}
             </div>
           )}

@@ -1,5 +1,5 @@
 import { getCurrentProfile, getCurrentUser } from "@/lib/auth";
-import { getSiteCurrency } from "@/lib/currency";
+import { getRequestCurrency } from "@/lib/request-currency";
 import { getOrCreateWallet } from "@/lib/wallet";
 import { DepositPromptToast } from "@/components/wallet/deposit-prompt-toast";
 
@@ -11,13 +11,14 @@ export async function CustomerDepositPromptGate() {
   const profile = await getCurrentProfile();
   if (profile?.role === "admin") return null;
 
-  const wallet = await getOrCreateWallet(user.id);
+  const currency = await getRequestCurrency();
+  const wallet = await getOrCreateWallet(user.id, currency);
 
   return (
     <DepositPromptToast
       userId={user.id}
       initialBalance={wallet ? Number(wallet.balance) : 0}
-      currency={getSiteCurrency()}
+      currency={currency}
     />
   );
 }

@@ -3,11 +3,14 @@ export type PaymentStatus = "pending" | "completed" | "failed" | "refunded";
 export type ToolFulfillmentMode = "manual" | "direct_api";
 export type FulfillmentStatus = "awaiting" | "fulfilled";
 
+export type DisplayCurrency = "ZMW" | "USD";
+
 export interface Profile {
   id: string;
   email: string;
   full_name: string | null;
   role: UserRole;
+  display_currency: DisplayCurrency | null;
   welcome_email_sent_at: string | null;
   created_at: string;
 }
@@ -85,7 +88,16 @@ export interface Payment {
 
 export type DepositStatus = "pending" | "confirmed" | "rejected";
 export type DepositMethod = "mtn" | "airtel" | "binance" | "usdt_trc20" | "other";
-export type WalletTxType = "deposit" | "purchase" | "platform_fee" | "refund" | "adjustment";
+export type WalletTxType =
+  | "deposit"
+  | "purchase"
+  | "platform_fee"
+  | "refund"
+  | "adjustment"
+  | "withdrawal";
+
+export type UserPaymentMethodType = "mtn" | "airtel" | "binance" | "usdt_trc20";
+export type WithdrawalStatus = "pending" | "completed" | "rejected";
 
 export interface UserWallet {
   user_id: string;
@@ -124,6 +136,39 @@ export interface WalletTransaction {
   description: string | null;
   deposit_id: string | null;
   payment_id: string | null;
+  withdrawal_id: string | null;
+  created_at: string;
+}
+
+export interface UserPaymentMethod {
+  id: string;
+  user_id: string;
+  method: UserPaymentMethodType;
+  label: string | null;
+  account_identifier: string;
+  account_name: string | null;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WalletWithdrawal {
+  id: string;
+  user_id: string;
+  amount: number;
+  currency: string;
+  payment_method_id: string;
+  payment_method_snapshot: {
+    method: UserPaymentMethodType;
+    label?: string | null;
+    account_identifier: string;
+    account_name?: string | null;
+  };
+  reference: string;
+  status: WithdrawalStatus;
+  policy_accepted_at: string;
+  admin_note: string | null;
+  processed_at: string | null;
   created_at: string;
 }
 

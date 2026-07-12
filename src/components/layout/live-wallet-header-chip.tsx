@@ -2,13 +2,13 @@
 
 import { WalletHeaderChip } from "@/components/layout/wallet-header-chip";
 import { useLiveWalletBalance } from "@/hooks/use-live-wallet-balance";
-import { getSiteCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 
 interface LiveWalletHeaderChipProps {
   userId: string;
   initialBalance: number;
   currency?: string;
+  displayCurrency?: import("@/lib/display-currency-preference").DisplayCurrency | null;
   className?: string;
   compact?: boolean;
 }
@@ -16,15 +16,16 @@ interface LiveWalletHeaderChipProps {
 export function LiveWalletHeaderChip({
   userId,
   initialBalance,
-  currency: _currency,
+  currency,
+  displayCurrency,
   className,
   compact,
 }: LiveWalletHeaderChipProps) {
-  const displayCurrency = getSiteCurrency();
+  const displayCurrencyResolved = currency ?? "USD";
   const { balance, justUpdated } = useLiveWalletBalance(
     userId,
     initialBalance,
-    displayCurrency
+    displayCurrencyResolved
   );
 
   return (
@@ -36,7 +37,8 @@ export function LiveWalletHeaderChip({
     >
       <WalletHeaderChip
         balance={balance}
-        currency={displayCurrency}
+        currency={displayCurrencyResolved}
+        displayCurrency={displayCurrency}
         className={className}
         compact={compact}
       />

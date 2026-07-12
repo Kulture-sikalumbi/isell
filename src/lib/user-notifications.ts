@@ -193,3 +193,35 @@ export async function notifyOrderProcessing(input: {
     link: "/dashboard?tab=orders",
   });
 }
+
+export async function notifyWithdrawalCompleted(input: {
+  userId: string;
+  amount: number;
+  currency: string;
+}) {
+  await notifyUser({
+    userId: input.userId,
+    type: "withdrawal_completed",
+    title: "Withdrawal sent",
+    message: `${formatSiteCurrency(input.amount, input.currency)} was sent to your payout method. Check your mobile money or crypto wallet.`,
+    link: "/dashboard?tab=wallet",
+  });
+}
+
+export async function notifyWithdrawalRejected(input: {
+  userId: string;
+  amount: number;
+  currency: string;
+  note?: string;
+}) {
+  const reason = input.note?.trim();
+  await notifyUser({
+    userId: input.userId,
+    type: "withdrawal_rejected",
+    title: "Withdrawal request declined",
+    message: reason
+      ? `Your withdrawal of ${formatSiteCurrency(input.amount, input.currency)} was declined. Reason: ${reason}`
+      : `Your withdrawal of ${formatSiteCurrency(input.amount, input.currency)} was declined. Contact support if you need help.`,
+    link: "/dashboard?tab=wallet",
+  });
+}

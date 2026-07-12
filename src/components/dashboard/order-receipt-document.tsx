@@ -1,4 +1,4 @@
-import { formatSiteCurrency } from "@/lib/currency";
+import { formatSiteCurrency } from "@/lib/format-currency";
 import type { OrderReceiptData } from "@/lib/order-receipt";
 
 interface OrderReceiptDocumentProps {

@@ -1,5 +1,20 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { currencyForCountry } from "@/lib/format-currency";
+import { resolveSiteCountry, stampSiteGeoOnResponse } from "@/lib/geo-country";
+
+async function withSiteCurrency(request: NextRequest): Promise<NextResponse> {
+  const siteCountry = await resolveSiteCountry(request);
+  const siteCurrency = currencyForCountry(siteCountry);
+  const requestHeaders = new Headers(request.headers);
+
+  requestHeaders.set("x-site-country", siteCountry);
+  requestHeaders.set("x-site-currency", siteCurrency);
+
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
+  stampSiteGeoOnResponse(response, siteCountry, siteCurrency);
+  return response;
+}
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
@@ -30,7 +45,7 @@ export async function middleware(request: NextRequest) {
 
   // Only hit Supabase on protected routes — avoids fetch on every static/asset request
   if (!isDashboard && !isAdmin) {
-    return NextResponse.next();
+    return withSiteCurrency(request);
   }
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
@@ -42,7 +57,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  let supabaseResponse = NextResponse.next({ request });
+  const siteCountry = await resolveSiteCountry(request);
+  const siteCurrency = currencyForCountry(siteCountry);
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-site-country", siteCountry);
+  requestHeaders.set("x-site-currency", siteCurrency);
+
+  let supabaseResponse = NextResponse.next({ request: { headers: requestHeaders } });
+  stampSiteGeoOnResponse(supabaseResponse, siteCountry, siteCurrency);
 
   try {
     const supabase = createServerClient(url, key, {
@@ -54,7 +76,8 @@ export async function middleware(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) => {
             request.cookies.set(name, value);
           });
-          supabaseResponse = NextResponse.next({ request });
+          supabaseResponse = NextResponse.next({ request: { headers: requestHeaders } });
+          stampSiteGeoOnResponse(supabaseResponse, siteCountry, siteCurrency);
           cookiesToSet.forEach(({ name, value, options }) => {
             supabaseResponse.cookies.set(name, value, options);
           });

@@ -21,6 +21,7 @@ interface AdminDashboardProps {
   attention: {
     awaitingOrders: number;
     pendingDeposits: number;
+    pendingWithdrawals: number;
     unreadNotifications: number;
     unreadMessages: number;
     totalAttention: number;
@@ -58,6 +59,15 @@ export function AdminDashboard({
               >
                 <strong className="text-white">{attention.pendingDeposits}</strong> pending
                 deposit{attention.pendingDeposits !== 1 ? "s" : ""}
+              </Link>
+            )}
+            {attention.pendingWithdrawals > 0 && (
+              <Link
+                href="/admin/withdrawals"
+                className="rounded-xl border border-violet-500/30 bg-violet-500/10 px-4 py-3 text-sm text-violet-100 hover:bg-violet-500/15 transition-colors"
+              >
+                <strong className="text-white">{attention.pendingWithdrawals}</strong> withdrawal
+                {attention.pendingWithdrawals !== 1 ? "s" : ""} to process
               </Link>
             )}
             {attention.unreadNotifications > 0 && (

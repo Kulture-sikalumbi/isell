@@ -2,7 +2,7 @@ export function cn(...classes: (string | false | null | undefined)[]) {
   return classes.filter(Boolean).join(" ");
 }
 
-export { formatSiteCurrency as formatCurrency } from "@/lib/currency";
+export { formatSiteCurrency as formatCurrency } from "@/lib/format-currency";
 
 export function formatDate(date: string) {
   return new Intl.DateTimeFormat("en-US", {

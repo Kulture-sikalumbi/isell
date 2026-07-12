@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
+import { getRequestCurrency } from "@/lib/request-currency";
 import {
   getMerchantDetails,
   getOrCreateWallet,
@@ -13,15 +14,17 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const currency = await getRequestCurrency();
+
   const [wallet, transactions, deposits] = await Promise.all([
-    getOrCreateWallet(user.id),
+    getOrCreateWallet(user.id, currency),
     getWalletTransactions(user.id),
     getUserDeposits(user.id),
   ]);
 
   return NextResponse.json({
     wallet,
-    merchants: getMerchantDetails(),
+    merchants: getMerchantDetails(currency),
     transactions,
     deposits,
   });
