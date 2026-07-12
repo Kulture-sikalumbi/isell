@@ -28,7 +28,7 @@ export default async function ToolsPage({
           <div className="mb-8 sm:mb-10">
             <h1 className="text-3xl sm:text-4xl font-bold mb-2 sm:mb-3">All Tools</h1>
             <p className="text-zinc-400 max-w-lg text-sm sm:text-base">
-              Choose a tool to browse devices. Each device has its own price and download link.
+              Choose a tool to browse devices. Each device has its own price and Windows/Mac download links.
             </p>
           </div>
         ) : (

@@ -11,6 +11,7 @@ import {
 } from "@/lib/payment-fulfillment";
 import { getCustomerIdentifierLabel } from "@/lib/identifier-label";
 import { useNavigationLoading } from "@/components/layout/navigation-progress";
+import { acquireBodyScrollLock } from "@/lib/body-scroll-lock";
 
 interface PaymentFulfillActionProps {
   payment: AdminPaymentRow;
@@ -37,11 +38,7 @@ export function PaymentFulfillAction({ payment }: PaymentFulfillActionProps) {
 
   useEffect(() => {
     if (!open) return;
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prevOverflow;
-    };
+    return acquireBodyScrollLock();
   }, [open]);
 
   if (!needsAction) {

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Search, X } from "lucide-react";
-import { PlatformDownloadButtons } from "@/components/tools/platform-download-buttons";
+import { AdminStorefrontEditButton } from "@/components/tools/admin-storefront-edit-button";
 import { ToolCategoryCard } from "@/components/tools/tool-category-card";
 import { VariationToolRow } from "@/components/tools/variation-tool-row";
 import { ToolsEmptyState } from "@/components/tools/tools-empty-state";
@@ -143,6 +143,7 @@ function CategoryToolsCatalogInner({ categories, isAdmin, isLoggedIn = false }: 
                 <ToolCategoryCard
                   category={category}
                   onSelect={() => openCategory(category.slug)}
+                  isAdmin={isAdmin}
                 />
               </div>
             ))}
@@ -165,20 +166,22 @@ function CategoryToolsCatalogInner({ categories, isAdmin, isLoggedIn = false }: 
         All tools
       </button>
 
-      <div>
-        <h2 className="text-2xl sm:text-3xl font-bold text-cyan-400 mb-2">
-          {selectedCategory.name}
-        </h2>
-        {selectedCategory.description && (
-          <p className="text-sm text-zinc-400 max-w-2xl">{selectedCategory.description}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-2xl sm:text-3xl font-bold text-cyan-400 mb-2">
+            {selectedCategory.name}
+          </h2>
+          {selectedCategory.description && (
+            <p className="text-sm text-zinc-400 max-w-2xl">{selectedCategory.description}</p>
+          )}
+        </div>
+        {isAdmin && (
+          <AdminStorefrontEditButton
+            href={`/admin/categories/${selectedCategory.id}/edit`}
+            label={`Edit ${selectedCategory.name}`}
+            className="shrink-0 mt-1"
+          />
         )}
-        <PlatformDownloadButtons
-          windowsUrl={selectedCategory.download_url}
-          macUrl={selectedCategory.download_url_mac}
-          className="mt-4"
-          requireSignIn={!isLoggedIn}
-          signInHref={`/auth/login?next=${encodeURIComponent(`/tools?category=${selectedCategory.slug}`)}`}
-        />
       </div>
 
       <div className="glass rounded-2xl p-4 border border-white/10">
@@ -227,7 +230,12 @@ function CategoryToolsCatalogInner({ categories, isAdmin, isLoggedIn = false }: 
               key={tool.id}
               style={{ animationDelay: `${Math.min(i * 40, 240)}ms` }}
             >
-              <VariationToolRow tool={tool} highlight={deviceQuery} isLoggedIn={isLoggedIn} />
+              <VariationToolRow
+                tool={tool}
+                highlight={deviceQuery}
+                isLoggedIn={isLoggedIn}
+                isAdmin={isAdmin}
+              />
             </div>
           ))}
         </div>

@@ -26,6 +26,7 @@ import { LiveWalletHeaderChip } from "@/components/layout/live-wallet-header-chi
 import { UserInboxBell } from "@/components/user/user-inbox-bell";
 import { ConnectionStatus } from "@/components/layout/connection-status";
 import { useNavigationLoading } from "@/components/layout/navigation-progress";
+import { acquireBodyScrollLock } from "@/lib/body-scroll-lock";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 
@@ -148,10 +149,8 @@ export function SiteNav({ user }: SiteNavProps) {
   }, [pathname]);
 
   useEffect(() => {
-    document.body.style.overflow = open ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
+    if (!open) return;
+    return acquireBodyScrollLock();
   }, [open]);
 
   const drawerLinks: NavItem[] = user?.isAdmin

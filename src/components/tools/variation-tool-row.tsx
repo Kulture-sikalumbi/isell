@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Cpu } from "lucide-react";
 import { ActivationEtaBadge } from "@/components/tools/activation-eta-badge";
-import { Badge } from "@/components/ui/badge";
+import { AdminStorefrontEditButton } from "@/components/tools/admin-storefront-edit-button";
 import type { StorefrontTool } from "@/lib/storefront-tool";
 import { ToolPrice } from "@/components/tools/tool-price";
 import { cn } from "@/lib/utils";
@@ -10,6 +10,7 @@ interface VariationToolRowProps {
   tool: StorefrontTool;
   highlight?: string;
   isLoggedIn?: boolean;
+  isAdmin?: boolean;
 }
 
 const accentColors = [
@@ -37,16 +38,17 @@ function HighlightText({ text, highlight }: { text: string; highlight?: string }
   );
 }
 
-export function VariationToolRow({ tool, highlight, isLoggedIn = false }: VariationToolRowProps) {
+export function VariationToolRow({ tool, highlight, isLoggedIn = false, isAdmin }: VariationToolRowProps) {
   const colorIndex =
     tool.name.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) %
     accentColors.length;
 
   return (
-    <Link
-      href={`/tools/${tool.slug}`}
-      className="block group"
-    >
+    <div className="relative">
+      <Link
+        href={`/tools/${tool.slug}`}
+        className="block group"
+      >
       <div
         className={cn(
           "flex items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 sm:px-5 sm:py-5",
@@ -93,6 +95,15 @@ export function VariationToolRow({ tool, highlight, isLoggedIn = false }: Variat
           <ArrowRight className="h-4 w-4 text-zinc-600 group-hover:text-cyan-400 transition-colors hidden sm:block" />
         </div>
       </div>
-    </Link>
+      </Link>
+      {isAdmin && (
+        <AdminStorefrontEditButton
+          href={`/admin/tools/${tool.id}/edit`}
+          label={`Edit ${tool.name}`}
+          className="absolute top-3 right-3 z-10 sm:top-4 sm:right-4"
+          size="sm"
+        />
+      )}
+    </div>
   );
 }

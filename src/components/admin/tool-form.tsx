@@ -39,6 +39,7 @@ export function ToolForm({ tool, categories, defaultCategoryId, onSubmit }: Tool
     name: tool?.name ?? "",
     description: tool?.description ?? "",
     download_url: tool?.download_url ?? "",
+    download_url_mac: tool?.download_url_mac ?? "",
     external_service_name: tool?.external_service_name ?? "",
     external_service_id: tool?.external_service_id ?? "",
     retail_price: tool?.retail_price?.toString() ?? "",
@@ -98,6 +99,7 @@ export function ToolForm({ tool, categories, defaultCategoryId, onSubmit }: Tool
         name: form.name.trim(),
         description: form.description.trim(),
         download_url: form.download_url.trim() || null,
+        download_url_mac: form.download_url_mac.trim() || null,
         external_service_name: form.external_service_name.trim() || null,
         external_service_id: form.external_service_id.trim() || null,
         retail_price: retail,
@@ -178,13 +180,26 @@ export function ToolForm({ tool, categories, defaultCategoryId, onSubmit }: Tool
           onChange={(e) => update("description", e.target.value)}
           placeholder="Short description customers see on the storefront"
         />
-        <Input
-          label="Download link"
-          value={form.download_url}
-          onChange={(e) => update("download_url", e.target.value)}
-          placeholder="https://..."
-          hint="Free download for this device — each device can have its own link"
-        />
+        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-4">
+          <p className="text-sm font-medium text-zinc-300">Desktop downloads</p>
+          <p className="text-xs text-zinc-500 -mt-2">
+            Free download links for Windows and Mac — customers see these on this device page.
+          </p>
+          <Input
+            label="Windows download link"
+            value={form.download_url}
+            onChange={(e) => update("download_url", e.target.value)}
+            placeholder="https://..."
+            hint="Win tool installer or zip"
+          />
+          <Input
+            label="Mac download link"
+            value={form.download_url_mac}
+            onChange={(e) => update("download_url_mac", e.target.value)}
+            placeholder="https://..."
+            hint="Mac tool installer or dmg"
+          />
+        </div>
         <Input
           label="Sort order"
           type="number"

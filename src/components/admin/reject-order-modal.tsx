@@ -10,6 +10,7 @@ import { formatOrderNumber } from "@/lib/order-number";
 import { getCustomerIdentifierLabel } from "@/lib/identifier-label";
 import { formatCurrency } from "@/lib/utils";
 import { useNavigationLoading } from "@/components/layout/navigation-progress";
+import { acquireBodyScrollLock } from "@/lib/body-scroll-lock";
 
 const QUICK_REASONS = [
   "Wrong IMEI / device ID",
@@ -46,11 +47,7 @@ export function RejectOrderModal({ payment, open, onOpenChange }: RejectOrderMod
 
   useEffect(() => {
     if (!open) return;
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prevOverflow;
-    };
+    return acquireBodyScrollLock();
   }, [open]);
 
   useEffect(() => {

@@ -25,8 +25,6 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   const updates = {
     name: (body.name as string)?.trim(),
     description: (body.description as string)?.trim() || null,
-    download_url: (body.download_url as string)?.trim() || null,
-    download_url_mac: (body.download_url_mac as string)?.trim() || null,
     sort_order: Number.isFinite(sortOrder) ? sortOrder : 0,
     is_featured: Boolean(body.is_featured),
     featured_sort_order: Number.isFinite(featuredSort) ? featuredSort : 0,

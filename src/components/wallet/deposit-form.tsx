@@ -13,6 +13,7 @@ import { depositMethodLabel, isManualCryptoDeposit } from "@/lib/deposit-methods
 import { getCurrencyLabel } from "@/lib/currency";
 import { cn, formatCurrency } from "@/lib/utils";
 import { useConnectivityOptional } from "@/components/layout/connectivity-provider";
+import { acquireBodyScrollLock } from "@/lib/body-scroll-lock";
 import { offlineAwareFetch, offlineMessage } from "@/lib/offline-fetch";
 import type { DepositMethod, WalletDeposit } from "@/types/database";
 
@@ -87,11 +88,7 @@ function DepositSuccessModal({
 
   useEffect(() => {
     if (!open) return;
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prevOverflow;
-    };
+    return acquireBodyScrollLock();
   }, [open]);
 
   if (!open || !mounted) return null;
@@ -189,11 +186,7 @@ function DepositConfirmModal({
 
   useEffect(() => {
     if (!open) return;
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prevOverflow;
-    };
+    return acquireBodyScrollLock();
   }, [open]);
 
   if (!open || !mounted) return null;

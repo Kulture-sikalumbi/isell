@@ -21,7 +21,7 @@ export default async function AdminCatalogPage() {
   return (
     <AdminShell
       title="Catalog"
-      description="Tools are what customers browse. Devices are the models they buy — each with its own price and download link."
+      description="Tools are what customers browse. Devices are the models they buy — each with its own price and Windows/Mac download links."
       action={
         <Link
           href="/admin/categories/new"
@@ -34,8 +34,8 @@ export default async function AdminCatalogPage() {
     >
       <div className="mb-6 rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-4 py-3 text-sm text-cyan-100/90">
         <strong className="text-cyan-200">How it works:</strong>{" "}
-        Create a <strong>tool</strong> with Windows + Mac download links → add{" "}
-        <strong>devices</strong> under it (iPhone 13, iPad Air…) → mark tools as{" "}
+        Create a <strong>tool</strong> (category name) → add{" "}
+        <strong>devices</strong> under it with Windows + Mac download links, prices, and models → mark tools as{" "}
         <strong>featured</strong> for the homepage.
       </div>
 
@@ -48,7 +48,7 @@ export default async function AdminCatalogPage() {
           <p className="text-zinc-300 font-medium mb-2">Your catalog is empty</p>
           <p className="text-sm text-zinc-500 mb-6 max-w-md mx-auto">
             Start by adding a tool name. You can then add devices with different prices and
-            download links under that tool.
+            Windows/Mac download links under that tool.
           </p>
           <Link
             href="/admin/categories/new"

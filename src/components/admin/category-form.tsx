@@ -16,8 +16,6 @@ export function CategoryForm({ category, onSubmit }: CategoryFormProps) {
   const [form, setForm] = useState({
     name: category?.name ?? "",
     description: category?.description ?? "",
-    download_url: category?.download_url ?? "",
-    download_url_mac: category?.download_url_mac ?? "",
     sort_order: category?.sort_order?.toString() ?? "0",
     is_featured: category?.is_featured ?? false,
     featured_sort_order: category?.featured_sort_order?.toString() ?? "0",
@@ -41,8 +39,6 @@ export function CategoryForm({ category, onSubmit }: CategoryFormProps) {
       await onSubmit?.({
         name: form.name.trim(),
         description: form.description.trim(),
-        download_url: form.download_url.trim(),
-        download_url_mac: form.download_url_mac.trim(),
         sort_order: Number.isFinite(sortOrder) ? sortOrder : 0,
         is_featured: form.is_featured,
         featured_sort_order: Number.isFinite(featuredSort) ? featuredSort : 0,
@@ -72,27 +68,6 @@ export function CategoryForm({ category, onSubmit }: CategoryFormProps) {
           onChange={(e) => update("description", e.target.value)}
           placeholder="Optional overview shown when this tool is selected"
         />
-
-        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-4">
-          <p className="text-sm font-medium text-zinc-300">Desktop downloads</p>
-          <p className="text-xs text-zinc-500 -mt-2">
-            Free download links for Windows and Mac — customers see these when browsing this tool.
-          </p>
-          <Input
-            label="Windows download link"
-            value={form.download_url}
-            onChange={(e) => update("download_url", e.target.value)}
-            placeholder="https://..."
-            hint="Win tool installer or zip"
-          />
-          <Input
-            label="Mac download link"
-            value={form.download_url_mac}
-            onChange={(e) => update("download_url_mac", e.target.value)}
-            placeholder="https://..."
-            hint="Mac tool installer or dmg"
-          />
-        </div>
 
         <Input
           label="Sort order"

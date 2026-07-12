@@ -3,6 +3,7 @@
 import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
 import { IPhoneSpinner } from "@/components/ui/iphone-spinner";
+import { acquireBodyScrollLock } from "@/lib/body-scroll-lock";
 
 interface GlobalLoadingOverlayProps {
   visible: boolean;
@@ -17,11 +18,7 @@ export function GlobalLoadingOverlay({ visible }: GlobalLoadingOverlayProps) {
 
   useEffect(() => {
     if (!visible) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
+    return acquireBodyScrollLock();
   }, [visible]);
 
   if (!mounted || !visible) return null;

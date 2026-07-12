@@ -35,6 +35,7 @@ export interface Tool {
   name: string;
   description: string | null;
   download_url: string | null;
+  download_url_mac: string | null;
   category_id: string | null;
   sort_order: number;
   activation_time_value: number | null;

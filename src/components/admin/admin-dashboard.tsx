@@ -110,7 +110,7 @@ export function AdminDashboard({
         <div className="mb-4 rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-4 py-3 text-sm text-cyan-100/90">
           <strong className="text-cyan-200">How the catalog works:</strong> add a{" "}
           <strong>tool</strong> (sidebar name customers see) → then add{" "}
-          <strong>devices</strong> under it (model, price, download link).
+          <strong>devices</strong> under it (model, price, Windows + Mac download links).
         </div>
 
         <div className="grid sm:grid-cols-2 gap-3">
@@ -131,7 +131,7 @@ export function AdminDashboard({
           <AdminQuickAction
             href="/admin/tools/new"
             title="Add device"
-            description="Add a device under a tool — set model name, price, and download link"
+            description="Add a device under a tool — set model name, price, and Windows/Mac download links"
             icon={Smartphone}
             accent="emerald"
           />

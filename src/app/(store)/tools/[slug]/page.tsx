@@ -38,7 +38,7 @@ export default async function ToolDetailPage({ params }: ToolDetailPageProps) {
   const currency = getSiteCurrency();
   const identifierLabel = getCustomerIdentifierLabel(tool.identifier_label);
   const windowsUrl = tool.download_url || tool.category?.download_url || null;
-  const macUrl = tool.category?.download_url_mac || null;
+  const macUrl = tool.download_url_mac || tool.category?.download_url_mac || null;
   const hasDownloads = Boolean(windowsUrl?.trim() || macUrl?.trim());
   const backHref = tool.category?.slug
     ? `/tools?category=${tool.category.slug}`

@@ -29,7 +29,7 @@ export function NewToolPageClient({ categories, defaultCategoryId }: NewToolPage
   return (
     <AdminShell
       title="Add device"
-      description="Customers will pick this device under the tool you selected — set its price and download link"
+      description="Customers will pick this device under the tool you selected — set its price and Windows/Mac download links"
     >
       <div className="glass rounded-2xl p-4 sm:p-8 max-w-3xl">
         <ToolForm

@@ -26,8 +26,6 @@ export function FeaturedToolsPanel({ categories, devicesByTool }: FeaturedToolsP
       body: JSON.stringify({
         name: category.name,
         description: category.description ?? "",
-        download_url: category.download_url ?? "",
-        download_url_mac: category.download_url_mac ?? "",
         sort_order: category.sort_order,
         is_featured: !category.is_featured,
         featured_sort_order: category.featured_sort_order,

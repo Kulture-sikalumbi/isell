@@ -1,10 +1,12 @@
 import { ChevronRight, Layers } from "lucide-react";
+import { AdminStorefrontEditButton } from "@/components/tools/admin-storefront-edit-button";
 import { cn } from "@/lib/utils";
 import type { ToolCategoryWithTools } from "@/lib/data";
 
 interface ToolCategoryCardProps {
   category: ToolCategoryWithTools;
   onSelect: () => void;
+  isAdmin?: boolean;
 }
 
 const accentColors = [
@@ -16,18 +18,19 @@ const accentColors = [
   "from-rose-500/25 to-rose-500/5",
 ];
 
-export function ToolCategoryCard({ category, onSelect }: ToolCategoryCardProps) {
+export function ToolCategoryCard({ category, onSelect, isAdmin }: ToolCategoryCardProps) {
   const colorIndex =
     category.name.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) %
     accentColors.length;
 
   return (
-    <button
-      type="button"
-      data-global-loading
-      onClick={onSelect}
-      className="group w-full text-left"
-    >
+    <div className="relative group w-full">
+      <button
+        type="button"
+        data-global-loading
+        onClick={onSelect}
+        className="group w-full text-left"
+      >
       <div
         className={cn(
           "glass glass-hover rounded-2xl p-5 sm:p-6 h-full flex items-center gap-4",
@@ -63,6 +66,15 @@ export function ToolCategoryCard({ category, onSelect }: ToolCategoryCardProps) 
           <ChevronRight className="h-5 w-5 text-zinc-600 group-hover:text-cyan-400 transition-colors" />
         </div>
       </div>
-    </button>
+      </button>
+      {isAdmin && (
+        <AdminStorefrontEditButton
+          href={`/admin/categories/${category.id}/edit`}
+          label={`Edit ${category.name}`}
+          className="absolute top-3 right-3 z-10"
+          size="sm"
+        />
+      )}
+    </div>
   );
 }

@@ -14,9 +14,6 @@ interface CatalogToolGroupProps {
 }
 
 export function CatalogToolGroup({ category, devices }: CatalogToolGroupProps) {
-  const hasWin = Boolean(category.download_url?.trim());
-  const hasMac = Boolean(category.download_url_mac?.trim());
-
   return (
     <section className="glass rounded-2xl overflow-hidden border border-white/5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-6 py-4 border-b border-white/5 bg-white/[0.02]">
@@ -38,22 +35,6 @@ export function CatalogToolGroup({ category, devices }: CatalogToolGroupProps) {
           </div>
           {category.description && (
             <p className="text-sm text-zinc-500 line-clamp-2">{category.description}</p>
-          )}
-          {(hasWin || hasMac) && (
-            <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-zinc-500">
-              {hasWin && (
-                <span className="inline-flex items-center gap-1">
-                  <Monitor className="h-3 w-3 text-cyan-400" />
-                  Windows link set
-                </span>
-              )}
-              {hasMac && (
-                <span className="inline-flex items-center gap-1">
-                  <Apple className="h-3 w-3 text-cyan-400" />
-                  Mac link set
-                </span>
-              )}
-            </div>
           )}
         </div>
 
@@ -109,13 +90,33 @@ export function CatalogToolGroup({ category, devices }: CatalogToolGroupProps) {
               </tr>
             </thead>
             <tbody>
-              {devices.map((device) => (
+              {devices.map((device) => {
+                const hasWin = Boolean(device.download_url?.trim());
+                const hasMac = Boolean(device.download_url_mac?.trim());
+
+                return (
                 <tr
                   key={device.id}
                   className="border-b border-white/5 last:border-0 hover:bg-white/[0.02]"
                 >
                   <td className="px-4 sm:px-6 py-3">
                     <div className="font-medium text-white">{device.name}</div>
+                    {(hasWin || hasMac) && (
+                      <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-zinc-500">
+                        {hasWin && (
+                          <span className="inline-flex items-center gap-1">
+                            <Monitor className="h-3 w-3 text-cyan-400" />
+                            Win
+                          </span>
+                        )}
+                        {hasMac && (
+                          <span className="inline-flex items-center gap-1">
+                            <Apple className="h-3 w-3 text-cyan-400" />
+                            Mac
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </td>
                   <td className="px-4 sm:px-6 py-3">
                     <QuickPriceEdit toolId={device.id} initialPrice={Number(device.retail_price)} />
@@ -140,7 +141,8 @@ export function CatalogToolGroup({ category, devices }: CatalogToolGroupProps) {
                     <ToolActions toolId={device.id} toolName={device.name} />
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

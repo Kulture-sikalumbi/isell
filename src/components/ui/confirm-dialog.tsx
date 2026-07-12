@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { AlertCircle, AlertTriangle, Info, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { acquireBodyScrollLock } from "@/lib/body-scroll-lock";
 import { cn } from "@/lib/utils";
 
 interface ModalShellProps {
@@ -23,11 +24,7 @@ function ModalShell({ open, onClose, disabled, children, labelledBy }: ModalShel
 
   useEffect(() => {
     if (!open) return;
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prevOverflow;
-    };
+    return acquireBodyScrollLock();
   }, [open]);
 
   if (!open || !mounted) return null;
