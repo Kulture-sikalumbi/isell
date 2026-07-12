@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { AdminShell } from "@/components/admin/admin-sidebar";
 import { CatalogToolGroup } from "@/components/admin/catalog-tool-group";
+import { FeaturedToolsPanel } from "@/components/admin/featured-tools-panel";
 import { getAllCategories, getAllTools } from "@/lib/data";
 
 export const metadata = { title: "Catalog — Admin" };
@@ -33,10 +34,14 @@ export default async function AdminCatalogPage() {
     >
       <div className="mb-6 rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-4 py-3 text-sm text-cyan-100/90">
         <strong className="text-cyan-200">How it works:</strong>{" "}
-        Create a <strong>tool</strong> (e.g. SMD Bypass iCloud) → add{" "}
-        <strong>devices</strong> under it (iPhone 13, iPad Air…) → customers pick the tool in
-        the sidebar, then choose their device.
+        Create a <strong>tool</strong> with Windows + Mac download links → add{" "}
+        <strong>devices</strong> under it (iPhone 13, iPad Air…) → mark tools as{" "}
+        <strong>featured</strong> for the homepage.
       </div>
+
+      {categories.length > 0 && (
+        <FeaturedToolsPanel categories={categories} devicesByTool={devicesByTool} />
+      )}
 
       {categories.length === 0 ? (
         <div className="glass rounded-2xl p-12 text-center">

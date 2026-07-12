@@ -145,6 +145,51 @@ export async function getAllTools(): Promise<ToolWithCategory[]> {
   return (data as ToolWithCategory[]) ?? [];
 }
 
+export async function getFeaturedCategoriesWithTools(): Promise<ToolCategoryWithTools[]> {
+  const supabase = getClient();
+  if (!supabase) return [];
+
+  const { data: categories, error: catError } = await supabase
+    .from("tool_categories")
+    .select("*")
+    .eq("is_active", true)
+    .eq("is_featured", true)
+    .order("featured_sort_order")
+    .order("name");
+
+  if (catError) {
+    console.error("getFeaturedCategoriesWithTools:", catError.message);
+    return [];
+  }
+
+  const { data: tools, error: toolError } = await supabase
+    .from("tools")
+    .select("*")
+    .eq("is_active", true)
+    .order("sort_order")
+    .order("name");
+
+  if (toolError) {
+    console.error("getFeaturedCategoriesWithTools tools:", toolError.message);
+    return [];
+  }
+
+  const toolsByCategory = new Map<string, Tool[]>();
+  for (const tool of tools ?? []) {
+    if (!tool.category_id) continue;
+    const list = toolsByCategory.get(tool.category_id) ?? [];
+    list.push(tool);
+    toolsByCategory.set(tool.category_id, list);
+  }
+
+  return (categories ?? [])
+    .filter((c) => c.slug !== "general")
+    .map((category) => ({
+      ...category,
+      tools: toStorefrontTools(toolsByCategory.get(category.id) ?? []),
+    }));
+}
+
 export async function getToolById(id: string): Promise<Tool | null> {
   const supabase = getClient();
   if (!supabase) return null;

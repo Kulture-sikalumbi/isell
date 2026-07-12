@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { ExternalLink, Pencil, Plus } from "lucide-react";
+import { ExternalLink, Monitor, Apple, Pencil, Plus, Star } from "lucide-react";
 import { CategoryActions } from "@/components/admin/category-actions";
+import { QuickPriceEdit } from "@/components/admin/quick-price-edit";
 import { ToolActions } from "@/components/admin/tool-actions";
 import { Badge } from "@/components/ui/badge";
 import { formatActivationEtaShort } from "@/lib/activation-time";
-import { formatCurrency } from "@/lib/utils";
 import type { ToolCategory } from "@/types/database";
 import type { ToolWithCategory } from "@/types/database";
 
@@ -14,6 +14,9 @@ interface CatalogToolGroupProps {
 }
 
 export function CatalogToolGroup({ category, devices }: CatalogToolGroupProps) {
+  const hasWin = Boolean(category.download_url?.trim());
+  const hasMac = Boolean(category.download_url_mac?.trim());
+
   return (
     <section className="glass rounded-2xl overflow-hidden border border-white/5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-6 py-4 border-b border-white/5 bg-white/[0.02]">
@@ -23,12 +26,34 @@ export function CatalogToolGroup({ category, devices }: CatalogToolGroupProps) {
             <Badge variant={category.is_active ? "success" : "default"}>
               {category.is_active ? "Live" : "Hidden"}
             </Badge>
+            {category.is_featured && (
+              <Badge variant="info" className="gap-1">
+                <Star className="h-3 w-3" />
+                Featured
+              </Badge>
+            )}
             <span className="text-xs text-zinc-500">
               {devices.length} device{devices.length !== 1 ? "s" : ""}
             </span>
           </div>
           {category.description && (
             <p className="text-sm text-zinc-500 line-clamp-2">{category.description}</p>
+          )}
+          {(hasWin || hasMac) && (
+            <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-zinc-500">
+              {hasWin && (
+                <span className="inline-flex items-center gap-1">
+                  <Monitor className="h-3 w-3 text-cyan-400" />
+                  Windows link set
+                </span>
+              )}
+              {hasMac && (
+                <span className="inline-flex items-center gap-1">
+                  <Apple className="h-3 w-3 text-cyan-400" />
+                  Mac link set
+                </span>
+              )}
+            </div>
           )}
         </div>
 
@@ -92,8 +117,8 @@ export function CatalogToolGroup({ category, devices }: CatalogToolGroupProps) {
                   <td className="px-4 sm:px-6 py-3">
                     <div className="font-medium text-white">{device.name}</div>
                   </td>
-                  <td className="px-4 sm:px-6 py-3 text-white">
-                    {formatCurrency(device.retail_price)}
+                  <td className="px-4 sm:px-6 py-3">
+                    <QuickPriceEdit toolId={device.id} initialPrice={Number(device.retail_price)} />
                   </td>
                   <td className="px-4 sm:px-6 py-3 text-zinc-300 capitalize">
                     {formatActivationEtaShort(

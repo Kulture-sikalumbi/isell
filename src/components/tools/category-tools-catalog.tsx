@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Search, X } from "lucide-react";
+import { PlatformDownloadButtons } from "@/components/tools/platform-download-buttons";
 import { ToolCategoryCard } from "@/components/tools/tool-category-card";
 import { VariationToolRow } from "@/components/tools/variation-tool-row";
 import { ToolsEmptyState } from "@/components/tools/tools-empty-state";
@@ -171,6 +172,13 @@ function CategoryToolsCatalogInner({ categories, isAdmin, isLoggedIn = false }: 
         {selectedCategory.description && (
           <p className="text-sm text-zinc-400 max-w-2xl">{selectedCategory.description}</p>
         )}
+        <PlatformDownloadButtons
+          windowsUrl={selectedCategory.download_url}
+          macUrl={selectedCategory.download_url_mac}
+          className="mt-4"
+          requireSignIn={!isLoggedIn}
+          signInHref={`/auth/login?next=${encodeURIComponent(`/tools?category=${selectedCategory.slug}`)}`}
+        />
       </div>
 
       <div className="glass rounded-2xl p-4 border border-white/10">

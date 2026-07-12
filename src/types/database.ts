@@ -18,7 +18,10 @@ export interface ToolCategory {
   name: string;
   description: string | null;
   download_url: string | null;
+  download_url_mac: string | null;
   sort_order: number;
+  is_featured: boolean;
+  featured_sort_order: number;
   is_active: boolean;
   created_at: string;
   updated_at: string;

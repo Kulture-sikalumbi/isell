@@ -4,10 +4,11 @@ import { ArrowRight } from "lucide-react";
 import { Hero, HowItWorks } from "@/components/landing/hero";
 import { FaqSection } from "@/components/landing/faq-section";
 import { TrustSection } from "@/components/landing/trust-section";
+import { FeaturedCategoryCard } from "@/components/tools/featured-category-card";
 import { ToolCard } from "@/components/tools/tool-card";
 import { ToolsEmptyState } from "@/components/tools/tools-empty-state";
 import { getCurrentProfile, getCurrentUser } from "@/lib/auth";
-import { getTools } from "@/lib/data";
+import { getFeaturedCategoriesWithTools, getTools } from "@/lib/data";
 import { toStorefrontTools } from "@/lib/storefront-tool";
 
 export default async function HomePage() {
@@ -17,7 +18,10 @@ export default async function HomePage() {
     redirect("/admin");
   }
 
-  const tools = toStorefrontTools(await getTools());
+  const featuredCategories = await getFeaturedCategoriesWithTools();
+  const fallbackTools = toStorefrontTools(await getTools());
+  const showFeatured = featuredCategories.length > 0;
+  const displayTools = showFeatured ? [] : fallbackTools.slice(0, 4);
 
   return (
     <>
@@ -31,10 +35,10 @@ export default async function HomePage() {
             <div>
               <h2 className="text-3xl sm:text-4xl font-bold mb-3">Featured Tools</h2>
               <p className="text-zinc-400">
-                Download free. Activate when you&apos;re ready.
+                Download free for Windows or Mac. Activate when you&apos;re ready.
               </p>
             </div>
-            {tools.length > 0 && (
+            {(showFeatured || fallbackTools.length > 0) && (
               <Link
                 href="/tools"
                 className="hidden sm:flex items-center gap-2 text-sm text-cyan-400 hover:text-cyan-300 transition-colors"
@@ -45,11 +49,21 @@ export default async function HomePage() {
             )}
           </div>
 
-          {tools.length === 0 ? (
+          {showFeatured ? (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {featuredCategories.slice(0, 4).map((category) => (
+                <FeaturedCategoryCard
+                  key={category.id}
+                  category={category}
+                  isLoggedIn={Boolean(user)}
+                />
+              ))}
+            </div>
+          ) : displayTools.length === 0 ? (
             <ToolsEmptyState />
           ) : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {tools.slice(0, 4).map((tool) => (
+              {displayTools.map((tool) => (
                 <ToolCard key={tool.id} tool={tool} isLoggedIn={Boolean(user)} />
               ))}
             </div>

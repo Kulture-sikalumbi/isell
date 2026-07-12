@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Download, ListOrdered, Shield, Clock } from "lucide-react";
+import { ArrowLeft, ListOrdered, Shield, Clock } from "lucide-react";
 import { ActivationEtaBadge } from "@/components/tools/activation-eta-badge";
+import { PlatformDownloadButtons } from "@/components/tools/platform-download-buttons";
 import { formatActivationEtaLong } from "@/lib/activation-time";
 import { getCurrentUser } from "@/lib/auth";
 import { CheckoutForm } from "@/components/tools/checkout-form";
@@ -36,7 +37,9 @@ export default async function ToolDetailPage({ params }: ToolDetailPageProps) {
   const storefrontTool = toStorefrontTool(tool);
   const currency = getSiteCurrency();
   const identifierLabel = getCustomerIdentifierLabel(tool.identifier_label);
-  const downloadUrl = tool.download_url || null;
+  const windowsUrl = tool.download_url || tool.category?.download_url || null;
+  const macUrl = tool.category?.download_url_mac || null;
+  const hasDownloads = Boolean(windowsUrl?.trim() || macUrl?.trim());
   const backHref = tool.category?.slug
     ? `/tools?category=${tool.category.slug}`
     : "/tools";
@@ -88,20 +91,17 @@ export default async function ToolDetailPage({ params }: ToolDetailPageProps) {
               </div>
             </div>
 
-            {downloadUrl && (
+            {hasDownloads && (
               <div className="mb-4">
                 {user ? (
-                  <a
-                    href={downloadUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-medium text-white hover:bg-white/10 transition-colors"
-                  >
-                    <Download className="h-4 w-4" />
-                    Download Tool (Free)
-                  </a>
+                  <PlatformDownloadButtons windowsUrl={windowsUrl} macUrl={macUrl} />
                 ) : (
-                  <SignInGate tool={tool} mode="download" />
+                  <PlatformDownloadButtons
+                    windowsUrl={windowsUrl}
+                    macUrl={macUrl}
+                    requireSignIn
+                    signInHref={`/auth/login?next=${encodeURIComponent(`/tools/${tool.slug}`)}`}
+                  />
                 )}
               </div>
             )}

@@ -15,6 +15,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   const { id } = await params;
   const body = await request.json();
   const sortOrder = Number(body.sort_order);
+  const featuredSort = Number(body.featured_sort_order);
 
   const supabase = createServiceClient();
   if (!supabase) {
@@ -24,8 +25,11 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   const updates = {
     name: (body.name as string)?.trim(),
     description: (body.description as string)?.trim() || null,
-    download_url: null,
+    download_url: (body.download_url as string)?.trim() || null,
+    download_url_mac: (body.download_url_mac as string)?.trim() || null,
     sort_order: Number.isFinite(sortOrder) ? sortOrder : 0,
+    is_featured: Boolean(body.is_featured),
+    featured_sort_order: Number.isFinite(featuredSort) ? featuredSort : 0,
     is_active: body.is_active ?? true,
     updated_at: new Date().toISOString(),
   };

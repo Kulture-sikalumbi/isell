@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import { AdminQuickAction } from "@/components/admin/admin-quick-action";
 import { AdminPendingDepositsPanel } from "@/components/admin/admin-pending-deposits-panel";
-import { EmailHealthPanel } from "@/components/admin/email-health-panel";
 import type { WalletDeposit } from "@/types/database";
 
 interface AdminDashboardProps {
@@ -205,8 +204,6 @@ export function AdminDashboard({
           />
         </div>
       </section>
-
-      <EmailHealthPanel />
     </div>
   );
 }
