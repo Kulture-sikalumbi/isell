@@ -48,7 +48,7 @@ export function AdminDepositsTable({ initialDeposits }: AdminDepositsTableProps)
   if (deposits.length === 0) {
     return (
       <div className="glass rounded-2xl p-12 text-center text-zinc-500">
-        No pending deposits. New requests appear when customers submit MTN/Airtel payments.
+        No pending deposits. New requests appear when customers submit wallet top-ups.
       </div>
     );
   }

@@ -7,7 +7,8 @@ import { CheckCircle2, Copy, ChevronRight, Loader2, Smartphone, X } from "lucide
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { BinancePayIcon, AirtelMoneyIcon, MtnMoMoIcon, UsdtTrc20Icon } from "@/components/payments/payment-method-icons";
+import { PaymentMethodLogo } from "@/components/payments/payment-method-logo";
+import { AirtelMoneyIcon, MtnMoMoIcon } from "@/components/payments/payment-method-icons";
 import { depositMethodLabel, isManualCryptoDeposit } from "@/lib/deposit-methods";
 import { getCurrencyLabel } from "@/lib/currency";
 import { cn, formatCurrency } from "@/lib/utils";
@@ -45,10 +46,12 @@ const methods: MethodOption[] = [
 const AMOUNT_PRESETS = [10, 50, 100, 200, 350] as const;
 
 function MethodIcon({ icon }: { icon?: MethodOption["icon"] }) {
+  if (!icon) return null;
+  if (icon === "binance" || icon === "usdt") {
+    return <PaymentMethodLogo method={icon} size="md" />;
+  }
   if (icon === "mtn") return <MtnMoMoIcon className="h-10 w-10 shrink-0 text-[10px]" />;
   if (icon === "airtel") return <AirtelMoneyIcon className="h-10 w-10 shrink-0 text-[8px]" />;
-  if (icon === "binance") return <BinancePayIcon className="h-10 w-10 shrink-0 text-[9px]" />;
-  if (icon === "usdt") return <UsdtTrc20Icon className="h-10 w-10 shrink-0 text-[8px]" />;
   return null;
 }
 

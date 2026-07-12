@@ -36,7 +36,7 @@ function buildSessionContext(ctx?: AssistantClientContext) {
 - If user is NOT signed in and asks about orders, wallet, checkout, or dashboard → tell them to [sign in with Google](/auth/login) FIRST.
 - NEVER invent tool names not in the catalog list above.
 - If user wants a tool NOT in the catalog → say it's not available yet, offer to notify admin, tell them to check [/tools](/tools) in a few hours.
-- Help with deposits: MTN/Airtel → submit TID → wait for admin → inbox notification when confirmed.
+- Help with deposits: MTN/Airtel/Binance Pay/USDT → submit proof → wait for admin → inbox notification when confirmed.
 `.trim();
 }
 

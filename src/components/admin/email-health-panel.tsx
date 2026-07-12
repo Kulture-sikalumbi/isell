@@ -19,6 +19,8 @@ interface EmailHealth {
     emailFrom: string;
     appUrl: string;
   };
+  resendKeyPrefix?: string | null;
+  resendKeyLooksValid?: boolean;
 }
 
 export function EmailHealthPanel() {
@@ -88,10 +90,10 @@ export function EmailHealthPanel() {
       ) : health ? (
         <>
           <ul className="space-y-2 text-sm mb-4">
-            <StatusRow
-              ok={health.resendConfigured}
-              label={`RESEND_API_KEY on server${health.resendKeyLength ? ` (${health.resendKeyLength} chars)` : ""}`}
-            />
+          <StatusRow
+            ok={health.resendConfigured && (health.resendKeyLooksValid ?? true)}
+            label={`RESEND_API_KEY${health.resendKeyPrefix ? ` (${health.resendKeyPrefix})` : ""}${health.resendKeyLength ? ` · ${health.resendKeyLength} chars` : ""}`}
+          />
             <StatusRow ok={Boolean(health.emailFrom)} label={`EMAIL_FROM (${health.emailFrom ?? "missing"})`} />
             <StatusRow ok={health.serviceRoleConfigured} label="SUPABASE_SERVICE_ROLE_KEY on server" />
             <StatusRow ok={Boolean(health.appUrl)} label={`NEXT_PUBLIC_APP_URL (${health.appUrl ?? "missing"})`} />

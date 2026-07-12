@@ -5,11 +5,28 @@
  * undefined. Use dynamic key construction so Azure App Service settings work
  * at request time.
  */
+function sanitizeEnvValue(value: string): string {
+  let v = value.trim();
+  // Azure App Settings sometimes include wrapping quotes — breaks Resend auth.
+  if (
+    (v.startsWith('"') && v.endsWith('"')) ||
+    (v.startsWith("'") && v.endsWith("'"))
+  ) {
+    v = v.slice(1, -1).trim();
+  }
+  // Common Azure mistake: value set to "RESEND_API_KEY=re_xxx" instead of just "re_xxx"
+  const keyPrefixMatch = v.match(/^[A-Z0-9_]+=(.+)$/);
+  if (keyPrefixMatch) {
+    v = keyPrefixMatch[1].trim();
+  }
+  return v;
+}
+
 function readEnvKey(key: string): string | undefined {
   if (typeof process === "undefined" || !process.env) return undefined;
   const value = process.env[key];
   if (value == null) return undefined;
-  const trimmed = String(value).trim();
+  const trimmed = sanitizeEnvValue(String(value));
   return trimmed || undefined;
 }
 
@@ -35,16 +52,6 @@ export function listRuntimeEnvKeyNames(): string[] {
   );
 }
 
-/**
- * TEMP — Azure email debug: hardcoded fallbacks when server env is empty.
- * Remove after confirming production email works (do not ship API keys long-term).
- */
-const HARDCODED_EMAIL_FALLBACK = {
-  apiKey: "re_73Ctre3N_Ez113xp8GaUZkSd8mGBSQvvG",
-  from: "orders@isellunlocks.com",
-  appUrl: "https://isellunlocks.com",
-} as const;
-
 /** Snapshot of email-related server env (for health checks and sending). */
 export function getServerEmailEnv() {
   const envApiKey = runtimeEnvParts("RESEND", "API", "KEY");
@@ -52,25 +59,29 @@ export function getServerEmailEnv() {
   const envAppUrl = runtimeEnvParts("NEXT", "PUBLIC", "APP", "URL");
   const serviceRole = runtimeEnvParts("SUPABASE", "SERVICE", "ROLE", "KEY");
 
-  const apiKey = envApiKey || HARDCODED_EMAIL_FALLBACK.apiKey;
-  const rawFrom = envFrom || HARDCODED_EMAIL_FALLBACK.from;
-  const appUrl = envAppUrl || HARDCODED_EMAIL_FALLBACK.appUrl;
+  const apiKey = envApiKey;
+  const rawFrom = envFrom;
+  const appUrl = envAppUrl;
 
   return {
     apiKey,
     rawFrom,
     appUrl,
     serviceRole,
-    from: rawFrom.includes("<")
-      ? rawFrom
-      : `iSell Unlocks <${rawFrom}>`,
+    from: rawFrom
+      ? rawFrom.includes("<")
+        ? rawFrom
+        : `iSell Unlocks <${rawFrom}>`
+      : "",
     ready: Boolean(apiKey && rawFrom && appUrl),
     apiKeyLength: apiKey?.length ?? 0,
+    resendKeyPrefix: apiKey ? `${apiKey.slice(0, 8)}…` : null,
+    resendKeyLooksValid: Boolean(apiKey?.startsWith("re_")),
     detectedKeyNames: listRuntimeEnvKeyNames(),
     emailConfigSource: {
-      resendApiKey: envApiKey ? "env" : "hardcoded-fallback",
-      emailFrom: envFrom ? "env" : "hardcoded-fallback",
-      appUrl: envAppUrl ? "env" : "hardcoded-fallback",
+      resendApiKey: envApiKey ? "env" : "missing",
+      emailFrom: envFrom ? "env" : "missing",
+      appUrl: envAppUrl ? "env" : "missing",
     },
   };
 }

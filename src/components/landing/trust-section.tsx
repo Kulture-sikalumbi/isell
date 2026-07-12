@@ -5,7 +5,7 @@ const TRUST_ITEMS = [
   {
     icon: Smartphone,
     title: "Mobile money ready",
-    description: "Pay with MTN, Airtel, or Binance — no complicated checkout.",
+    description: "Pay with MTN, Airtel, Binance Pay, or USDT — no complicated checkout.",
   },
   {
     icon: Clock,

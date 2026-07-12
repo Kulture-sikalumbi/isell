@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "iSell Unlocks — Instant Tool Activation",
   description:
-    "Zambia's prepaid wallet platform for device unlock tool activations. Pay with MTN or Airtel, activate instantly.",
+    "Zambia's prepaid wallet platform for device unlock tool activations. Pay with MTN, Airtel, Binance Pay, or USDT — activate instantly.",
   icons: {
     icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
     apple: [{ url: "/apple-icon.svg", type: "image/svg+xml" }],

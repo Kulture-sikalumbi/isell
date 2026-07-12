@@ -1,12 +1,14 @@
 import Image from "next/image";
 import airtelMoney from "@/assets/airtel_money.png";
-import binance from "@/assets/binance2.png";
+import binanceLogo from "@/assets/Binance.jpeg";
 import mtnMoney from "@/assets/mtn_money.jpg";
+import usdtLogo from "@/assets/Trc20.jpeg";
 
 const PAYMENT_METHODS = [
   { name: "MTN Mobile Money", src: mtnMoney, alt: "MTN Mobile Money" },
   { name: "Airtel Money", src: airtelMoney, alt: "Airtel Money" },
-  { name: "Binance Pay", src: binance, alt: "Binance Pay" },
+  { name: "Binance Pay", src: binanceLogo, alt: "Binance Pay" },
+  { name: "USDT TRC20", src: usdtLogo, alt: "USDT TRC20" },
 ] as const;
 
 export function PaymentMethods() {
@@ -28,12 +30,6 @@ export function PaymentMethods() {
             />
           </div>
         ))}
-        <div
-          className="flex h-11 items-center justify-center rounded-lg border border-[#26A17B]/40 bg-[#26A17B]/10 px-3 py-1.5"
-          title="USDT TRC20"
-        >
-          <span className="text-xs font-semibold text-[#26A17B]">USDT TRC20</span>
-        </div>
       </div>
     </div>
   );

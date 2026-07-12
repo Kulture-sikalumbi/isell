@@ -15,6 +15,7 @@ import {
 import { formatActivationEtaLong } from "@/lib/activation-time";
 import type { StorefrontTool } from "@/lib/storefront-tool";
 import { formatCurrency } from "@/lib/utils";
+import { WALLET_PAYMENT_METHODS_SHORT } from "@/lib/wallet-payment-copy";
 import { useConnectivityOptional } from "@/components/layout/connectivity-provider";
 import { useNavigationLoading } from "@/components/layout/navigation-progress";
 import { offlineAwareFetch, offlineMessage } from "@/lib/offline-fetch";
@@ -113,7 +114,7 @@ export function CheckoutForm({
         <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 px-4 py-3 text-sm text-amber-300">
           You need {formatCurrency(checkoutTotal - walletBalance, currency)} more.{" "}
           <Link href="/dashboard?tab=wallet" className="underline text-amber-200">
-            Add funds via MTN / Airtel
+            Add funds via {WALLET_PAYMENT_METHODS_SHORT}
           </Link>
         </div>
       )}

@@ -50,7 +50,9 @@ export async function POST() {
   if (!result.ok) {
     return NextResponse.json(
       {
-        error: result.skipped || result.error || "Resend rejected the send",
+        error: !status.resendKeyLooksValid
+          ? "RESEND_API_KEY on server is invalid — copy the exact key from Resend dashboard (starts with re_) into Azure and GitHub secrets, no quotes."
+          : result.skipped || result.error || "Resend rejected the send",
         ...status,
       },
       { status: 502 }

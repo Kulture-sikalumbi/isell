@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { PaymentMethodLogo } from "@/components/payments/payment-method-logo";
 
 interface IconProps {
   className?: string;
@@ -89,15 +90,15 @@ export function PaymentMethodsRow({
   showMomo = true,
   className,
 }: PaymentMethodsRowProps) {
+  const depositMethods = ["mtn", "airtel", "binance", "usdt"] as const;
+
   return (
     <div className={cn("flex items-center gap-2", className)}>
       {showWallet && <WalletPayIcon />}
-      {showMomo && (
-        <>
-          <MtnMoMoIcon />
-          <AirtelMoneyIcon />
-        </>
-      )}
+      {showMomo &&
+        depositMethods.map((method) => (
+          <PaymentMethodLogo key={method} method={method} size="sm" />
+        ))}
     </div>
   );
 }

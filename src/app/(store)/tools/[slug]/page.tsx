@@ -126,7 +126,7 @@ export default async function ToolDetailPage({ params }: ToolDetailPageProps) {
               <h2 className="text-xl font-bold text-white">Activate now</h2>
               <span className="text-xs text-zinc-500 uppercase tracking-wide">{currency}</span>
             </div>
-            <p className="text-sm text-zinc-500 mb-6">Pay from your prepaid wallet — MTN & Airtel funded</p>
+            <p className="text-sm text-zinc-500 mb-6">Pay from your prepaid wallet — funded via MTN, Airtel, Binance Pay, or USDT</p>
             {user && userEmail ? (
               <CheckoutForm
                 tool={storefrontTool}

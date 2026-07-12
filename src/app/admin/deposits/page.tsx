@@ -10,7 +10,7 @@ export default async function AdminDepositsPage() {
   return (
     <AdminShell
       title="Wallet deposits"
-      description="Verify MTN / Airtel payments and credit customer wallets"
+      description="Verify wallet deposits and credit customer wallets"
     >
       <AdminDepositsTable initialDeposits={deposits} />
     </AdminShell>

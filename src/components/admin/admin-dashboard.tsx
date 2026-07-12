@@ -161,7 +161,7 @@ export function AdminDashboard({
           <AdminQuickAction
             href="/admin/deposits"
             title="Wallet deposits"
-            description="Confirm MTN & Airtel deposits with customer TID"
+            description="Confirm wallet deposits (MTN, Airtel, Binance Pay, USDT)"
             icon={Wallet}
             accent="amber"
             badge={attention.pendingDeposits}

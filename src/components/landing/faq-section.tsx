@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 const FAQS = [
   {
     q: "How do I pay for activation?",
-    a: "Choose a tool, sign in with Google, enter your IMEI or device ID, and pay with MTN Mobile Money, Airtel Money, or Binance Pay at checkout.",
+    a: "Choose a tool, sign in with Google, enter your IMEI or device ID, and pay from your prepaid wallet. Top up via MTN Mobile Money, Airtel Money, Binance Pay, or USDT (TRC20).",
   },
   {
     q: "What is an IMEI and where do I find it?",

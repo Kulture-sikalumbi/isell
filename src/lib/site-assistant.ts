@@ -154,7 +154,7 @@ export function fallbackAssistantReply(
     return (
       "How wallet payments work:\n\n" +
       "1. [Sign in](/auth/login)\n" +
-      "2. Add funds → [/dashboard?tab=wallet](/dashboard?tab=wallet) (MTN/Airtel + TID)\n" +
+      "2. Add funds → [/dashboard?tab=wallet](/dashboard?tab=wallet) (MTN, Airtel, Binance Pay, or USDT)\n" +
       "3. Pick a tool → [/tools](/tools)\n" +
       "4. Pay from wallet at checkout\n\n" +
       "You'll get an inbox notification when your deposit is confirmed or activation is ready." +

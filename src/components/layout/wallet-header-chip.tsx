@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Plus, Wallet, History, ChevronDown } from "lucide-react";
 import { getSiteCurrency } from "@/lib/currency";
+import { WALLET_PAYMENT_METHODS_SHORT } from "@/lib/wallet-payment-copy";
 import { cn, formatCurrency } from "@/lib/utils";
 
 interface WalletHeaderChipProps {
@@ -119,7 +120,7 @@ export function WalletHeaderChip({
             className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-zinc-300 hover:text-white hover:bg-white/5"
           >
             <Plus className="h-4 w-4 text-cyan-400" />
-            Add funds via MTN / Airtel
+            Add funds via {WALLET_PAYMENT_METHODS_SHORT}
           </Link>
           <Link
             href="/dashboard?tab=history"

@@ -11,6 +11,8 @@ export function getEmailConfigStatus() {
     appUrl: env.appUrl || null,
     serviceRoleConfigured: Boolean(env.serviceRole),
     ready: env.ready,
+    resendKeyPrefix: env.resendKeyPrefix,
+    resendKeyLooksValid: env.resendKeyLooksValid,
     detectedKeyNames: env.detectedKeyNames,
     emailConfigSource: env.emailConfigSource,
   };

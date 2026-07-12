@@ -91,7 +91,7 @@ export async function sendWelcomeEmailIfNeeded(
     type: "welcome",
     title: "Welcome to iSell Unlocks",
     message:
-      "Top up your wallet with MTN or Airtel, pick a tool, and activate with your IMEI — your key appears in Activations.",
+      "Top up your wallet with MTN, Airtel, Binance Pay, or USDT (TRC20), pick a tool, and activate with your IMEI — your key appears in Activations.",
     link: "/dashboard?tab=wallet",
   });
 

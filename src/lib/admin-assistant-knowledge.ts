@@ -114,7 +114,7 @@ ${
 ${toolList || "No tools yet"}
 
 ## Workflows you should know
-**Deposits:** Customer picks amount → pays MTN/Airtel on phone → enters TID + details in **one submit** → you verify on phone → Confirm at [/admin/deposits](/admin/deposits) → wallet credited → customer notified in inbox.
+**Deposits:** Customer picks amount → pays via MTN/Airtel/Binance Pay/USDT → enters proof (TID, order ID, or TxID) in **one submit** → you verify → Confirm at [/admin/deposits](/admin/deposits) → wallet credited → customer notified in inbox.
 
 **Orders:** Wallet purchase → manual tools need fulfillment at [/admin/payments](/admin/payments) → enter activation code → customer gets inbox notification.
 

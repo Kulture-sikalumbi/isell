@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Plus, Sparkles, Wallet } from "lucide-react";
+import { WALLET_DEPOSIT_BANNER_COPY } from "@/lib/wallet-payment-copy";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
@@ -97,7 +98,7 @@ export function WalletBalanceCard({
           {!compact && (
             <p className="mt-2 text-xs text-zinc-400 max-w-sm leading-relaxed flex items-start gap-1.5">
               <Sparkles className="h-3.5 w-3.5 text-violet-400 shrink-0 mt-0.5" />
-              Top up once with MTN or Airtel — activate tools instantly from your wallet.
+              {WALLET_DEPOSIT_BANNER_COPY}
             </p>
           )}
           {pendingCount > 0 && (

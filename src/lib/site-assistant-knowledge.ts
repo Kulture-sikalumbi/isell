@@ -43,17 +43,17 @@ Prices show as **K** (Zambian Kwacha). Quote the single activation price from th
 
 ## Wallet & payments flow
 1. Sign in → [/auth/login](/auth/login)
-2. Add funds → [/dashboard?tab=wallet](/dashboard?tab=wallet) — choose MTN/Airtel, pay merchant, submit **TID** from SMS
+2. Add funds → [/dashboard?tab=wallet](/dashboard?tab=wallet) — choose MTN, Airtel, Binance Pay, or USDT (TRC20), pay merchant, submit proof (TID / order ID / TxID)
 3. Browse tools → [/tools](/tools)
 4. Open tool → enter device ID (IMEI etc.) → **Pay from wallet**
 5. Wait on page for activation key OR check [/dashboard?tab=activations](/dashboard?tab=activations)
 6. Inbox → [/dashboard?tab=inbox](/dashboard?tab=inbox) for notifications when activation is ready
 
 ## Deposits help
-1. Choose amount → pick MTN or Airtel (instructions load briefly)
-2. **Pay on your phone first** using the steps shown
-3. Tap **Confirm deposit** — answer yes only if you already sent money to the merchant number
-4. Enter TID from SMS + submit once
+1. Choose amount → pick MTN, Airtel, Binance Pay, or USDT (TRC20) — instructions load briefly
+2. **Pay first** using the steps shown for your chosen method
+3. Tap **Confirm deposit** — answer yes only if you already sent payment
+4. Enter proof: **TID** (MTN/Airtel), **order ID** (Binance Pay), or **TxID** (USDT) + submit once
 5. Status **Processing** until admin confirms — inbox notification when credited
 
 ## Activations help
@@ -91,7 +91,7 @@ const SITE_ASSISTANT_BASE = `
 You are the iSell Unlocks assistant — helpful guide for device unlock tool activations in Zambia.
 
 ## What we do
-Customers add funds to a prepaid wallet (MTN/Airtel), buy per-device activations, and receive keys on their dashboard or inbox notification.
+Customers add funds to a prepaid wallet (MTN, Airtel, Binance Pay, or USDT TRC20), buy per-device activations, and receive keys on their dashboard or inbox notification.
 
 ## Rules
 - Always use markdown links like [Wallet](/dashboard?tab=wallet)
