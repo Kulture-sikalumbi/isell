@@ -15,7 +15,10 @@ interface CatalogToolGroupProps {
 
 export function CatalogToolGroup({ category, devices }: CatalogToolGroupProps) {
   return (
-    <section className="glass rounded-2xl overflow-hidden border border-white/5">
+    <section
+      id={`tool-${category.id}`}
+      className="scroll-mt-28 glass rounded-2xl overflow-hidden border border-white/5 target:ring-2 target:ring-cyan-500/30 transition-shadow"
+    >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-6 py-4 border-b border-white/5 bg-white/[0.02]">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-1">
@@ -97,7 +100,8 @@ export function CatalogToolGroup({ category, devices }: CatalogToolGroupProps) {
                 return (
                 <tr
                   key={device.id}
-                  className="border-b border-white/5 last:border-0 hover:bg-white/[0.02]"
+                  id={`device-${device.id}`}
+                  className="scroll-mt-28 border-b border-white/5 last:border-0 hover:bg-white/[0.02] target:bg-cyan-500/10 target:ring-1 target:ring-inset target:ring-cyan-500/30 transition-colors"
                 >
                   <td className="px-4 sm:px-6 py-3">
                     <div className="font-medium text-white">{device.name}</div>

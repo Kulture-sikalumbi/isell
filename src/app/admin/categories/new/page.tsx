@@ -17,7 +17,8 @@ export default function NewCategoryPage() {
     if (!res.ok) {
       throw new Error(result.error || "Failed to create category");
     }
-    router.push("/admin/categories");
+    const categoryId = result.category?.id as string | undefined;
+    router.push(categoryId ? `/admin/categories#tool-${categoryId}` : "/admin/categories");
   }
 
   return (

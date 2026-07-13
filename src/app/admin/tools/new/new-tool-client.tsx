@@ -23,7 +23,8 @@ export function NewToolPageClient({ categories, defaultCategoryId }: NewToolPage
     if (!res.ok) {
       throw new Error(result.error || "Failed to create device");
     }
-    router.push("/admin/categories");
+    const deviceId = result.tool?.id as string | undefined;
+    router.push(deviceId ? `/admin/categories#device-${deviceId}` : "/admin/categories");
   }
 
   return (

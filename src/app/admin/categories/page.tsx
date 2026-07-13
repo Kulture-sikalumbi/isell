@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { AdminShell } from "@/components/admin/admin-sidebar";
+import { CatalogScrollRestore } from "@/components/admin/catalog-scroll-restore";
 import { CatalogToolGroup } from "@/components/admin/catalog-tool-group";
 import { FeaturedToolsPanel } from "@/components/admin/featured-tools-panel";
 import { getAllCategories, getAllTools } from "@/lib/data";
@@ -32,6 +33,7 @@ export default async function AdminCatalogPage() {
         </Link>
       }
     >
+      <CatalogScrollRestore />
       <div className="mb-6 rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-4 py-3 text-sm text-cyan-100/90">
         <strong className="text-cyan-200">How it works:</strong>{" "}
         Create a <strong>tool</strong> (category name) → add{" "}

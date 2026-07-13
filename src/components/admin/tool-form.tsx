@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, Plus, Save, Settings2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Save, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,9 +27,16 @@ interface ToolFormProps {
   categories: ToolCategory[];
   defaultCategoryId?: string;
   onSubmit?: (data: Record<string, unknown>) => void | Promise<void>;
+  onSaveAndNext?: (data: Record<string, unknown>) => void | Promise<void>;
 }
 
-export function ToolForm({ tool, categories, defaultCategoryId, onSubmit }: ToolFormProps) {
+export function ToolForm({
+  tool,
+  categories,
+  defaultCategoryId,
+  onSubmit,
+  onSaveAndNext,
+}: ToolFormProps) {
   const initialCategoryId =
     tool?.category_id ?? defaultCategoryId ?? categories[0]?.id ?? "";
 
@@ -71,8 +78,9 @@ export function ToolForm({ tool, categories, defaultCategoryId, onSubmit }: Tool
     }));
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function submitPayload(
+    submitFn: ((data: Record<string, unknown>) => void | Promise<void>) | undefined
+  ) {
     setSubmitting(true);
     setError("");
 
@@ -116,7 +124,7 @@ export function ToolForm({ tool, categories, defaultCategoryId, onSubmit }: Tool
       };
 
       if (isManual) {
-        await onSubmit?.({
+        await submitFn?.({
           ...base,
           developer_api_url: null,
           activation_type_id: null,
@@ -124,7 +132,7 @@ export function ToolForm({ tool, categories, defaultCategoryId, onSubmit }: Tool
         });
       } else {
         const direct = buildDirectApiPayload(form.directApi);
-        await onSubmit?.({
+        await submitFn?.({
           ...base,
           ...direct,
           developer_name: null,
@@ -135,6 +143,16 @@ export function ToolForm({ tool, categories, defaultCategoryId, onSubmit }: Tool
     } finally {
       setSubmitting(false);
     }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    await submitPayload(onSubmit);
+  }
+
+  async function handleSaveAndNext(e: React.FormEvent) {
+    e.preventDefault();
+    await submitPayload(onSaveAndNext);
   }
 
   if (categories.length === 0) {
@@ -414,19 +432,37 @@ export function ToolForm({ tool, categories, defaultCategoryId, onSubmit }: Tool
         </div>
       )}
 
-      <Button type="submit" size="lg" disabled={submitting}>
-        {submitting ? "Saving…" : tool ? (
-          <>
-            <Save className="h-4 w-4" />
-            Save changes
-          </>
-        ) : (
-          <>
-            <Plus className="h-4 w-4" />
-            Add device
-          </>
+      <div className="flex flex-wrap gap-3">
+        <Button type="submit" size="lg" disabled={submitting}>
+          {submitting ? "Saving…" : tool ? (
+            <>
+              <Save className="h-4 w-4" />
+              Save changes
+            </>
+          ) : (
+            <>
+              <Plus className="h-4 w-4" />
+              Add device
+            </>
+          )}
+        </Button>
+        {tool && onSaveAndNext && (
+          <Button
+            type="button"
+            size="lg"
+            variant="secondary"
+            disabled={submitting}
+            onClick={handleSaveAndNext}
+          >
+            {submitting ? "Saving…" : (
+              <>
+                Save &amp; next
+                <ChevronRight className="h-4 w-4" />
+              </>
+            )}
+          </Button>
         )}
-      </Button>
+      </div>
     </form>
   );
 }

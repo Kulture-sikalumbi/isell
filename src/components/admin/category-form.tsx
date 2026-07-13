@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Save } from "lucide-react";
+import { ChevronRight, Plus, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,9 +10,10 @@ import type { ToolCategory } from "@/types/database";
 interface CategoryFormProps {
   category?: ToolCategory;
   onSubmit?: (data: Record<string, unknown>) => void | Promise<void>;
+  onSaveAndNext?: (data: Record<string, unknown>) => void | Promise<void>;
 }
 
-export function CategoryForm({ category, onSubmit }: CategoryFormProps) {
+export function CategoryForm({ category, onSubmit, onSaveAndNext }: CategoryFormProps) {
   const [form, setForm] = useState({
     name: category?.name ?? "",
     description: category?.description ?? "",
@@ -28,15 +29,16 @@ export function CategoryForm({ category, onSubmit }: CategoryFormProps) {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function submitPayload(
+    submitFn: ((data: Record<string, unknown>) => void | Promise<void>) | undefined
+  ) {
     setSubmitting(true);
     setError("");
 
     try {
       const sortOrder = parseInt(form.sort_order, 10);
       const featuredSort = parseInt(form.featured_sort_order, 10);
-      await onSubmit?.({
+      await submitFn?.({
         name: form.name.trim(),
         description: form.description.trim(),
         sort_order: Number.isFinite(sortOrder) ? sortOrder : 0,
@@ -49,6 +51,16 @@ export function CategoryForm({ category, onSubmit }: CategoryFormProps) {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    await submitPayload(onSubmit);
+  }
+
+  async function handleSaveAndNext(e: React.FormEvent) {
+    e.preventDefault();
+    await submitPayload(onSaveAndNext);
   }
 
   return (
@@ -115,19 +127,37 @@ export function CategoryForm({ category, onSubmit }: CategoryFormProps) {
         </div>
       )}
 
-      <Button type="submit" size="lg" disabled={submitting}>
-        {submitting ? "Saving…" : category ? (
-          <>
-            <Save className="h-4 w-4" />
-            Save tool
-          </>
-        ) : (
-          <>
-            <Plus className="h-4 w-4" />
-            Add tool
-          </>
+      <div className="flex flex-wrap gap-3">
+        <Button type="submit" size="lg" disabled={submitting}>
+          {submitting ? "Saving…" : category ? (
+            <>
+              <Save className="h-4 w-4" />
+              Save tool
+            </>
+          ) : (
+            <>
+              <Plus className="h-4 w-4" />
+              Add tool
+            </>
+          )}
+        </Button>
+        {category && onSaveAndNext && (
+          <Button
+            type="button"
+            size="lg"
+            variant="secondary"
+            disabled={submitting}
+            onClick={handleSaveAndNext}
+          >
+            {submitting ? "Saving…" : (
+              <>
+                Save &amp; next
+                <ChevronRight className="h-4 w-4" />
+              </>
+            )}
+          </Button>
         )}
-      </Button>
+      </div>
     </form>
   );
 }
