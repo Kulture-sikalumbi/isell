@@ -40,7 +40,7 @@ export function ToolForm({
   const initialCategoryId =
     tool?.category_id ?? defaultCategoryId ?? categories[0]?.id ?? "";
 
-  const [showAdvanced, setShowAdvanced] = useState(Boolean(tool));
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [form, setForm] = useState({
     category_id: initialCategoryId,
     fulfillment_mode: (tool?.fulfillment_mode ?? "manual") as ToolFulfillmentMode,
