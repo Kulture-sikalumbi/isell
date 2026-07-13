@@ -20,7 +20,7 @@ export default async function ToolsPage({
   const isAdmin = profile?.role === "admin";
   const isLoggedIn = Boolean(user);
   const displayCurrency = await getRequestCurrency();
-  const fxRate = displayCurrency === "ZMW" ? await getUsdToZmwRate() : null;
+  const fxRate = await getUsdToZmwRate();
   const activeCategory = categorySlug
     ? categories.find((c) => c.slug === categorySlug && c.slug !== "general")
     : null;

@@ -2,12 +2,15 @@
 
 import Link from "next/link";
 import { LogIn } from "lucide-react";
-import { convertCurrency, getClientDisplayCurrency } from "@/lib/format-currency";
+import { getClientDisplayCurrency } from "@/lib/format-currency";
+import { convertToolAmount, normalizePriceCurrency } from "@/lib/tool-pricing";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
 interface ToolPriceProps {
   amount: number;
+  /** Currency stored in the database for this price — never the user's display preference alone. */
+  priceCurrency?: string;
   currency?: string;
   fxRate?: number | null;
   isLoggedIn: boolean;
@@ -19,6 +22,7 @@ interface ToolPriceProps {
 
 export function ToolPrice({
   amount,
+  priceCurrency = "ZMW",
   currency,
   fxRate,
   isLoggedIn,
@@ -28,7 +32,12 @@ export function ToolPrice({
   variant = "inline",
 }: ToolPriceProps) {
   const displayCurrency = (currency ?? getClientDisplayCurrency()).toUpperCase();
-  const displayAmount = convertCurrency(amount, "USD", displayCurrency, fxRate ?? undefined);
+  const displayAmount = convertToolAmount(
+    amount,
+    normalizePriceCurrency(priceCurrency),
+    displayCurrency,
+    fxRate ?? undefined
+  );
   const loginHref = `/auth/login?next=${encodeURIComponent(loginNext)}`;
 
   if (!isLoggedIn) {

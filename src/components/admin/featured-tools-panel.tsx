@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Pencil, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { formatCurrency } from "@/lib/utils";
+import { formatToolPrice } from "@/lib/tool-pricing";
 import type { ToolCategory } from "@/types/database";
 import type { ToolWithCategory } from "@/types/database";
 
@@ -65,10 +65,11 @@ export function FeaturedToolsPanel({ categories, devicesByTool }: FeaturedToolsP
         <div className="grid sm:grid-cols-2 gap-3">
           {featured.slice(0, 4).map((category) => {
             const devices = devicesByTool.get(category.id) ?? [];
-            const minPrice = devices.reduce(
-              (min, d) => Math.min(min, Number(d.retail_price)),
-              Infinity
-            );
+            const minDevice = devices.reduce<(typeof devices)[number] | null>((best, device) => {
+              if (!best) return device;
+              return Number(device.retail_price) < Number(best.retail_price) ? device : best;
+            }, null);
+            const minPrice = minDevice ? Number(minDevice.retail_price) : null;
 
             return (
               <div
@@ -79,8 +80,8 @@ export function FeaturedToolsPanel({ categories, devicesByTool }: FeaturedToolsP
                   <p className="font-medium text-white truncate">{category.name}</p>
                   <p className="text-xs text-zinc-500 mt-0.5">
                     Order {category.featured_sort_order}
-                    {Number.isFinite(minPrice) && minPrice !== Infinity
-                      ? ` · from ${formatCurrency(minPrice)}`
+                    {minPrice != null
+                      ? ` · from ${formatToolPrice(minPrice, minDevice?.price_currency ?? "ZMW", minDevice?.price_currency ?? "ZMW")}`
                       : " · no devices yet"}
                   </p>
                 </div>

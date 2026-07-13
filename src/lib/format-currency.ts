@@ -61,6 +61,10 @@ export function resolveDisplayCurrency(currency?: string | null): string {
   return normalizeCurrency(currency ?? getClientDisplayCurrency());
 }
 
+/**
+ * Convert between USD and ZMW. For tool/catalog prices use convertToolAmount()
+ * from @/lib/tool-pricing with each tool's stored price_currency — never assume USD.
+ */
 export function convertCurrency(
   amount: number,
   fromCurrency?: string | null,

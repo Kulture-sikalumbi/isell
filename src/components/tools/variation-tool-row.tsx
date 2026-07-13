@@ -96,6 +96,7 @@ export function VariationToolRow({
           />
           <ToolPrice
             amount={tool.checkout_price}
+            priceCurrency={tool.price_currency}
             currency={displayCurrency}
             fxRate={fxRate}
             isLoggedIn={isLoggedIn}

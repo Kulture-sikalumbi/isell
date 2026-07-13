@@ -13,7 +13,7 @@ import { getToolBySlug } from "@/lib/data";
 import { getWalletBalance } from "@/lib/wallet";
 import { getCustomerIdentifierLabel } from "@/lib/identifier-label";
 import { ToolPrice } from "@/components/tools/tool-price";
-import { convertCurrency } from "@/lib/format-currency";
+import { convertToolAmount, getToolCheckoutTotalInCurrency } from "@/lib/tool-pricing";
 import { getUsdToZmwRate } from "@/lib/currency-rates";
 import { getRequestCurrency } from "@/lib/request-currency";
 
@@ -37,9 +37,9 @@ export default async function ToolDetailPage({ params }: ToolDetailPageProps) {
   const userEmail = user?.email ?? "";
   const storefrontTool = toStorefrontTool(tool);
   const currency = await getRequestCurrency();
-  const fxRate = currency === "ZMW" ? await getUsdToZmwRate() : undefined;
+  const fxRate = await getUsdToZmwRate();
   const walletBalance = user ? await getWalletBalance(user.id, currency) : 0;
-  const checkoutTotal = convertCurrency(storefrontTool.checkout_price, "USD", currency, fxRate ?? undefined);
+  const checkoutTotal = getToolCheckoutTotalInCurrency(storefrontTool, currency, fxRate);
   const identifierLabel = getCustomerIdentifierLabel(tool.identifier_label);
   const windowsUrl = tool.download_url || tool.category?.download_url || null;
   const macUrl = tool.download_url_mac || tool.category?.download_url_mac || null;
@@ -78,6 +78,7 @@ export default async function ToolDetailPage({ params }: ToolDetailPageProps) {
                 <span className="text-sm text-zinc-400">Activation Price</span>
                 <ToolPrice
                   amount={storefrontTool.checkout_price}
+                  priceCurrency={storefrontTool.price_currency}
                   currency={currency}
                   fxRate={fxRate}
                   isLoggedIn={Boolean(user)}

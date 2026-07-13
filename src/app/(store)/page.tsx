@@ -23,7 +23,7 @@ export default async function HomePage() {
   const featuredCategories = await getFeaturedCategoriesWithTools();
   const fallbackTools = toStorefrontTools(await getTools());
   const displayCurrency = await getRequestCurrency();
-  const fxRate = displayCurrency === "ZMW" ? await getUsdToZmwRate() : null;
+  const fxRate = await getUsdToZmwRate();
   const showFeatured = featuredCategories.length > 0;
   const displayTools = showFeatured ? [] : fallbackTools.slice(0, 4);
 

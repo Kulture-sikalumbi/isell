@@ -10,7 +10,8 @@ import {
   buildDirectApiFormState,
   buildDirectApiPayload,
 } from "@/components/admin/tool-form-direct-api";
-import { getCurrencyLabel } from "@/lib/format-currency";
+import { normalizePriceCurrency } from "@/lib/tool-pricing";
+import type { DisplayCurrency } from "@/types/database";
 import {
   ACTIVATION_TIME_UNIT_OPTIONS,
   parseActivationTimeFields,
@@ -43,6 +44,7 @@ export function ToolForm({ tool, categories, defaultCategoryId, onSubmit }: Tool
     external_service_name: tool?.external_service_name ?? "",
     external_service_id: tool?.external_service_id ?? "",
     retail_price: tool?.retail_price?.toString() ?? "",
+    price_currency: normalizePriceCurrency(tool?.price_currency) as DisplayCurrency,
     wholesale_cost: tool?.wholesale_cost?.toString() ?? "0",
     sort_order: tool?.sort_order?.toString() ?? "0",
     activation_time_value: tool?.activation_time_value?.toString() ?? "",
@@ -103,6 +105,7 @@ export function ToolForm({ tool, categories, defaultCategoryId, onSubmit }: Tool
         external_service_name: form.external_service_name.trim() || null,
         external_service_id: form.external_service_id.trim() || null,
         retail_price: retail,
+        price_currency: form.price_currency,
         wholesale_cost: wholesaleCost,
         sort_order: Number.isFinite(sortOrder) ? sortOrder : 0,
         ...activationTime,
@@ -207,8 +210,38 @@ export function ToolForm({ tool, categories, defaultCategoryId, onSubmit }: Tool
           onChange={(e) => update("sort_order", e.target.value)}
           hint="Order within the tool list (lower first)"
         />
+        <div>
+          <label className="block text-sm font-medium text-zinc-300 mb-2">Price currency</label>
+          <div className="grid grid-cols-2 gap-3">
+            {(["ZMW", "USD"] as const).map((code) => (
+              <label
+                key={code}
+                className={`cursor-pointer rounded-xl border p-3 transition-colors ${
+                  form.price_currency === code
+                    ? "border-cyan-500/40 bg-cyan-500/10"
+                    : "border-white/10 bg-white/[0.02]"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="price_currency"
+                  value={code}
+                  checked={form.price_currency === code}
+                  onChange={() => update("price_currency", code)}
+                  className="sr-only"
+                />
+                <p className="font-medium text-white text-sm">
+                  {code === "ZMW" ? "Zambia (K)" : "US Dollar ($)"}
+                </p>
+                <p className="text-xs text-zinc-500 mt-1">
+                  Stored as entered — customers see converted prices
+                </p>
+              </label>
+            ))}
+          </div>
+        </div>
         <Input
-          label={`Activation price (${getCurrencyLabel()})`}
+          label={`Activation price (${form.price_currency === "ZMW" ? "K" : "USD"})`}
           type="number"
           step="0.01"
           min="0"
@@ -276,7 +309,7 @@ export function ToolForm({ tool, categories, defaultCategoryId, onSubmit }: Tool
         {showAdvanced && (
           <div className="mt-4 space-y-6 pl-1">
             <Input
-              label={`Wholesale cost (${getCurrencyLabel()})`}
+              label={`Wholesale cost (${form.price_currency === "ZMW" ? "K" : "USD"})`}
               type="number"
               step="0.01"
               min="0"

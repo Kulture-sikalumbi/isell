@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 import { completePaidOrder } from "@/lib/complete-order";
 import { getToolBySlug } from "@/lib/data";
-import { getCheckoutTotal } from "@/lib/platform-fee";
 import { createAuthClient, createServiceClient } from "@/lib/supabase/server";
 import { getRequestCurrency } from "@/lib/request-currency";
+import { getToolCheckoutTotalInCurrency } from "@/lib/tool-pricing";
 import { getWalletBalance, purchaseWithWallet } from "@/lib/wallet";
-import { convertCurrency } from "@/lib/format-currency";
 import { getUsdToZmwRate } from "@/lib/currency-rates";
 
 export async function POST(request: Request) {
@@ -46,8 +45,8 @@ export async function POST(request: Request) {
     }
 
     const currency = await getRequestCurrency();
-    const fxRate = currency === "ZMW" ? await getUsdToZmwRate() : undefined;
-    const totalCost = convertCurrency(getCheckoutTotal(tool), "USD", currency, fxRate);
+    const fxRate = await getUsdToZmwRate();
+    const totalCost = getToolCheckoutTotalInCurrency(tool, currency, fxRate);
     const balance = await getWalletBalance(user.id, currency);
 
     if (balance < totalCost) {

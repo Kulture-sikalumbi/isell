@@ -2,15 +2,22 @@
 
 import { useState } from "react";
 import { Check, Pencil } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+import { formatToolPrice } from "@/lib/tool-pricing";
+import type { DisplayCurrency } from "@/types/database";
 
 interface QuickPriceEditProps {
   toolId: string;
   initialPrice: number;
+  priceCurrency?: DisplayCurrency;
   onUpdated?: (price: number) => void;
 }
 
-export function QuickPriceEdit({ toolId, initialPrice, onUpdated }: QuickPriceEditProps) {
+export function QuickPriceEdit({
+  toolId,
+  initialPrice,
+  priceCurrency = "ZMW",
+  onUpdated,
+}: QuickPriceEditProps) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(initialPrice.toString());
   const [saving, setSaving] = useState(false);
@@ -56,9 +63,9 @@ export function QuickPriceEdit({ toolId, initialPrice, onUpdated }: QuickPriceEd
           setEditing(true);
         }}
         className="inline-flex items-center gap-1.5 text-white hover:text-cyan-300 transition-colors group"
-        title="Click to edit price"
+        title={`Click to edit price (${priceCurrency})`}
       >
-        {formatCurrency(displayPrice)}
+        {formatToolPrice(displayPrice, priceCurrency, priceCurrency)}
         <Pencil className="h-3 w-3 text-zinc-500 group-hover:text-cyan-400" />
       </button>
     );
@@ -66,6 +73,7 @@ export function QuickPriceEdit({ toolId, initialPrice, onUpdated }: QuickPriceEd
 
   return (
     <div className="flex items-center gap-1.5">
+      <span className="text-xs text-zinc-500">{priceCurrency === "ZMW" ? "K" : "$"}</span>
       <input
         type="number"
         step="0.01"

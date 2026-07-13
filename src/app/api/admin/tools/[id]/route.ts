@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/server";
+import { normalizePriceCurrency } from "@/lib/tool-pricing";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -52,6 +53,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     external_service_id: body.external_service_id || null,
     external_service_name: body.external_service_name || null,
     retail_price: body.retail_price,
+    price_currency: normalizePriceCurrency(body.price_currency as string | undefined),
     wholesale_cost: body.wholesale_cost,
     identifier_label: body.identifier_label,
     identifier_instructions: body.identifier_instructions || null,

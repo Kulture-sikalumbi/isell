@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRight, Layers } from "lucide-react";
 import { ToolPrice } from "@/components/tools/tool-price";
 import { cn, formatCurrency } from "@/lib/utils";
-import { convertCurrency } from "@/lib/format-currency";
+import { convertToolAmount, getToolPriceCurrency } from "@/lib/tool-pricing";
 import type { ToolCategoryWithTools } from "@/lib/data";
 
 interface FeaturedCategoryCardProps {
@@ -29,8 +29,23 @@ export function FeaturedCategoryCard({
     category.name.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) %
     accentColors.length;
 
-  const prices = category.tools.map((t) => t.checkout_price).filter((p) => p >= 0);
-  const minPrice = prices.length > 0 ? Math.min(...prices) : null;
+  const cheapest =
+    category.tools.length === 0
+      ? null
+      : category.tools.reduce((best, tool) => {
+          const converted = convertToolAmount(
+            tool.checkout_price,
+            getToolPriceCurrency(tool),
+            displayCurrency,
+            fxRate ?? undefined
+          );
+          if (!best || converted < best.converted) {
+            return { tool, converted };
+          }
+          return best;
+        }, null as { tool: (typeof category.tools)[number]; converted: number } | null);
+
+  const minPrice = cheapest?.converted ?? null;
   const href = `/tools?category=${category.slug}`;
 
   return (
@@ -64,21 +79,21 @@ export function FeaturedCategoryCard({
               isLoggedIn ? (
                 <>
                   <span className="text-lg font-bold text-white">
-                    {formatCurrency(
-                      convertCurrency(minPrice, "USD", displayCurrency, fxRate ?? undefined),
-                      displayCurrency
-                    )}
+                    {formatCurrency(minPrice, displayCurrency)}
                   </span>
                   <span className="text-xs text-zinc-500 ml-2">from</span>
                 </>
-              ) : (
+              ) : cheapest ? (
                 <ToolPrice
-                  amount={minPrice}
+                  amount={cheapest.tool.checkout_price}
+                  priceCurrency={cheapest.tool.price_currency}
                   currency={displayCurrency}
                   fxRate={fxRate}
                   isLoggedIn={false}
                   loginNext={href}
                 />
+              ) : (
+                <span className="text-sm text-zinc-500">Browse devices</span>
               )
             ) : (
               <span className="text-sm text-zinc-500">Browse devices</span>

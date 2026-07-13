@@ -1,6 +1,6 @@
 import { getTools } from "@/lib/data";
 import { formatSiteCurrency, getSiteCurrency } from "@/lib/currency";
-import { getCheckoutTotal } from "@/lib/platform-fee";
+import { formatToolCheckoutPrice } from "@/lib/tool-pricing";
 import { getMerchantDetails } from "@/lib/wallet";
 
 export async function buildSiteAssistantContext(input?: {
@@ -19,7 +19,7 @@ export async function buildSiteAssistantContext(input?: {
       : tools
           .map(
             (t) =>
-              `- **${t.name}** — [/tools/${t.slug}](/tools/${t.slug}) — ${formatSiteCurrency(getCheckoutTotal(t), currency)} — ${t.description?.slice(0, 80) ?? "unlock tool"}`
+              `- **${t.name}** — [/tools/${t.slug}](/tools/${t.slug}) — ${formatToolCheckoutPrice(t, currency)} — ${t.description?.slice(0, 80) ?? "unlock tool"}`
           )
           .join("\n");
 

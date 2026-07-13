@@ -1,5 +1,7 @@
 import { getSiteCurrency } from "@/lib/currency";
+import { getUsdToZmwRate } from "@/lib/currency-rates";
 import { calculatePlatformFee } from "@/lib/platform-fee";
+import { convertToolAmount, getToolPriceCurrency } from "@/lib/tool-pricing";
 import { createServiceClient } from "@/lib/supabase/server";
 import { notifyAdminNewDeposit } from "@/lib/wallet-notifications";
 import type {
@@ -302,8 +304,17 @@ export async function purchaseWithWallet(input: {
   const supabase = createServiceClient();
   if (!supabase) return { ok: false, error: "Database not configured" };
 
-  const platformFee = calculatePlatformFee(input.tool.retail_price, input.tool);
-  const price = Number(input.tool.retail_price);
+  const chargeCurrency = input.currency?.trim().toUpperCase() || getSiteCurrency();
+  const priceCurrency = getToolPriceCurrency(input.tool);
+  const fxRate =
+    priceCurrency !== chargeCurrency ? await getUsdToZmwRate() : null;
+  const price = convertToolAmount(
+    Number(input.tool.retail_price),
+    priceCurrency,
+    chargeCurrency,
+    fxRate
+  );
+  const platformFee = calculatePlatformFee(price, input.tool);
 
   const { data, error } = await supabase.rpc("wallet_purchase", {
     p_user_id: input.userId,

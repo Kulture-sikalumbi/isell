@@ -2,6 +2,7 @@ import { getTools, getPayments } from "@/lib/data";
 import { getMerchantAccountingSummary } from "@/lib/ledger";
 import { getAdminAttentionCounts, getPendingDeposits, getPlatformFeeStats } from "@/lib/wallet";
 import { formatSiteCurrency, getSiteCurrency } from "@/lib/currency";
+import { formatToolPrice } from "@/lib/tool-pricing";
 import { getMerchantDetails } from "@/lib/wallet";
 import { getSupportConversations } from "@/lib/support";
 
@@ -27,7 +28,7 @@ export async function buildAdminAssistantContext(): Promise<string> {
   const toolList = tools
     .map(
       (t) =>
-        `- **${t.name}** (${t.slug}) — ${formatSiteCurrency(t.retail_price, currency)} — ${t.fulfillment_mode} — ${t.is_active ? "active" : "inactive"}`
+        `- **${t.name}** (${t.slug}) — ${formatToolPrice(t.retail_price, t.price_currency ?? "ZMW", currency)} — ${t.fulfillment_mode} — ${t.is_active ? "active" : "inactive"}`
     )
     .join("\n");
 

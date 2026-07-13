@@ -119,7 +119,11 @@ export function CatalogToolGroup({ category, devices }: CatalogToolGroupProps) {
                     )}
                   </td>
                   <td className="px-4 sm:px-6 py-3">
-                    <QuickPriceEdit toolId={device.id} initialPrice={Number(device.retail_price)} />
+                    <QuickPriceEdit
+                      toolId={device.id}
+                      initialPrice={Number(device.retail_price)}
+                      priceCurrency={device.price_currency ?? "ZMW"}
+                    />
                   </td>
                   <td className="px-4 sm:px-6 py-3 text-zinc-300 capitalize">
                     {formatActivationEtaShort(

@@ -44,6 +44,7 @@ export interface Tool {
   activation_time_value: number | null;
   activation_time_unit: ActivationTimeUnit | null;
   retail_price: number;
+  price_currency: DisplayCurrency;
   wholesale_cost: number;
   fulfillment_mode: ToolFulfillmentMode;
   developer_api_url: string | null;

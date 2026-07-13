@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/server";
 import { buildDeviceSlug } from "@/lib/tool-slug";
+import { normalizePriceCurrency } from "@/lib/tool-pricing";
 import { slugify } from "@/lib/utils";
 
 function parseActivationTimeBody(body: Record<string, unknown>) {
@@ -71,6 +72,7 @@ export async function POST(request: Request) {
       external_service_id: (body.external_service_id as string) || null,
       external_service_name: (body.external_service_name as string) || null,
       retail_price: body.retail_price as number,
+      price_currency: normalizePriceCurrency(body.price_currency as string | undefined),
       wholesale_cost: body.wholesale_cost as number,
       identifier_label: (body.identifier_label as string) || "IMEI",
       identifier_instructions: (body.identifier_instructions as string) || null,
