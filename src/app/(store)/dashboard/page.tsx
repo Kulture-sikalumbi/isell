@@ -68,7 +68,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       isWalletArea ? getPendingWithdrawalForUser(user.id) : Promise.resolve(null),
   ]);
 
-  const merchants = getMerchantDetails(displayCurrency);
+  const merchants = await getMerchantDetails(displayCurrency);
   const balance = wallet ? Number(wallet.balance) : 0;
 
   const activationByPaymentId = new Map(

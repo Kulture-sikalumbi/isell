@@ -14,24 +14,37 @@ import type {
 } from "@/types/database";
 
 import { runtimeEnv } from "@/lib/runtime-env";
+import { getMerchantDepositSettings } from "@/lib/site-settings";
 
-export function getMerchantDetails(currency?: string) {
+export interface MerchantDetails {
+  mtn: string;
+  airtel: string;
+  binancePayId: string;
+  usdtTrc20Address: string;
+  currency: string;
+}
+
+export async function getMerchantDetails(currency?: string): Promise<MerchantDetails> {
   const resolvedCurrency = currency?.trim().toUpperCase() || getSiteCurrency();
+  const stored = await getMerchantDepositSettings();
+
   return {
-    mtn: runtimeEnv("MERCHANT_MTN_NUMBER") || "",
-    airtel: runtimeEnv("MERCHANT_AIRTEL_NUMBER") || "",
+    mtn: stored.mtn || runtimeEnv("MERCHANT_MTN_NUMBER") || "",
+    airtel: stored.airtel || runtimeEnv("MERCHANT_AIRTEL_NUMBER") || "",
     binancePayId:
+      stored.binancePayId ||
       runtimeEnv("MERCHANT_BINANCE_PAY_ID") ||
       runtimeEnv("MERCHANT_BINANCE_ID") ||
       "",
-    usdtTrc20Address: runtimeEnv("MERCHANT_USDT_TRC20_ADDRESS") || "",
+    usdtTrc20Address:
+      stored.usdtTrc20Address || runtimeEnv("MERCHANT_USDT_TRC20_ADDRESS") || "",
     currency: resolvedCurrency,
   };
 }
 
 export function merchantDestinationFor(
   method: DepositMethod,
-  merchants: ReturnType<typeof getMerchantDetails>
+  merchants: MerchantDetails
 ): string {
   if (method === "airtel") return merchants.airtel;
   if (method === "binance") return merchants.binancePayId;
@@ -194,7 +207,7 @@ export async function createDepositRequest(input: {
   const senderName = input.senderName?.trim() || null;
 
   const reference = `DEP-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-  const merchants = getMerchantDetails(input.currency);
+  const merchants = await getMerchantDetails(input.currency);
 
   const { data, error } = await supabase
     .from("wallet_deposits")
@@ -508,7 +521,7 @@ export async function createDepositIntent(input: {
   if (!amount || amount <= 0) return null;
 
   const reference = `DEP-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-  const merchants = getMerchantDetails(input.currency);
+  const merchants = await getMerchantDetails(input.currency);
 
   const { data, error } = await supabase
     .from("wallet_deposits")

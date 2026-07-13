@@ -57,3 +57,71 @@ export async function saveCurrencyRateSettings(input: {
 
   return !error;
 }
+
+const MERCHANT_DEPOSITS_KEY = "merchant_deposits";
+
+export interface MerchantDepositSettings {
+  mtn: string;
+  airtel: string;
+  binancePayId: string;
+  usdtTrc20Address: string;
+  updatedAt: string | null;
+}
+
+function trimMerchantField(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+export async function getMerchantDepositSettings(): Promise<MerchantDepositSettings> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return {
+      mtn: "",
+      airtel: "",
+      binancePayId: "",
+      usdtTrc20Address: "",
+      updatedAt: null,
+    };
+  }
+
+  const { data } = await supabase
+    .from("site_settings")
+    .select("setting_value, updated_at")
+    .eq("setting_key", MERCHANT_DEPOSITS_KEY)
+    .maybeSingle();
+
+  const settingValue = (data?.setting_value as Record<string, unknown> | null) ?? null;
+
+  return {
+    mtn: trimMerchantField(settingValue?.mtn),
+    airtel: trimMerchantField(settingValue?.airtel),
+    binancePayId: trimMerchantField(settingValue?.binance_pay_id),
+    usdtTrc20Address: trimMerchantField(settingValue?.usdt_trc20_address),
+    updatedAt: data?.updated_at ?? (settingValue?.updated_at as string | null) ?? null,
+  };
+}
+
+export async function saveMerchantDepositSettings(input: {
+  mtn: string;
+  airtel: string;
+  binancePayId: string;
+  usdtTrc20Address: string;
+}): Promise<boolean> {
+  const supabase = createServiceClient();
+  if (!supabase) return false;
+
+  const updatedAt = new Date().toISOString();
+  const { error } = await supabase.from("site_settings").upsert({
+    setting_key: MERCHANT_DEPOSITS_KEY,
+    setting_value: {
+      mtn: trimMerchantField(input.mtn),
+      airtel: trimMerchantField(input.airtel),
+      binance_pay_id: trimMerchantField(input.binancePayId),
+      usdt_trc20_address: trimMerchantField(input.usdtTrc20Address),
+      updated_at: updatedAt,
+    },
+    updated_at: updatedAt,
+  });
+
+  return !error;
+}

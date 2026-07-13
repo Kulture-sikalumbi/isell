@@ -16,15 +16,16 @@ export async function GET() {
 
   const currency = await getRequestCurrency();
 
-  const [wallet, transactions, deposits] = await Promise.all([
+  const [wallet, transactions, deposits, merchants] = await Promise.all([
     getOrCreateWallet(user.id, currency),
     getWalletTransactions(user.id),
     getUserDeposits(user.id),
+    getMerchantDetails(currency),
   ]);
 
   return NextResponse.json({
     wallet,
-    merchants: getMerchantDetails(currency),
+    merchants,
     transactions,
     deposits,
   });

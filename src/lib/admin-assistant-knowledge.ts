@@ -19,7 +19,7 @@ export async function buildAdminAssistantContext(): Promise<string> {
     ]);
 
   const currency = getSiteCurrency();
-  const merchants = getMerchantDetails();
+  const merchants = await getMerchantDetails();
   const awaiting = payments.filter(
     (p) => p.status === "completed" && p.fulfillment_status === "awaiting"
   );

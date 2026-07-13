@@ -11,7 +11,7 @@ export async function buildSiteAssistantContext(input?: {
 }): Promise<string> {
   const tools = await getTools();
   const currency = input?.walletCurrency ?? getSiteCurrency();
-  const merchants = getMerchantDetails();
+  const merchants = await getMerchantDetails();
 
   const toolList =
     tools.length === 0
