@@ -6,7 +6,7 @@ import { Check, Copy, KeyRound, Loader2, Wallet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ReceiptDownloadButton } from "@/components/dashboard/receipt-download-button";
-import { getCustomerIdentifierLabel } from "@/lib/identifier-label";
+import { CheckoutFieldsDisplay } from "@/components/orders/checkout-fields-display";
 import { formatOrderNumber } from "@/lib/order-number";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { Activation, Payment } from "@/types/database";
@@ -74,10 +74,11 @@ export function OrderCard({ payment, activation }: OrderCardProps) {
 
       <div className="grid sm:grid-cols-2 gap-3 text-sm">
         <div className="rounded-xl bg-black/30 border border-white/5 px-4 py-3">
-          <p className="text-xs text-zinc-500 mb-1">
-            {getCustomerIdentifierLabel(payment.tool?.identifier_label)}
-          </p>
-          <p className="font-mono text-zinc-200">{payment.hardware_id}</p>
+          <CheckoutFieldsDisplay
+            hardwareId={payment.hardware_id}
+            checkoutFields={payment.checkout_fields}
+            identifierLabel={payment.tool?.identifier_label}
+          />
         </div>
         <div className="rounded-xl bg-black/30 border border-white/5 px-4 py-3">
           <p className="text-xs text-zinc-500 mb-1">Amount paid</p>

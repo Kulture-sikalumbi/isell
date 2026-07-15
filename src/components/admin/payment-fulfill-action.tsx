@@ -9,7 +9,7 @@ import {
   paymentNeedsFulfillment,
   type AdminPaymentRow,
 } from "@/lib/payment-fulfillment";
-import { getCustomerIdentifierLabel } from "@/lib/identifier-label";
+import { CheckoutFieldsDisplay } from "@/components/orders/checkout-fields-display";
 import { useNavigationLoading } from "@/components/layout/navigation-progress";
 import { acquireBodyScrollLock } from "@/lib/body-scroll-lock";
 
@@ -30,7 +30,6 @@ export function PaymentFulfillAction({ payment }: PaymentFulfillActionProps) {
   const needsAction = paymentNeedsFulfillment(payment);
   const customerEmail = payment.profile?.email;
   const customerName = payment.profile?.full_name;
-  const idLabel = getCustomerIdentifierLabel(payment.tool?.identifier_label);
 
   useEffect(() => {
     setMounted(true);
@@ -145,8 +144,11 @@ export function PaymentFulfillAction({ payment }: PaymentFulfillActionProps) {
                 )}
 
                 <div className="rounded-xl bg-black/30 border border-white/10 px-4 py-3 text-sm">
-                  <p className="text-xs text-zinc-500 mb-1">{idLabel}</p>
-                  <p className="font-mono text-zinc-200 break-all">{payment.hardware_id}</p>
+                  <CheckoutFieldsDisplay
+                    hardwareId={payment.hardware_id}
+                    checkoutFields={payment.checkout_fields}
+                    identifierLabel={payment.tool?.identifier_label}
+                  />
                 </div>
 
                 {payment.tool?.external_service_name && (

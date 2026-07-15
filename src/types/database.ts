@@ -1,3 +1,5 @@
+import type { CheckoutFieldValue, ToolFormField } from "@/lib/tool-form-fields";
+
 export type UserRole = "user" | "admin";
 export type PaymentStatus = "pending" | "completed" | "failed" | "refunded";
 export type ToolFulfillmentMode = "manual" | "direct_api";
@@ -54,6 +56,10 @@ export interface Tool {
   identifier_label: string;
   identifier_instructions: string | null;
   identifier_placeholder: string | null;
+  /** Admin-defined checkout inputs (label, placeholder, hint, etc.). */
+  form_fields: ToolFormField[] | null;
+  /** Optional title above help instructions on the device page. */
+  form_help_title: string | null;
   developer_name: string | null;
   api_config: Record<string, unknown>;
   platform_fee_percent: number | null;
@@ -72,6 +78,8 @@ export interface Payment {
   user_id: string | null;
   tool_id: string;
   hardware_id: string;
+  /** Full checkout field values when the tool has multiple inputs. */
+  checkout_fields: CheckoutFieldValue[] | null;
   amount: number;
   currency: string;
   provider: string | null;

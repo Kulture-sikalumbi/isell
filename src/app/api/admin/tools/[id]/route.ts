@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/server";
 import { normalizePriceCurrency } from "@/lib/tool-pricing";
+import {
+  normalizeFormFields,
+  syncLegacyIdentifierFromFields,
+} from "@/lib/tool-form-fields";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -41,6 +45,15 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Database not configured" }, { status: 503 });
   }
 
+  const formFields = normalizeFormFields(body.form_fields);
+  if (formFields.length === 0) {
+    return NextResponse.json(
+      { error: "Add at least one checkout field with a label" },
+      { status: 400 }
+    );
+  }
+  const legacyIds = syncLegacyIdentifierFromFields(formFields);
+
   const updates: Record<string, unknown> = {
     category_id: body.category_id || null,
     sort_order: Number.isFinite(Number(body.sort_order)) ? Number(body.sort_order) : 0,
@@ -55,9 +68,11 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     retail_price: body.retail_price,
     price_currency: normalizePriceCurrency(body.price_currency as string | undefined),
     wholesale_cost: body.wholesale_cost,
-    identifier_label: body.identifier_label,
+    form_fields: formFields,
+    form_help_title: (body.form_help_title as string)?.trim() || null,
+    identifier_label: legacyIds.identifier_label,
+    identifier_placeholder: legacyIds.identifier_placeholder,
     identifier_instructions: body.identifier_instructions || null,
-    identifier_placeholder: body.identifier_placeholder || null,
     is_active: body.is_active ?? true,
   };
 

@@ -11,13 +11,10 @@ const methodLabels = DEPOSIT_METHOD_LABELS;
 
 function statusMeta(deposit: WalletDeposit) {
   if (deposit.status === "pending") {
-    const isMtnApi = deposit.provider === "mtn_momo";
     return {
-      label: isMtnApi ? "Awaiting MTN approval" : "Processing",
+      label: "Processing",
       variant: "info" as const,
-      hint: isMtnApi
-        ? "Approve the request on your phone. Wallet updates automatically after MTN confirms."
-        : "Admin is verifying your payment. Balance updates after confirmation.",
+      hint: "Your payment is being verified. Your wallet updates once the deposit is confirmed.",
     };
   }
   if (deposit.status === "confirmed") {

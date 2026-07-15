@@ -617,7 +617,7 @@ export async function confirmDepositFromProvider(depositId: string, providerNote
 
   const { data } = await supabase
     .from("wallet_deposits")
-    .select("status")
+    .select("status, user_id, amount, currency")
     .eq("id", depositId)
     .maybeSingle();
 
@@ -633,6 +633,14 @@ export async function confirmDepositFromProvider(depositId: string, providerNote
 
   const typed = result as { ok: boolean; error?: string; balance?: number };
   if (!typed.ok) return { ok: false, error: typed.error || "Failed to confirm deposit" };
+
+  const { notifyDepositConfirmed } = await import("@/lib/user-notifications");
+  await notifyDepositConfirmed({
+    userId: data.user_id,
+    amount: Number(data.amount),
+    currency: data.currency,
+  });
+
   return { ok: true, balance: typed.balance };
 }
 

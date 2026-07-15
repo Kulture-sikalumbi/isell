@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { PaymentOrderActions } from "@/components/admin/payment-order-actions";
+import { CheckoutFieldsDisplay } from "@/components/orders/checkout-fields-display";
 import {
   adminPaymentStatus,
   paymentNeedsFulfillment,
@@ -85,8 +86,15 @@ export function PaymentsTable({ payments, showActions = false }: PaymentsTablePr
                         {payment.profile?.email ?? "—"}
                       </div>
                     </td>
-                    <td className="px-6 py-4 font-mono text-xs text-zinc-400">
-                      {payment.hardware_id}
+                    <td className="px-6 py-4 font-mono text-xs text-zinc-400 max-w-[200px]">
+                      <CheckoutFieldsDisplay
+                        hardwareId={payment.hardware_id}
+                        checkoutFields={payment.checkout_fields}
+                        identifierLabel={payment.tool?.identifier_label}
+                        className="space-y-1.5"
+                        labelClassName="text-[10px] text-zinc-500 mb-0.5"
+                        valueClassName="font-mono text-xs text-zinc-400 break-all"
+                      />
                     </td>
                     <td className="px-6 py-4 text-white">
                       {formatCurrency(payment.amount, payment.currency)}

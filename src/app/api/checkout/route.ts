@@ -4,21 +4,53 @@ import { getToolBySlug } from "@/lib/data";
 import { createAuthClient, createServiceClient } from "@/lib/supabase/server";
 import { getRequestCurrency } from "@/lib/request-currency";
 import { getToolCheckoutTotalInCurrency } from "@/lib/tool-pricing";
+import {
+  collectCheckoutValues,
+  resolveToolFormFields,
+} from "@/lib/tool-form-fields";
 import { getWalletBalance, purchaseWithWallet } from "@/lib/wallet";
 import { getUsdToZmwRate } from "@/lib/currency-rates";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { toolId, toolSlug, hardwareId, email } = body;
+    const { toolId, toolSlug, email } = body;
+    const fieldValues =
+      body.fieldValues && typeof body.fieldValues === "object"
+        ? (body.fieldValues as Record<string, string>)
+        : undefined;
+    // Back-compat: older clients sent a single hardwareId
+    const legacyHardwareId =
+      typeof body.hardwareId === "string" ? body.hardwareId.trim() : "";
 
-    if (!toolId || !hardwareId || !email) {
+    if (!toolId || !email) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
     const tool = toolSlug ? await getToolBySlug(toolSlug) : null;
     if (!tool) {
       return NextResponse.json({ error: "Tool not found" }, { status: 404 });
+    }
+
+    const formFields = resolveToolFormFields(tool);
+    const collected = fieldValues
+      ? collectCheckoutValues(formFields, fieldValues)
+      : legacyHardwareId
+        ? {
+            ok: true as const,
+            primaryValue: legacyHardwareId,
+            checkoutFields: [
+              {
+                id: formFields[0]?.id ?? "primary",
+                label: formFields[0]?.label ?? tool.identifier_label ?? "ID",
+                value: legacyHardwareId,
+              },
+            ],
+          }
+        : { ok: false as const, error: "Missing required fields" };
+
+    if (!collected.ok) {
+      return NextResponse.json({ error: collected.error }, { status: 400 });
     }
 
     const authClient = await createAuthClient();
@@ -32,7 +64,7 @@ export async function POST(request: Request) {
 
     if (!user) {
       return NextResponse.json(
-        { error: "You must be signed in to purchase activations" },
+        { error: "You must be signed in to purchase" },
         { status: 401 }
       );
     }
@@ -63,7 +95,7 @@ export async function POST(request: Request) {
     const result = await purchaseWithWallet({
       userId: user.id,
       tool,
-      hardwareId: hardwareId.trim(),
+      hardwareId: collected.primaryValue,
       currency,
     });
 
@@ -77,6 +109,13 @@ export async function POST(request: Request) {
     const supabase = createServiceClient();
     if (!supabase) {
       return NextResponse.json({ error: "Database not configured" }, { status: 503 });
+    }
+
+    if (collected.checkoutFields.length > 0) {
+      await supabase
+        .from("payments")
+        .update({ checkout_fields: collected.checkoutFields })
+        .eq("id", result.payment_id);
     }
 
     const { data: payment } = await supabase

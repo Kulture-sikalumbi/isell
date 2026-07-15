@@ -10,17 +10,22 @@ import {
   buildDirectApiFormState,
   buildDirectApiPayload,
 } from "@/components/admin/tool-form-direct-api";
+import { ToolFormFieldsEditor } from "@/components/admin/tool-form-fields-editor";
 import { normalizePriceCurrency } from "@/lib/tool-pricing";
 import type { DisplayCurrency } from "@/types/database";
 import {
   ACTIVATION_TIME_UNIT_OPTIONS,
   parseActivationTimeFields,
 } from "@/lib/activation-time";
+import {
+  DEFAULT_IMEI_FIELD,
+  DEFAULT_IMEI_INSTRUCTIONS,
+  normalizeFormFields,
+  resolveToolFormFields,
+  syncLegacyIdentifierFromFields,
+  type ToolFormField,
+} from "@/lib/tool-form-fields";
 import type { Tool, ToolCategory, ToolFulfillmentMode } from "@/types/database";
-
-const DEFAULT_IMEI_INSTRUCTIONS =
-  "Dial *#06# on the phone\nOr Settings → About → IMEI";
-const DEFAULT_IMEI_PLACEHOLDER = "Enter 15-digit IMEI (dial *#06# on the phone)";
 
 interface ToolFormProps {
   tool?: Tool;
@@ -28,6 +33,11 @@ interface ToolFormProps {
   defaultCategoryId?: string;
   onSubmit?: (data: Record<string, unknown>) => void | Promise<void>;
   onSaveAndNext?: (data: Record<string, unknown>) => void | Promise<void>;
+}
+
+function initialFormFields(tool?: Tool): ToolFormField[] {
+  if (!tool) return [{ ...DEFAULT_IMEI_FIELD }];
+  return resolveToolFormFields(tool);
 }
 
 export function ToolForm({
@@ -56,9 +66,10 @@ export function ToolForm({
     sort_order: tool?.sort_order?.toString() ?? "0",
     activation_time_value: tool?.activation_time_value?.toString() ?? "",
     activation_time_unit: tool?.activation_time_unit ?? "hours",
-    identifier_label: tool?.identifier_label ?? "IMEI",
-    identifier_instructions: tool?.identifier_instructions ?? DEFAULT_IMEI_INSTRUCTIONS,
-    identifier_placeholder: tool?.identifier_placeholder ?? DEFAULT_IMEI_PLACEHOLDER,
+    form_fields: initialFormFields(tool),
+    form_help_title: tool?.form_help_title ?? "",
+    identifier_instructions:
+      tool?.identifier_instructions ?? DEFAULT_IMEI_INSTRUCTIONS,
     is_active: tool?.is_active ?? true,
     directApi: buildDirectApiFormState(tool),
   });
@@ -97,11 +108,17 @@ export function ToolForm({
         throw new Error("Select the tool this device belongs to");
       }
 
+      const formFields = normalizeFormFields(form.form_fields);
+      if (formFields.length === 0) {
+        throw new Error("Add at least one checkout field with a label");
+      }
+
       const sortOrder = parseInt(form.sort_order, 10);
       const activationTime = parseActivationTimeFields(
         form.activation_time_value,
         form.activation_time_unit
       );
+      const legacyIds = syncLegacyIdentifierFromFields(formFields);
 
       const base = {
         category_id: form.category_id,
@@ -117,9 +134,10 @@ export function ToolForm({
         wholesale_cost: wholesaleCost,
         sort_order: Number.isFinite(sortOrder) ? sortOrder : 0,
         ...activationTime,
-        identifier_label: form.identifier_label.trim() || "IMEI",
-        identifier_instructions: form.identifier_instructions.trim() || DEFAULT_IMEI_INSTRUCTIONS,
-        identifier_placeholder: form.identifier_placeholder.trim() || DEFAULT_IMEI_PLACEHOLDER,
+        form_fields: formFields,
+        form_help_title: form.form_help_title.trim() || null,
+        identifier_instructions: form.identifier_instructions.trim() || null,
+        ...legacyIds,
         is_active: form.is_active,
       };
 
@@ -259,7 +277,7 @@ export function ToolForm({
           </div>
         </div>
         <Input
-          label={`Activation price (${form.price_currency === "ZMW" ? "K" : "USD"})`}
+          label={`Price (${form.price_currency === "ZMW" ? "K" : "USD"})`}
           type="number"
           step="0.01"
           min="0"
@@ -270,7 +288,7 @@ export function ToolForm({
         />
         <div>
           <label className="block text-sm font-medium text-zinc-300 mb-2">
-            Activation time
+            Delivery time
           </label>
           <div className="grid grid-cols-2 gap-3">
             <Input
@@ -297,6 +315,19 @@ export function ToolForm({
             </div>
           </div>
         </div>
+
+        <ToolFormFieldsEditor
+          fields={form.form_fields}
+          helpTitle={form.form_help_title}
+          helpInstructions={form.identifier_instructions}
+          onFieldsChange={(fields) =>
+            setForm((prev) => ({ ...prev, form_fields: fields }))
+          }
+          onHelpTitleChange={(value) => update("form_help_title", value)}
+          onHelpInstructionsChange={(value) =>
+            update("identifier_instructions", value)
+          }
+        />
       </div>
 
       <label className="flex items-center gap-3 cursor-pointer">
@@ -394,30 +425,6 @@ export function ToolForm({
                 />
               </div>
             )}
-
-            <div>
-              <p className="text-sm font-medium text-zinc-300 mb-3">Checkout device ID field</p>
-              <div className="grid md:grid-cols-2 gap-4">
-                <Input
-                  label="Field label"
-                  value={form.identifier_label}
-                  onChange={(e) => update("identifier_label", e.target.value)}
-                  placeholder="IMEI"
-                />
-                <Input
-                  label="Input placeholder"
-                  value={form.identifier_placeholder}
-                  onChange={(e) => update("identifier_placeholder", e.target.value)}
-                />
-                <div className="md:col-span-2">
-                  <Textarea
-                    label="How to find IMEI"
-                    value={form.identifier_instructions}
-                    onChange={(e) => update("identifier_instructions", e.target.value)}
-                  />
-                </div>
-              </div>
-            </div>
 
             {!isManual && (
               <DirectApiFields form={form.directApi} onChange={updateDirectApi} />

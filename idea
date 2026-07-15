@@ -1,0 +1,27 @@
+# Project Context: Proprietary Mobile Money Automation Gateway (Android)
+
+## Overview
+We are building a lightweight, custom Android background utility app using React Native. This app serves as an automated bridge for a Next.js (TypeScript) + Supabase mobile repair platform hosted on Azure. 
+
+Because official Mobile Money (MoMo) APIs are unavailable, this app will act as a dedicated SMS gateway. It will run on a dedicated physical Android device in the office, intercept incoming MoMo transaction SMS receipts in the background, parse the details via Regular Expressions, and securely forward the data via an HTTP POST webhook to our Next.js API.
+
+## Tech Stack Constraints
+- **Framework:** React Native (Bare or Expo with native dev plugins for SMS background execution)
+- **Primary Languages:** JavaScript / TypeScript
+- **Target OS:** Android Only (Requires native system permissions)
+- **Key Modules Needed:** Native SMS Broadcast Receiver / Event Listener (`react-native-get-sms-android`, `expo-sms-receiver`, or custom native module equivalent)
+
+## Features to Implement
+1. **Permission Handler UI:** A clean interface that checks and requests `RECEIVE_SMS` and `READ_SMS` Android system permissions when opened.
+2. **Background Listener Service:** A lightweight background thread/service that remains active even if the app UI is closed, ensuring the OS doesn't kill it.
+3. **Regex Parser Engine:** A string processing function that triggers when an incoming SMS matches sender IDs like "MTNMoMo" or "AirtelMoney". It must cleanly extract:
+   - `transactionId` (Digits following "Trans ID:")
+   - `amount` (The numeric value following "K")
+   - `sender` (The network sender identification)
+4. **Secure Webhook Client:** A standard `fetch` wrapper that POSTs the parsed payload to `https://your-azure-app.com/api/v1/momo-webhook`. It must include a strict authorization header: `Authorization: Bearer <SECRET_APP_TOKEN>`.
+5. **Dashboard UI:** A dead-simple, 1-page UI displaying:
+   - A toggle switch showing gateway status ("ACTIVE" / "INACTIVE").
+   - A live transaction log stream showing the last 5 intercepted messages and their webhook status for visual client validation.
+
+## Next Step
+Please generate the complete codebase architecture or the primary component file (`App.tsx` / background service script) that fulfills these criteria, optimizing for minimal battery usage and robust background reliability.

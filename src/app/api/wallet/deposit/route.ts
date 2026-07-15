@@ -43,7 +43,7 @@ export async function POST(request: Request) {
   const merchants = await getMerchantDetails(currency);
   const merchantNumber = merchantDestinationFor(method, merchants);
 
-  if (method !== "other" && method !== "mtn" && !merchantNumber) {
+  if (method !== "other" && !merchantNumber) {
     return NextResponse.json(
       { error: "Merchant number not configured yet. Contact admin." },
       { status: 503 }

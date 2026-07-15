@@ -6,12 +6,13 @@ import type { Tool } from "@/types/database";
 
 interface SignInGateProps {
   tool: Tool;
-  mode: "download" | "activate";
+  mode: "download" | "activate" | "order";
 }
 
 export function SignInGate({ tool, mode }: SignInGateProps) {
   const next = `/tools/${tool.slug}`;
   const loginUrl = `/auth/login?next=${encodeURIComponent(next)}`;
+  const isDownload = mode === "download";
 
   return (
     <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-6 text-center">
@@ -19,12 +20,12 @@ export function SignInGate({ tool, mode }: SignInGateProps) {
         <AppleIcon className="h-5 w-5 text-cyan-400" />
       </div>
       <h3 className="font-semibold text-white mb-2">
-        {mode === "download" ? "Sign in to download" : "Sign in to activate"}
+        {isDownload ? "Sign in to download" : "Sign in to order"}
       </h3>
       <p className="text-sm text-zinc-400 mb-5 max-w-xs mx-auto">
-        {mode === "download"
+        {isDownload
           ? "Create an account with Google to download this tool."
-          : "Sign in with Google to purchase and receive your activation code."}
+          : "Sign in with Google to purchase and receive order updates."}
       </p>
       <Link href={loginUrl}>
         <Button size="lg" className="w-full sm:w-auto">

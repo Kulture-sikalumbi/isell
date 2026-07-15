@@ -7,7 +7,7 @@ import { Ban, Loader2, Mail, Wallet, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { type AdminPaymentRow } from "@/lib/payment-fulfillment";
 import { formatOrderNumber } from "@/lib/order-number";
-import { getCustomerIdentifierLabel } from "@/lib/identifier-label";
+import { CheckoutFieldsDisplay } from "@/components/orders/checkout-fields-display";
 import { formatCurrency } from "@/lib/utils";
 import { useNavigationLoading } from "@/components/layout/navigation-progress";
 import { acquireBodyScrollLock } from "@/lib/body-scroll-lock";
@@ -37,7 +37,6 @@ export function RejectOrderModal({ payment, open, onOpenChange }: RejectOrderMod
   const refundTotal = Number(payment.amount) + Number(payment.platform_fee ?? 0);
   const customerEmail = payment.profile?.email;
   const customerName = payment.profile?.full_name;
-  const idLabel = getCustomerIdentifierLabel(payment.tool?.identifier_label);
   const trimmedReason = reason.trim();
   const canSubmit = trimmedReason.length >= 3;
 
@@ -143,9 +142,15 @@ export function RejectOrderModal({ payment, open, onOpenChange }: RejectOrderMod
                 {formatOrderNumber(payment)}
               </span>
             </div>
-            <div className="px-4 py-3 flex justify-between gap-4">
-              <span className="text-zinc-500 shrink-0">{idLabel}</span>
-              <span className="font-mono text-zinc-200 text-right break-all">{payment.hardware_id}</span>
+            <div className="px-4 py-3">
+              <CheckoutFieldsDisplay
+                hardwareId={payment.hardware_id}
+                checkoutFields={payment.checkout_fields}
+                identifierLabel={payment.tool?.identifier_label}
+                className="space-y-2"
+                labelClassName="text-zinc-500 text-xs mb-0.5"
+                valueClassName="font-mono text-zinc-200 break-all text-sm"
+              />
             </div>
             <div className="px-4 py-3 flex justify-between gap-4 items-center">
               <span className="text-zinc-500 shrink-0">Refund</span>

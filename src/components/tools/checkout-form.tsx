@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ShieldCheck, Zap, Clock } from "lucide-react";
 import Link from "next/link";
 import { ActivationWaitingPanel } from "@/components/dashboard/activation-waiting-panel";
@@ -8,11 +8,9 @@ import { PaymentMethodsRow } from "@/components/payments/payment-method-icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getClientDisplayCurrency } from "@/lib/format-currency";
-import {
-  getCustomerIdentifierLabel,
-  getCustomerIdentifierPlaceholder,
-} from "@/lib/identifier-label";
+import { getCustomerIdentifierLabel } from "@/lib/identifier-label";
 import { formatActivationEtaLong } from "@/lib/activation-time";
+import { resolveToolFormFields } from "@/lib/tool-form-fields";
 import type { StorefrontTool } from "@/lib/storefront-tool";
 import { formatCurrency } from "@/lib/utils";
 import { walletPaymentMethodsShort } from "@/lib/wallet-payment-copy";
@@ -37,7 +35,14 @@ export function CheckoutForm({
 }: CheckoutFormProps) {
   const connectivity = useConnectivityOptional();
   const { stopLoading } = useNavigationLoading();
-  const [hardwareId, setHardwareId] = useState("");
+  const formFields = useMemo(() => resolveToolFormFields(tool), [tool]);
+  const [fieldValues, setFieldValues] = useState<Record<string, string>>(() => {
+    const initial: Record<string, string> = {};
+    for (const field of resolveToolFormFields(tool)) {
+      initial[field.id] = "";
+    }
+    return initial;
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [waitingPaymentId, setWaitingPaymentId] = useState<string | null>(null);
@@ -63,7 +68,7 @@ export function CheckoutForm({
         body: JSON.stringify({
           toolId: tool.id,
           toolSlug: tool.slug,
-          hardwareId,
+          fieldValues,
           email: userEmail,
         }),
       });
@@ -124,17 +129,22 @@ export function CheckoutForm({
         <span>{formatActivationEtaLong(tool.activation_time_value, tool.activation_time_unit)}</span>
       </div>
 
-      <Input
-        label={getCustomerIdentifierLabel(tool.identifier_label)}
-        placeholder={getCustomerIdentifierPlaceholder(
-          tool.identifier_label,
-          tool.identifier_placeholder
-        )}
-        value={hardwareId}
-        onChange={(e) => setHardwareId(e.target.value)}
-        required
-        hint="Dial *#06# on the phone or check Settings → About → IMEI"
-      />
+      {formFields.map((field) => (
+        <Input
+          key={field.id}
+          label={getCustomerIdentifierLabel(field.label)}
+          placeholder={
+            field.placeholder.trim() ||
+            `Enter your ${getCustomerIdentifierLabel(field.label).toLowerCase()}`
+          }
+          value={fieldValues[field.id] ?? ""}
+          onChange={(e) =>
+            setFieldValues((prev) => ({ ...prev, [field.id]: e.target.value }))
+          }
+          required={field.required}
+          hint={field.hint.trim() || undefined}
+        />
+      ))}
 
       <div className="rounded-xl border border-white/10 bg-black/30 px-4 py-3">
         <p className="text-xs text-zinc-500 mb-1">Order updates sent to</p>
@@ -152,7 +162,7 @@ export function CheckoutForm({
 
       <div className="flex items-start gap-2 text-xs text-zinc-500">
         <ShieldCheck className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
-        Instant wallet payment · key emailed and saved to Activations when ready
+        Instant wallet payment · updates emailed and saved to your dashboard when ready
       </div>
 
       {error && (
@@ -163,7 +173,7 @@ export function CheckoutForm({
 
       <Button type="submit" size="lg" className="w-full h-12 text-base" loading={loading} disabled={!canAfford}>
         <Zap className="h-4 w-4" />
-        Pay & activate now
+        Pay now
       </Button>
     </form>
   );

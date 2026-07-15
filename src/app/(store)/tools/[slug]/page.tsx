@@ -12,8 +12,9 @@ import { toStorefrontTool } from "@/lib/storefront-tool";
 import { getToolBySlug } from "@/lib/data";
 import { getWalletBalance } from "@/lib/wallet";
 import { getCustomerIdentifierLabel } from "@/lib/identifier-label";
+import { resolveToolFormFields } from "@/lib/tool-form-fields";
 import { ToolPrice } from "@/components/tools/tool-price";
-import { convertToolAmount, getToolCheckoutTotalInCurrency } from "@/lib/tool-pricing";
+import { getToolCheckoutTotalInCurrency } from "@/lib/tool-pricing";
 import { getUsdToZmwRate } from "@/lib/currency-rates";
 import { getRequestCurrency } from "@/lib/request-currency";
 
@@ -40,7 +41,12 @@ export default async function ToolDetailPage({ params }: ToolDetailPageProps) {
   const fxRate = await getUsdToZmwRate();
   const walletBalance = user ? await getWalletBalance(user.id, currency) : 0;
   const checkoutTotal = getToolCheckoutTotalInCurrency(storefrontTool, currency, fxRate);
-  const identifierLabel = getCustomerIdentifierLabel(tool.identifier_label);
+  const formFields = resolveToolFormFields(tool);
+  const primaryLabel = getCustomerIdentifierLabel(
+    formFields[0]?.label ?? tool.identifier_label
+  );
+  const helpTitle =
+    tool.form_help_title?.trim() || `How to find your ${primaryLabel}`;
   const windowsUrl = tool.download_url || tool.category?.download_url || null;
   const macUrl = tool.download_url_mac || tool.category?.download_url_mac || null;
   const hasDownloads = Boolean(windowsUrl?.trim() || macUrl?.trim());
@@ -75,7 +81,7 @@ export default async function ToolDetailPage({ params }: ToolDetailPageProps) {
 
             <div className="glass rounded-2xl p-6 space-y-4 mb-8">
               <div className="flex items-center justify-between gap-4">
-                <span className="text-sm text-zinc-400">Activation Price</span>
+                <span className="text-sm text-zinc-400">Price</span>
                 <ToolPrice
                   amount={storefrontTool.checkout_price}
                   priceCurrency={storefrontTool.price_currency}
@@ -93,7 +99,7 @@ export default async function ToolDetailPage({ params }: ToolDetailPageProps) {
               </div>
               <div className="flex items-center gap-3 text-sm text-zinc-400">
                 <Shield className="h-4 w-4 text-cyan-400" />
-                Hardware-bound to your {identifierLabel}
+                Linked to your {primaryLabel}
               </div>
             </div>
 
@@ -112,13 +118,11 @@ export default async function ToolDetailPage({ params }: ToolDetailPageProps) {
               </div>
             )}
 
-            {tool.identifier_instructions && (
+            {tool.identifier_instructions?.trim() && (
               <div className="rounded-2xl border border-white/10 bg-black/30 p-6 mb-8">
                 <div className="flex items-center gap-2 mb-3">
                   <ListOrdered className="h-4 w-4 text-cyan-400" />
-                  <h3 className="text-sm font-medium text-white">
-                    How to find your {identifierLabel}
-                  </h3>
+                  <h3 className="text-sm font-medium text-white">{helpTitle}</h3>
                 </div>
                 <div className="text-sm text-zinc-400 whitespace-pre-line leading-relaxed">
                   {tool.identifier_instructions}
@@ -129,7 +133,7 @@ export default async function ToolDetailPage({ params }: ToolDetailPageProps) {
 
           <div className="panel-solid rounded-2xl p-6 sm:p-8 border border-cyan-500/20 shadow-xl shadow-cyan-500/5 ring-1 ring-white/5 sticky top-24">
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-xl font-bold text-white">Activate now</h2>
+              <h2 className="text-xl font-bold text-white">Order now</h2>
               <span className="text-xs text-zinc-500 uppercase tracking-wide">{currency}</span>
             </div>
             <p className="text-sm text-zinc-500 mb-6">Pay from your prepaid wallet — funded via MTN, Airtel, Binance Pay, or USDT</p>
@@ -142,7 +146,7 @@ export default async function ToolDetailPage({ params }: ToolDetailPageProps) {
                 currency={currency}
               />
             ) : (
-              <SignInGate tool={tool} mode="activate" />
+              <SignInGate tool={tool} mode="order" />
             )}
           </div>
         </div>

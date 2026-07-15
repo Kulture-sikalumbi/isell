@@ -17,7 +17,7 @@ export function formatWithdrawalMinimum(currency: string): string {
 
 export const WALLET_DEPOSIT_TERMS = [
   "Wallet funds are prepaid balance for tool activations on iSell Unlocks.",
-  "Deposits are verified manually (or via MTN API) before your balance is credited.",
+  "Deposits are verified against merchant payment receipts before your balance is credited.",
   "You can deposit without saving payment methods — enter TID and sender details manually as before.",
   "Saved payment methods are optional for deposits (they pre-fill sender info) and required for withdrawals.",
   "Minimum withdrawal amounts apply — see the withdraw section for current limits.",
