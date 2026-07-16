@@ -53,26 +53,49 @@ export function listRuntimeEnvKeyNames(): string[] {
 }
 
 /** Snapshot of email-related server env (for health checks and sending). */
+function extractEmailAddress(value: string): string | null {
+  const trimmed = value.trim();
+  const wrapped = trimmed.match(/<([^>]+)>/);
+  if (wrapped?.[1]) return wrapped[1].trim();
+  if (trimmed.includes("@")) return trimmed;
+  return null;
+}
+
+function defaultReplyToAddress(from: string): string | null {
+  const fromEmail = extractEmailAddress(from);
+  if (!fromEmail) return null;
+
+  const [, domain] = fromEmail.split("@");
+  if (!domain) return fromEmail;
+
+  return `support@${domain}`;
+}
+
 export function getServerEmailEnv() {
   const envApiKey = runtimeEnvParts("RESEND", "API", "KEY");
   const envFrom = runtimeEnvParts("EMAIL", "FROM");
+  const envReplyTo = runtimeEnvParts("EMAIL", "REPLY", "TO");
   const envAppUrl = runtimeEnvParts("NEXT", "PUBLIC", "APP", "URL");
   const serviceRole = runtimeEnvParts("SUPABASE", "SERVICE", "ROLE", "KEY");
 
   const apiKey = envApiKey;
   const rawFrom = envFrom;
+  const rawReplyTo = envReplyTo;
   const appUrl = envAppUrl;
+  const from = rawFrom
+    ? rawFrom.includes("<")
+      ? rawFrom
+      : `iSell Unlocks <${rawFrom}>`
+    : "";
 
   return {
     apiKey,
     rawFrom,
+    rawReplyTo,
     appUrl,
     serviceRole,
-    from: rawFrom
-      ? rawFrom.includes("<")
-        ? rawFrom
-        : `iSell Unlocks <${rawFrom}>`
-      : "",
+    from,
+    replyTo: rawReplyTo?.trim() || defaultReplyToAddress(from),
     ready: Boolean(apiKey && rawFrom && appUrl),
     apiKeyLength: apiKey?.length ?? 0,
     resendKeyPrefix: apiKey ? `${apiKey.slice(0, 8)}…` : null,
@@ -81,6 +104,7 @@ export function getServerEmailEnv() {
     emailConfigSource: {
       resendApiKey: envApiKey ? "env" : "missing",
       emailFrom: envFrom ? "env" : "missing",
+      emailReplyTo: envReplyTo ? "env" : "missing",
       appUrl: envAppUrl ? "env" : "missing",
     },
   };

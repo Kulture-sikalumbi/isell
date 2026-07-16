@@ -1,5 +1,7 @@
 import { getAdminEmails } from "@/lib/auth";
 import { buildActivationReadyEmailHtml } from "@/lib/activation-email-template";
+import { buildDepositConfirmedEmailHtml } from "@/lib/deposit-confirmed-email-template";
+import { buildOrderProcessingEmailHtml } from "@/lib/order-processing-email-template";
 import { buildOrderRejectedEmailHtml } from "@/lib/order-rejected-email-template";
 import { buildWelcomeEmailHtml } from "@/lib/welcome-email-template";
 import { getCustomerIdentifierLabel } from "@/lib/identifier-label";
@@ -12,6 +14,26 @@ interface SendEmailInput {
   html: string;
 }
 
+function htmlToText(html: string): string {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|tr|h[1-6]|li)>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n[ \t]+/g, "\n")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+}
+
 export interface SendEmailResult {
   ok: boolean;
   error?: string;
@@ -19,7 +41,7 @@ export interface SendEmailResult {
 }
 
 export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult> {
-  const { apiKey, from } = getServerEmailEnv();
+  const { apiKey, from, replyTo } = getServerEmailEnv();
   const recipients = (Array.isArray(input.to) ? input.to : [input.to]).filter(Boolean);
 
   if (recipients.length === 0) {
@@ -36,9 +58,11 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
 
   const payload = {
     from,
+    reply_to: replyTo || undefined,
     to: recipients,
     subject: input.subject,
     html: input.html,
+    text: htmlToText(input.html),
   };
 
   const httpsResult = await sendViaResendHttps({
@@ -175,6 +199,50 @@ export async function sendWelcomeEmail(input: {
     html: buildWelcomeEmailHtml({
       customerName: input.customerName,
       appUrl: input.appUrl,
+    }),
+  });
+  return result.ok;
+}
+
+export async function sendDepositConfirmedEmail(input: {
+  to: string;
+  amountLabel: string;
+  appUrl: string;
+  customerName?: string | null;
+}) {
+  const result = await sendEmail({
+    to: input.to,
+    subject: "Your wallet deposit is confirmed",
+    html: buildDepositConfirmedEmailHtml({
+      amountLabel: input.amountLabel,
+      appUrl: input.appUrl,
+      customerName: input.customerName,
+    }),
+  });
+  return result.ok;
+}
+
+export async function sendOrderProcessingEmail(input: {
+  to: string;
+  orderNumber: string;
+  toolName: string;
+  hardwareId: string;
+  identifierLabel?: string;
+  amountLabel?: string;
+  appUrl: string;
+  customerName?: string | null;
+}) {
+  const result = await sendEmail({
+    to: input.to,
+    subject: `Order received: ${input.toolName}`,
+    html: buildOrderProcessingEmailHtml({
+      orderNumber: input.orderNumber,
+      toolName: input.toolName,
+      hardwareId: input.hardwareId,
+      identifierLabel: input.identifierLabel,
+      amountLabel: input.amountLabel,
+      appUrl: input.appUrl,
+      customerName: input.customerName,
     }),
   });
   return result.ok;

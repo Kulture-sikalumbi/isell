@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { ArrowRight, Layers } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import { CategoryLogo } from "@/components/tools/category-logo";
 import { ToolPrice } from "@/components/tools/tool-price";
-import { cn, formatCurrency } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
 import { convertToolAmount, getToolPriceCurrency } from "@/lib/tool-pricing";
 import type { ToolCategoryWithTools } from "@/lib/data";
 
@@ -52,14 +53,14 @@ export function FeaturedCategoryCard({
     <Link href={href} className="block group h-full">
       <div className="glass glass-hover rounded-2xl p-5 sm:p-6 h-full flex flex-col relative overflow-hidden">
         <div className="flex items-start justify-between gap-3 mb-4">
-          <div
-            className={cn(
-              "inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br border border-white/10 shrink-0",
-              accentColors[colorIndex]
-            )}
-          >
-            <Layers className="h-5 w-5 text-white/80" />
-          </div>
+          <CategoryLogo
+            iconUrl={category.icon_url}
+            name={category.name}
+            accentClass={accentColors[colorIndex]}
+            className="h-12 w-12"
+            iconClassName="h-5 w-5 text-white/80"
+            imageClassName="h-8 w-8 rounded-lg object-cover"
+          />
           <span className="text-[10px] uppercase tracking-wide text-violet-300/80 font-semibold">
             Featured
           </span>

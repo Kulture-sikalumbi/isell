@@ -3,9 +3,12 @@ import https from "node:https";
 interface ResendSendInput {
   apiKey: string;
   from: string;
+  reply_to?: string | null;
   to: string[];
   subject: string;
   html: string;
+  text?: string;
+  headers?: Record<string, string>;
 }
 
 /** Node https — more reliable than fetch on some Azure App Service Node runtimes. */
@@ -15,9 +18,12 @@ export function sendViaResendHttps(input: ResendSendInput): Promise<{
 }> {
   const body = JSON.stringify({
     from: input.from,
+    reply_to: input.reply_to ?? undefined,
     to: input.to,
     subject: input.subject,
     html: input.html,
+    text: input.text,
+    headers: input.headers,
   });
 
   return new Promise((resolve) => {

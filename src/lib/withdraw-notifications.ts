@@ -1,6 +1,7 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import { sendEmailToAdmins } from "@/lib/email";
 import { formatSiteCurrency } from "@/lib/currency";
+import { getServerEmailEnv } from "@/lib/runtime-env";
 import { depositMethodLabel } from "@/lib/deposit-methods";
 import type { UserPaymentMethod } from "@/types/database";
 
@@ -37,7 +38,7 @@ export async function notifyAdminNewWithdrawal(input: {
     payment_id: null,
   });
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const appUrl = getServerEmailEnv().appUrl || "http://localhost:3000";
   await sendEmailToAdmins({
     subject: title,
     html: `

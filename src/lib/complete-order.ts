@@ -1,6 +1,8 @@
 import { fulfillPayment } from "@/lib/fulfillment";
 import { notifyAdminNewOrder } from "@/lib/notifications";
 import { notifyOrderProcessing } from "@/lib/user-notifications";
+import { resolveDisplayCurrency } from "@/lib/currency";
+import { formatOrderNumber } from "@/lib/order-number";
 import { createServiceClient } from "@/lib/supabase/server";
 import type { Payment, Tool } from "@/types/database";
 
@@ -21,9 +23,15 @@ export async function completePaidOrder(payment: Payment & { tool?: Tool }) {
 
     await notifyAdminNewOrder(payment);
     if (payment.user_id) {
+      const currency = resolveDisplayCurrency(payment.currency);
       await notifyOrderProcessing({
         userId: payment.user_id,
         toolName: tool.name,
+        orderNumber: formatOrderNumber(payment),
+        hardwareId: payment.hardware_id,
+        identifierLabel: tool.identifier_label,
+        amount: Number(payment.amount),
+        currency,
       });
     }
     return { awaiting_admin: true, fulfilled: false };

@@ -1,7 +1,32 @@
 import { getUserEmail } from "@/lib/auth";
-import { sendActivationReadyEmail, sendOrderRejectedEmail } from "@/lib/email";
+import {
+  sendActivationReadyEmail,
+  sendDepositConfirmedEmail,
+  sendOrderProcessingEmail,
+  sendOrderRejectedEmail,
+} from "@/lib/email";
 import { formatSiteCurrency } from "@/lib/currency";
+import { getServerEmailEnv } from "@/lib/runtime-env";
 import { createServiceClient } from "@/lib/supabase/server";
+
+async function getCustomerEmailContext(userId: string) {
+  const email = await getUserEmail(userId);
+  if (!email) return null;
+
+  const supabase = createServiceClient();
+  let customerName: string | null = null;
+  if (supabase) {
+    const { data } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", userId)
+      .single();
+    customerName = data?.full_name ?? null;
+  }
+
+  const appUrl = getServerEmailEnv().appUrl || "http://localhost:3000";
+  return { email, customerName, appUrl };
+}
 
 export interface UserNotification {
   id: string;
@@ -77,30 +102,18 @@ export async function notifyActivationReady(input: {
     link: `/dashboard?tab=activations&wait=${input.paymentId}`,
   });
 
-  const email = await getUserEmail(input.userId);
-  if (!email) return;
+  const emailContext = await getCustomerEmailContext(input.userId);
+  if (!emailContext) return;
 
-  const supabase = createServiceClient();
-  let customerName: string | null = null;
-  if (supabase) {
-    const { data } = await supabase
-      .from("profiles")
-      .select("full_name")
-      .eq("id", input.userId)
-      .single();
-    customerName = data?.full_name ?? null;
-  }
-
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   await sendActivationReadyEmail({
-    to: email,
+    to: emailContext.email,
     toolName: input.toolName,
     toolDescription: input.toolDescription,
     hardwareId: input.hardwareId,
     identifierLabel: input.identifierLabel,
     activationCode: input.activationCode,
-    appUrl,
-    customerName,
+    appUrl: emailContext.appUrl,
+    customerName: emailContext.customerName,
   });
 }
 
@@ -115,6 +128,16 @@ export async function notifyDepositConfirmed(input: {
     title: "Wallet deposit confirmed",
     message: `${formatSiteCurrency(input.amount, input.currency)} was added to your wallet. You can buy activations now.`,
     link: "/dashboard?tab=wallet",
+  });
+
+  const emailContext = await getCustomerEmailContext(input.userId);
+  if (!emailContext) return;
+
+  await sendDepositConfirmedEmail({
+    to: emailContext.email,
+    amountLabel: formatSiteCurrency(input.amount, input.currency),
+    appUrl: emailContext.appUrl,
+    customerName: emailContext.customerName,
   });
 }
 
@@ -139,31 +162,19 @@ export async function notifyOrderRefunded(input: {
     link: "/dashboard?tab=orders",
   });
 
-  const email = await getUserEmail(input.userId);
-  if (!email) return;
+  const emailContext = await getCustomerEmailContext(input.userId);
+  if (!emailContext) return;
 
-  const supabase = createServiceClient();
-  let customerName: string | null = null;
-  if (supabase) {
-    const { data } = await supabase
-      .from("profiles")
-      .select("full_name")
-      .eq("id", input.userId)
-      .single();
-    customerName = data?.full_name ?? null;
-  }
-
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   await sendOrderRejectedEmail({
-    to: email,
+    to: emailContext.email,
     orderNumber: input.orderNumber,
     toolName: input.toolName,
     hardwareId: input.hardwareId,
     identifierLabel: input.identifierLabel,
     refundAmount: amountLabel,
     reason,
-    appUrl,
-    customerName,
+    appUrl: emailContext.appUrl,
+    customerName: emailContext.customerName,
   });
 }
 
@@ -184,6 +195,11 @@ export async function notifySupportReply(input: {
 export async function notifyOrderProcessing(input: {
   userId: string;
   toolName: string;
+  orderNumber: string;
+  hardwareId: string;
+  identifierLabel?: string;
+  amount?: number;
+  currency?: string;
 }) {
   await notifyUser({
     userId: input.userId,
@@ -191,6 +207,25 @@ export async function notifyOrderProcessing(input: {
     title: `Order received: ${input.toolName}`,
     message: "Payment received. We're processing your activation — we'll email your key and add it to Activations when ready.",
     link: "/dashboard?tab=orders",
+  });
+
+  const emailContext = await getCustomerEmailContext(input.userId);
+  if (!emailContext) return;
+
+  const amountLabel =
+    input.amount != null && input.currency
+      ? formatSiteCurrency(input.amount, input.currency)
+      : undefined;
+
+  await sendOrderProcessingEmail({
+    to: emailContext.email,
+    orderNumber: input.orderNumber,
+    toolName: input.toolName,
+    hardwareId: input.hardwareId,
+    identifierLabel: input.identifierLabel,
+    amountLabel,
+    appUrl: emailContext.appUrl,
+    customerName: emailContext.customerName,
   });
 }
 

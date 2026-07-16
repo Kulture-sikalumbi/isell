@@ -1,11 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronRight, Plus, Save } from "lucide-react";
+import { ChevronRight, Plus, Save, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { ToolCategory } from "@/types/database";
+
+function extractPublicLogoPath(url: string): string | null {
+  // Supabase public URL shape:
+  // .../storage/v1/object/public/<bucket>/<path>
+  const marker = "/storage/v1/object/public/logos/";
+  const idx = url.indexOf(marker);
+  if (idx === -1) return null;
+  const path = url.slice(idx + marker.length).split("?")[0]?.trim();
+  return path && path.startsWith("categories/") ? path : null;
+}
 
 interface CategoryFormProps {
   category?: ToolCategory;
@@ -17,13 +27,18 @@ export function CategoryForm({ category, onSubmit, onSaveAndNext }: CategoryForm
   const [form, setForm] = useState({
     name: category?.name ?? "",
     description: category?.description ?? "",
+    icon_url: category?.icon_url ?? "",
     sort_order: category?.sort_order?.toString() ?? "0",
     is_featured: category?.is_featured ?? false,
     featured_sort_order: category?.featured_sort_order?.toString() ?? "0",
     is_active: category?.is_active ?? true,
   });
   const [submitting, setSubmitting] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+  const [logoPath, setLogoPath] = useState<string | null>(
+    category?.icon_url ? extractPublicLogoPath(category.icon_url) : null
+  );
 
   function update(field: string, value: string | boolean) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -41,6 +56,7 @@ export function CategoryForm({ category, onSubmit, onSaveAndNext }: CategoryForm
       await submitFn?.({
         name: form.name.trim(),
         description: form.description.trim(),
+        icon_url: form.icon_url.trim(),
         sort_order: Number.isFinite(sortOrder) ? sortOrder : 0,
         is_featured: form.is_featured,
         featured_sort_order: Number.isFinite(featuredSort) ? featuredSort : 0,
@@ -63,6 +79,53 @@ export function CategoryForm({ category, onSubmit, onSaveAndNext }: CategoryForm
     await submitPayload(onSaveAndNext);
   }
 
+  async function uploadLogo(file: File) {
+    setUploading(true);
+    setError("");
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      body.append("categoryName", form.name || "tool");
+      if (logoPath) body.append("previousPath", logoPath);
+
+      const res = await fetch("/api/admin/categories/logo", {
+        method: "POST",
+        body,
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        throw new Error(result.error || "Upload failed");
+      }
+      update("icon_url", String(result.url || ""));
+      setLogoPath(typeof result.path === "string" ? result.path : null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function removeLogo() {
+    setError("");
+    const path = logoPath || (form.icon_url.trim() ? extractPublicLogoPath(form.icon_url.trim()) : null);
+    if (path) {
+      setUploading(true);
+      try {
+        await fetch("/api/admin/categories/logo", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ path }),
+        });
+      } catch {
+        // ignore delete errors; worst case it's an orphaned file
+      } finally {
+        setUploading(false);
+      }
+    }
+    setLogoPath(null);
+    update("icon_url", "");
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-4">
@@ -80,6 +143,58 @@ export function CategoryForm({ category, onSubmit, onSaveAndNext }: CategoryForm
           onChange={(e) => update("description", e.target.value)}
           placeholder="Optional overview shown when this tool is selected"
         />
+
+        <Input
+          label="Tool logo URL"
+          value={form.icon_url}
+          onChange={(e) => update("icon_url", e.target.value)}
+          placeholder="https://example.com/logo.png"
+          hint="Optional image shown on the category card in the tools browse page"
+        />
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="inline-flex cursor-pointer">
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/svg+xml"
+              className="hidden"
+              disabled={uploading || submitting}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  void uploadLogo(file);
+                }
+                e.currentTarget.value = "";
+              }}
+            />
+            <span className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-zinc-300 hover:bg-white/[0.06] transition-colors">
+              <Upload className="h-4 w-4" />
+              {uploading ? "Uploading..." : "Upload logo file"}
+            </span>
+          </label>
+          {form.icon_url.trim() && (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={removeLogo}
+              disabled={uploading || submitting}
+            >
+              <X className="h-4 w-4" />
+              Remove logo
+            </Button>
+          )}
+        </div>
+        {form.icon_url.trim() && (
+          <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={form.icon_url.trim()}
+              alt="Category logo preview"
+              className="h-12 w-12 rounded-lg object-cover border border-white/10"
+            />
+            <p className="text-xs text-zinc-500">Preview of category card logo</p>
+          </div>
+        )}
 
         <Input
           label="Sort order"

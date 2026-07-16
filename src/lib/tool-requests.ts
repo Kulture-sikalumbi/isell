@@ -1,5 +1,6 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import { sendEmailToAdmins } from "@/lib/email";
+import { getServerEmailEnv } from "@/lib/runtime-env";
 
 export async function notifyAdminToolRequest(input: {
   requestedName: string;
@@ -39,7 +40,7 @@ export async function notifyAdminToolRequest(input: {
     payment_id: null,
   });
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const appUrl = getServerEmailEnv().appUrl || "http://localhost:3000";
   await sendEmailToAdmins({
     subject: title,
     html: `

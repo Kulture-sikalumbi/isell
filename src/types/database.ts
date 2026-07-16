@@ -22,6 +22,7 @@ export interface ToolCategory {
   slug: string;
   name: string;
   description: string | null;
+  icon_url: string | null;
   download_url: string | null;
   download_url_mac: string | null;
   sort_order: number;

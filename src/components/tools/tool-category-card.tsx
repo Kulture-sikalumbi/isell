@@ -1,5 +1,6 @@
-import { ChevronRight, Layers } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { AdminStorefrontEditButton } from "@/components/tools/admin-storefront-edit-button";
+import { CategoryLogo } from "@/components/tools/category-logo";
 import { cn } from "@/lib/utils";
 import type { ToolCategoryWithTools } from "@/lib/data";
 
@@ -37,14 +38,11 @@ export function ToolCategoryCard({ category, onSelect, isAdmin }: ToolCategoryCa
           "border border-white/10 hover:border-cyan-500/30 transition-all"
         )}
       >
-        <div
-          className={cn(
-            "flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br border border-white/10",
-            accentColors[colorIndex]
-          )}
-        >
-          <Layers className="h-6 w-6 text-white/85" />
-        </div>
+        <CategoryLogo
+          iconUrl={category.icon_url}
+          name={category.name}
+          accentClass={accentColors[colorIndex]}
+        />
 
         <div className="min-w-0 flex-1">
           <h3 className="text-base sm:text-lg font-semibold text-white group-hover:text-cyan-300 transition-colors line-clamp-2">

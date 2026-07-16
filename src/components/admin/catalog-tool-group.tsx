@@ -20,7 +20,16 @@ export function CatalogToolGroup({ category, devices }: CatalogToolGroupProps) {
       className="scroll-mt-28 glass rounded-2xl overflow-hidden border border-white/5 target:ring-2 target:ring-cyan-500/30 transition-shadow"
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-6 py-4 border-b border-white/5 bg-white/[0.02]">
-        <div className="min-w-0">
+        <div className="min-w-0 flex items-start gap-3">
+          {category.icon_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={category.icon_url}
+              alt=""
+              className="h-10 w-10 shrink-0 rounded-lg object-cover border border-white/10"
+            />
+          ) : null}
+          <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-1">
             <h2 className="text-base font-semibold text-white">{category.name}</h2>
             <Badge variant={category.is_active ? "success" : "default"}>
@@ -39,6 +48,7 @@ export function CatalogToolGroup({ category, devices }: CatalogToolGroupProps) {
           {category.description && (
             <p className="text-sm text-zinc-500 line-clamp-2">{category.description}</p>
           )}
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 shrink-0">

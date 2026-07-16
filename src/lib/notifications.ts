@@ -3,6 +3,7 @@ import { alertAdminNewOrder } from "@/lib/admin-alerts";
 import { sendAdminOrderEmail } from "@/lib/email";
 import { formatSiteCurrency, resolveDisplayCurrency } from "@/lib/currency";
 import { formatOrderNumber } from "@/lib/order-number";
+import { getServerEmailEnv } from "@/lib/runtime-env";
 import type { Payment, Tool } from "@/types/database";
 
 export async function notifyAdminNewOrder(payment: Payment & { tool?: Tool }) {
@@ -23,7 +24,7 @@ export async function notifyAdminNewOrder(payment: Payment & { tool?: Tool }) {
     payment_id: payment.id,
   });
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const appUrl = getServerEmailEnv().appUrl || "http://localhost:3000";
 
   await Promise.all([
     sendAdminOrderEmail({
