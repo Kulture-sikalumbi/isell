@@ -3,8 +3,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { getRequestCurrency } from "@/lib/request-currency";
 import {
   getMerchantDetails,
-  getOrCreateWallet,
   getUserDeposits,
+  getWalletDisplaySnapshot,
   getWalletTransactions,
 } from "@/lib/wallet";
 
@@ -16,15 +16,27 @@ export async function GET() {
 
   const currency = await getRequestCurrency();
 
-  const [wallet, transactions, deposits, merchants] = await Promise.all([
-    getOrCreateWallet(user.id, currency),
+  const [snapshot, transactions, deposits, merchants] = await Promise.all([
+    getWalletDisplaySnapshot(user.id, currency),
     getWalletTransactions(user.id),
     getUserDeposits(user.id),
     getMerchantDetails(currency),
   ]);
 
   return NextResponse.json({
-    wallet,
+    wallet: snapshot.wallet
+      ? {
+          ...snapshot.wallet,
+          // Keep raw ledger values on wallet; expose converted display fields separately.
+          balance: snapshot.nativeBalance,
+          currency: snapshot.nativeCurrency,
+        }
+      : null,
+    displayBalance: snapshot.displayBalance,
+    displayCurrency: snapshot.displayCurrency,
+    nativeBalance: snapshot.nativeBalance,
+    nativeCurrency: snapshot.nativeCurrency,
+    fxRate: snapshot.fxRate,
     merchants,
     transactions,
     deposits,

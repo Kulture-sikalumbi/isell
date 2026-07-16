@@ -3,7 +3,7 @@ import { getCurrentProfile, getCurrentUser } from "@/lib/auth";
 import { getMerchantAccountingSummary } from "@/lib/ledger";
 import { getRequestCurrency } from "@/lib/request-currency";
 import { getUnreadUserNotificationCount } from "@/lib/user-notifications";
-import { getAdminAttentionCounts, getOrCreateWallet } from "@/lib/wallet";
+import { getAdminAttentionCounts, getWalletDisplaySnapshot } from "@/lib/wallet";
 import { BrandWordmark } from "@/components/brand/brand-wordmark";
 import { SiteNav, type SiteNavUser } from "@/components/layout/site-nav";
 import { normalizeDisplayCurrency } from "@/lib/display-currency-preference";
@@ -48,14 +48,16 @@ export async function SiteHeader() {
         adminMessagesUnread: attention.unreadMessages,
       };
     } else {
-      const [wallet, inboxUnread] = await Promise.all([
-        getOrCreateWallet(user.id, displayCurrency),
+      const [walletSnapshot, inboxUnread] = await Promise.all([
+        getWalletDisplaySnapshot(user.id, displayCurrency),
         getUnreadUserNotificationCount(user.id),
       ]);
       navUser = {
         ...base,
-        walletBalance: wallet ? Number(wallet.balance) : 0,
-        walletCurrency: displayCurrency,
+        walletBalance: walletSnapshot.displayBalance,
+        walletCurrency: walletSnapshot.displayCurrency,
+        walletNativeCurrency: walletSnapshot.nativeCurrency,
+        walletFxRate: walletSnapshot.fxRate,
         displayCurrency: profileCurrency ?? (displayCurrency as "ZMW" | "USD"),
         inboxUnread,
       };

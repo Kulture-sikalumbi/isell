@@ -1,5 +1,6 @@
 import { getSiteCurrency } from "@/lib/currency";
 import { getUsdToZmwRate } from "@/lib/currency-rates";
+import { convertCurrency, resolveDisplayCurrency } from "@/lib/format-currency";
 import { calculatePlatformFee } from "@/lib/platform-fee";
 import { convertToolAmount, getToolPriceCurrency } from "@/lib/tool-pricing";
 import { createServiceClient } from "@/lib/supabase/server";
@@ -15,6 +16,17 @@ import type {
 
 import { runtimeEnv } from "@/lib/runtime-env";
 import { getMerchantDepositSettings } from "@/lib/site-settings";
+
+export interface WalletDisplaySnapshot {
+  /** Balance converted into the customer's display currency */
+  displayBalance: number;
+  displayCurrency: string;
+  /** Raw ledger balance in the wallet's native currency */
+  nativeBalance: number;
+  nativeCurrency: string;
+  fxRate: number | null;
+  wallet: UserWallet | null;
+}
 
 export interface MerchantDetails {
   mtn: string;
@@ -86,9 +98,52 @@ export async function getOrCreateWallet(
   return created;
 }
 
+/** Convert a native wallet balance into the customer's display currency. */
+export function convertWalletBalanceForDisplay(
+  nativeBalance: number,
+  nativeCurrency: string | null | undefined,
+  displayCurrency: string,
+  usdToZmwRate?: number | null
+): number {
+  return convertCurrency(
+    nativeBalance,
+    resolveDisplayCurrency(nativeCurrency),
+    resolveDisplayCurrency(displayCurrency),
+    usdToZmwRate
+  );
+}
+
+/** Wallet snapshot with balance converted for the current display currency. */
+export async function getWalletDisplaySnapshot(
+  userId: string,
+  displayCurrency?: string
+): Promise<WalletDisplaySnapshot> {
+  const resolvedDisplay = resolveDisplayCurrency(displayCurrency);
+  const wallet = await getOrCreateWallet(userId, resolvedDisplay);
+  const nativeBalance = wallet ? Number(wallet.balance) : 0;
+  const nativeCurrency = resolveDisplayCurrency(wallet?.currency || resolvedDisplay);
+  const fxRate =
+    nativeCurrency !== resolvedDisplay ? await getUsdToZmwRate() : null;
+  const displayBalance = convertWalletBalanceForDisplay(
+    nativeBalance,
+    nativeCurrency,
+    resolvedDisplay,
+    fxRate
+  );
+
+  return {
+    displayBalance,
+    displayCurrency: resolvedDisplay,
+    nativeBalance,
+    nativeCurrency,
+    fxRate,
+    wallet,
+  };
+}
+
 export async function getWalletBalance(userId: string, currency?: string): Promise<number> {
-  const wallet = await getOrCreateWallet(userId, currency);
-  return wallet ? Number(wallet.balance) : 0;
+  const snapshot = await getWalletDisplaySnapshot(userId, currency);
+  return snapshot.displayBalance;
 }
 
 export async function getWalletTransactions(
@@ -317,7 +372,12 @@ export async function purchaseWithWallet(input: {
   const supabase = createServiceClient();
   if (!supabase) return { ok: false, error: "Database not configured" };
 
-  const chargeCurrency = input.currency?.trim().toUpperCase() || getSiteCurrency();
+  const wallet = await getOrCreateWallet(input.userId, input.currency);
+  if (!wallet) return { ok: false, error: "Wallet not found" };
+
+  // Always debit in the wallet's native currency so switching display currency
+  // only changes presentation, not the ledger units.
+  const chargeCurrency = resolveDisplayCurrency(wallet.currency);
   const priceCurrency = getToolPriceCurrency(input.tool);
   const fxRate =
     priceCurrency !== chargeCurrency ? await getUsdToZmwRate() : null;
@@ -335,7 +395,7 @@ export async function purchaseWithWallet(input: {
     p_hardware_id: input.hardwareId.trim(),
     p_tool_price: price,
     p_platform_fee: platformFee,
-    p_currency: input.currency?.trim().toUpperCase() || getSiteCurrency(),
+    p_currency: chargeCurrency,
   });
 
   if (error) return { ok: false, error: error.message };

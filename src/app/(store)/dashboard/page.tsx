@@ -19,7 +19,7 @@ import { getActivations, getUserPayments } from "@/lib/data";
 import {
   getMerchantDetails,
   getPendingWalletDeposits,
-  getOrCreateWallet,
+  getWalletDisplaySnapshot,
 } from "@/lib/wallet";
 import { getUserPaymentMethods } from "@/lib/payment-methods";
 import { getPendingWithdrawalForUser } from "@/lib/withdrawals";
@@ -56,11 +56,11 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const isWalletArea = tab === "wallet" || tab === "history";
   const displayCurrency = await getRequestCurrency();
 
-  const [activations, orders, wallet, notifications, inboxUnread, pendingDeposits, paymentMethods, pendingWithdrawal] =
+  const [activations, orders, walletSnapshot, notifications, inboxUnread, pendingDeposits, paymentMethods, pendingWithdrawal] =
     await Promise.all([
       getActivations(user.id),
       getUserPayments(user.id),
-      isWalletArea ? getOrCreateWallet(user.id, displayCurrency) : Promise.resolve(null),
+      isWalletArea ? getWalletDisplaySnapshot(user.id, displayCurrency) : Promise.resolve(null),
       getUserNotifications(user.id),
       getUnreadUserNotificationCount(user.id),
       getPendingWalletDeposits(user.id),
@@ -69,7 +69,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   ]);
 
   const merchants = await getMerchantDetails(displayCurrency);
-  const balance = wallet ? Number(wallet.balance) : 0;
+  const balance = walletSnapshot?.displayBalance ?? 0;
+  const wallet = walletSnapshot?.wallet ?? null;
 
   const activationByPaymentId = new Map(
     activations

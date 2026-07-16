@@ -1,6 +1,6 @@
 import { getCurrentProfile, getCurrentUser } from "@/lib/auth";
 import { getRequestCurrency } from "@/lib/request-currency";
-import { getOrCreateWallet } from "@/lib/wallet";
+import { getWalletDisplaySnapshot } from "@/lib/wallet";
 import { DepositPromptToast } from "@/components/wallet/deposit-prompt-toast";
 
 /** Gentle, non-blocking deposit reminder for signed-in customers. */
@@ -12,13 +12,15 @@ export async function CustomerDepositPromptGate() {
   if (profile?.role === "admin") return null;
 
   const currency = await getRequestCurrency();
-  const wallet = await getOrCreateWallet(user.id, currency);
+  const snapshot = await getWalletDisplaySnapshot(user.id, currency);
 
   return (
     <DepositPromptToast
       userId={user.id}
-      initialBalance={wallet ? Number(wallet.balance) : 0}
-      currency={currency}
+      initialBalance={snapshot.displayBalance}
+      currency={snapshot.displayCurrency}
+      nativeCurrency={snapshot.nativeCurrency}
+      fxRate={snapshot.fxRate}
     />
   );
 }

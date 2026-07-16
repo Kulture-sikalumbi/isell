@@ -42,6 +42,8 @@ export interface SiteNavUser {
   isAdmin: boolean;
   walletBalance?: number;
   walletCurrency?: string;
+  walletNativeCurrency?: string;
+  walletFxRate?: number | null;
   displayCurrency?: DisplayCurrency | null;
   merchantBalance?: number;
   merchantCurrency?: string;
@@ -214,6 +216,8 @@ function SiteNavShell({ user, pathname }: SiteNavProps & { pathname: string }) {
             initialBalance={user.walletBalance}
             currency={user.walletCurrency}
             displayCurrency={user.displayCurrency}
+            nativeCurrency={user.walletNativeCurrency}
+            fxRate={user.walletFxRate}
           />
         )}
         {user && !user.isAdmin && (
@@ -254,6 +258,8 @@ function SiteNavShell({ user, pathname }: SiteNavProps & { pathname: string }) {
             initialBalance={user.walletBalance}
             currency={user.walletCurrency}
             displayCurrency={user.displayCurrency}
+            nativeCurrency={user.walletNativeCurrency}
+            fxRate={user.walletFxRate}
             compact
           />
         )}

@@ -79,14 +79,14 @@ export async function POST(request: Request) {
     const currency = await getRequestCurrency();
     const fxRate = await getUsdToZmwRate();
     const totalCost = getToolCheckoutTotalInCurrency(tool, currency, fxRate);
-    const balance = await getWalletBalance(user.id, currency);
+    const displayBalance = await getWalletBalance(user.id, currency);
 
-    if (balance < totalCost) {
+    if (displayBalance < totalCost) {
       return NextResponse.json(
         {
           error: "Insufficient wallet balance",
           required: totalCost,
-          balance,
+          balance: displayBalance,
         },
         { status: 402 }
       );

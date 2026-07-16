@@ -10,7 +10,7 @@ import {
 import { callGemini, fallbackAssistantReply } from "@/lib/site-assistant";
 import type { AssistantClientContext } from "@/lib/assistant-storage";
 import { getRequestCurrency } from "@/lib/request-currency";
-import { getOrCreateWallet, getUserDeposits } from "@/lib/wallet";
+import { getUserDeposits, getWalletDisplaySnapshot } from "@/lib/wallet";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -72,9 +72,9 @@ export async function POST(request: Request) {
     let pendingDeposits = clientContext?.pendingDeposits ?? 0;
 
     if (serverUser && walletBalance === undefined) {
-      const wallet = await getOrCreateWallet(serverUser.id, requestCurrency);
-      walletBalance = wallet ? Number(wallet.balance) : 0;
-      walletCurrency = wallet?.currency ?? requestCurrency;
+      const snapshot = await getWalletDisplaySnapshot(serverUser.id, requestCurrency);
+      walletBalance = snapshot.displayBalance;
+      walletCurrency = snapshot.displayCurrency;
       const deposits = await getUserDeposits(serverUser.id);
       pendingDeposits = deposits.filter((d) => d.status === "pending").length;
     }

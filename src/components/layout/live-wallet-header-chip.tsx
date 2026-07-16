@@ -9,6 +9,8 @@ interface LiveWalletHeaderChipProps {
   initialBalance: number;
   currency?: string;
   displayCurrency?: import("@/lib/display-currency-preference").DisplayCurrency | null;
+  nativeCurrency?: string | null;
+  fxRate?: number | null;
   className?: string;
   compact?: boolean;
 }
@@ -18,6 +20,8 @@ export function LiveWalletHeaderChip({
   initialBalance,
   currency,
   displayCurrency,
+  nativeCurrency,
+  fxRate,
   className,
   compact,
 }: LiveWalletHeaderChipProps) {
@@ -25,7 +29,8 @@ export function LiveWalletHeaderChip({
   const { balance, justUpdated } = useLiveWalletBalance(
     userId,
     initialBalance,
-    displayCurrencyResolved
+    displayCurrencyResolved,
+    { nativeCurrency, fxRate }
   );
 
   return (

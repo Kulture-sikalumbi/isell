@@ -14,16 +14,23 @@ interface DepositPromptToastProps {
   userId: string;
   initialBalance: number;
   currency: string;
+  nativeCurrency?: string | null;
+  fxRate?: number | null;
 }
 
 export function DepositPromptToast({
   userId,
   initialBalance,
   currency,
+  nativeCurrency,
+  fxRate,
 }: DepositPromptToastProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { balance } = useLiveWalletBalance(userId, initialBalance, currency);
+  const { balance } = useLiveWalletBalance(userId, initialBalance, currency, {
+    nativeCurrency,
+    fxRate,
+  });
   const [dismissed, setDismissed] = useState(false);
 
   const onWalletTab =
