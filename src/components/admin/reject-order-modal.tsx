@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Ban, Loader2, Mail, Wallet, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CopyableValue } from "@/components/ui/copyable-value";
 import { type AdminPaymentRow } from "@/lib/payment-fulfillment";
 import { formatOrderNumber } from "@/lib/order-number";
 import { CheckoutFieldsDisplay } from "@/components/orders/checkout-fields-display";
@@ -138,9 +139,12 @@ export function RejectOrderModal({ payment, open, onOpenChange }: RejectOrderMod
           <div className="rounded-xl bg-black/30 border border-white/10 divide-y divide-white/5 text-sm">
             <div className="px-4 py-3 flex justify-between gap-4">
               <span className="text-zinc-500 shrink-0">Order</span>
-              <span className="font-mono text-cyan-300/90 text-right">
-                {formatOrderNumber(payment)}
-              </span>
+              <CopyableValue
+                value={formatOrderNumber(payment)}
+                valueClassName="font-mono text-cyan-300/90 text-right"
+                buttonClassName="py-0.5"
+                title="Copy order number"
+              />
             </div>
             <div className="px-4 py-3">
               <CheckoutFieldsDisplay
@@ -150,6 +154,7 @@ export function RejectOrderModal({ payment, open, onOpenChange }: RejectOrderMod
                 className="space-y-2"
                 labelClassName="text-zinc-500 text-xs mb-0.5"
                 valueClassName="font-mono text-zinc-200 break-all text-sm"
+                copyable
               />
             </div>
             <div className="px-4 py-3 flex justify-between gap-4 items-center">
@@ -170,7 +175,13 @@ export function RejectOrderModal({ payment, open, onOpenChange }: RejectOrderMod
                   <span className="text-white font-medium">{customerName || customerEmail}</span>
                 </p>
                 {customerName && (
-                  <p className="text-xs text-zinc-500 truncate mt-0.5">{customerEmail}</p>
+                  <CopyableValue
+                    value={customerEmail}
+                    className="mt-1"
+                    valueClassName="text-xs text-zinc-500"
+                    buttonClassName="py-0.5"
+                    title="Copy customer email"
+                  />
                 )}
               </div>
             </div>

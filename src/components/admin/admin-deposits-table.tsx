@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Check, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { CopyableValue } from "@/components/ui/copyable-value";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { DEPOSIT_METHOD_LABELS } from "@/lib/deposit-methods";
 import type { WalletDeposit } from "@/types/database";
@@ -82,7 +83,13 @@ export function AdminDepositsTable({ initialDeposits }: AdminDepositsTableProps)
                     {d.profile?.full_name || d.profile?.email || "—"}
                   </p>
                   {d.profile?.email && d.profile.full_name && (
-                    <p className="text-xs text-zinc-500">{d.profile.email}</p>
+                    <CopyableValue
+                      value={d.profile.email}
+                      className="mt-1"
+                      valueClassName="text-xs text-zinc-500"
+                      buttonClassName="py-0.5"
+                      title="Copy customer email"
+                    />
                   )}
                 </td>
                 <td className="px-6 py-4 text-emerald-400 font-medium">
@@ -92,19 +99,44 @@ export function AdminDepositsTable({ initialDeposits }: AdminDepositsTableProps)
                   <Badge variant="info">{methodLabels[d.method]}</Badge>
                 </td>
                 <td className="px-6 py-4 font-mono text-xs text-zinc-300">
-                  {d.transaction_id || (
+                  {d.transaction_id ? (
+                    <CopyableValue
+                      value={d.transaction_id}
+                      valueClassName="font-mono text-xs text-zinc-300"
+                      buttonClassName="py-0.5"
+                      title="Copy transaction ID"
+                    />
+                  ) : (
                     <span className="text-amber-400">Awaiting customer</span>
                   )}
                   {(d.sender_phone || d.sender_name) && (
-                    <p className="text-zinc-500 font-sans mt-1 normal-case">
-                      {d.sender_name}
-                      {d.sender_name && d.sender_phone ? " · " : ""}
-                      {d.sender_phone}
-                    </p>
+                    <div className="mt-1 space-y-1 normal-case">
+                      {d.sender_name && (
+                        <CopyableValue
+                          value={d.sender_name}
+                          valueClassName="text-xs text-zinc-500"
+                          buttonClassName="py-0.5"
+                          title="Copy sender name"
+                        />
+                      )}
+                      {d.sender_phone && (
+                        <CopyableValue
+                          value={d.sender_phone}
+                          valueClassName="font-mono text-xs text-zinc-400"
+                          buttonClassName="py-0.5"
+                          title="Copy sender phone"
+                        />
+                      )}
+                    </div>
                   )}
                 </td>
                 <td className="px-6 py-4 font-mono text-xs text-zinc-400">
-                  {d.reference}
+                  <CopyableValue
+                    value={d.reference}
+                    valueClassName="font-mono text-xs text-zinc-400"
+                    buttonClassName="py-0.5"
+                    title="Copy deposit reference"
+                  />
                 </td>
                 <td className="px-6 py-4 text-zinc-500">{formatDate(d.created_at)}</td>
                 <td className="px-6 py-4">

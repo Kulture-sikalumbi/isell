@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { KeyRound, Loader2, Mail, Send, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CopyableValue } from "@/components/ui/copyable-value";
 import {
   paymentNeedsFulfillment,
   type AdminPaymentRow,
@@ -134,7 +135,13 @@ export function PaymentFulfillAction({ payment }: PaymentFulfillActionProps) {
                         </span>
                       </p>
                       {customerName && (
-                        <p className="text-xs text-zinc-500 truncate mt-0.5">{customerEmail}</p>
+                        <CopyableValue
+                          value={customerEmail}
+                          className="mt-1"
+                          valueClassName="text-xs text-zinc-500"
+                          buttonClassName="py-0.5"
+                          title="Copy customer email"
+                        />
                       )}
                       <p className="text-xs text-zinc-500 mt-1">
                         Also saved to customer Activations tab instantly.
@@ -148,6 +155,7 @@ export function PaymentFulfillAction({ payment }: PaymentFulfillActionProps) {
                     hardwareId={payment.hardware_id}
                     checkoutFields={payment.checkout_fields}
                     identifierLabel={payment.tool?.identifier_label}
+                    copyable
                   />
                 </div>
 

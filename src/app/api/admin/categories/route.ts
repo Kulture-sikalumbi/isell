@@ -3,6 +3,16 @@ import { getAdminUser } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/server";
 import { slugify } from "@/lib/utils";
 
+function mapCategoryWriteError(message: string): string {
+  if (
+    message.includes("icon_url") &&
+    (message.includes("column") || message.includes("schema cache"))
+  ) {
+    return "Database schema is outdated: missing tool_categories.icon_url. Run latest Supabase migrations and try again.";
+  }
+  return message;
+}
+
 export async function POST(request: Request) {
   try {
     const admin = await getAdminUser();
@@ -42,7 +52,7 @@ export async function POST(request: Request) {
       .single();
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: mapCategoryWriteError(error.message) }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, category: data });

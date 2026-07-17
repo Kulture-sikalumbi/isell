@@ -1,3 +1,4 @@
+import { CopyableValue } from "@/components/ui/copyable-value";
 import { getCustomerIdentifierLabel } from "@/lib/identifier-label";
 import { displayCheckoutFields } from "@/lib/tool-form-fields";
 
@@ -8,6 +9,7 @@ interface CheckoutFieldsDisplayProps {
   className?: string;
   labelClassName?: string;
   valueClassName?: string;
+  copyable?: boolean;
 }
 
 /** Renders one or more submitted checkout fields for admin/customer order views. */
@@ -18,6 +20,7 @@ export function CheckoutFieldsDisplay({
   className = "space-y-2",
   labelClassName = "text-xs text-zinc-500 mb-1",
   valueClassName = "font-mono text-zinc-200 break-all",
+  copyable = false,
 }: CheckoutFieldsDisplayProps) {
   const fields = displayCheckoutFields({
     checkout_fields: checkoutFields,
@@ -32,7 +35,11 @@ export function CheckoutFieldsDisplay({
           <p className={labelClassName}>
             {getCustomerIdentifierLabel(field.label)}
           </p>
-          <p className={valueClassName}>{field.value}</p>
+          {copyable ? (
+            <CopyableValue value={field.value} valueClassName={valueClassName} />
+          ) : (
+            <p className={valueClassName}>{field.value}</p>
+          )}
         </div>
       ))}
     </div>

@@ -2,6 +2,16 @@ import { NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/server";
 
+function mapCategoryWriteError(message: string): string {
+  if (
+    message.includes("icon_url") &&
+    (message.includes("column") || message.includes("schema cache"))
+  ) {
+    return "Database schema is outdated: missing tool_categories.icon_url. Run latest Supabase migrations and try again.";
+  }
+  return message;
+}
+
 interface RouteParams {
   params: Promise<{ id: string }>;
 }
@@ -41,7 +51,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: mapCategoryWriteError(error.message) }, { status: 500 });
   }
 
   return NextResponse.json({ success: true, category: data });

@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { PaymentOrderActions } from "@/components/admin/payment-order-actions";
 import { CheckoutFieldsDisplay } from "@/components/orders/checkout-fields-display";
+import { CopyableValue } from "@/components/ui/copyable-value";
 import {
   adminPaymentStatus,
   paymentNeedsFulfillment,
@@ -68,7 +69,12 @@ export function PaymentsTable({ payments, showActions = false }: PaymentsTablePr
                     }`}
                   >
                     <td className="px-6 py-4 font-mono text-xs text-cyan-300/90 whitespace-nowrap">
-                      {formatOrderNumber(payment)}
+                      <CopyableValue
+                        value={formatOrderNumber(payment)}
+                        valueClassName="font-mono text-xs text-cyan-300/90"
+                        buttonClassName="py-0.5"
+                        title="Copy order number"
+                      />
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-white">{payment.tool?.name ?? "—"}</div>
@@ -82,8 +88,17 @@ export function PaymentsTable({ payments, showActions = false }: PaymentsTablePr
                       <div className="text-zinc-300 text-xs">
                         {payment.profile?.full_name || "Customer"}
                       </div>
-                      <div className="text-zinc-500 text-xs truncate max-w-[160px]">
-                        {payment.profile?.email ?? "—"}
+                      <div className="text-zinc-500 text-xs max-w-[220px]">
+                        {payment.profile?.email ? (
+                          <CopyableValue
+                            value={payment.profile.email}
+                            valueClassName="text-zinc-500 text-xs"
+                            buttonClassName="py-0.5"
+                            title="Copy customer email"
+                          />
+                        ) : (
+                          "—"
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 font-mono text-xs text-zinc-400 max-w-[200px]">
@@ -94,6 +109,7 @@ export function PaymentsTable({ payments, showActions = false }: PaymentsTablePr
                         className="space-y-1.5"
                         labelClassName="text-[10px] text-zinc-500 mb-0.5"
                         valueClassName="font-mono text-xs text-zinc-400 break-all"
+                        copyable
                       />
                     </td>
                     <td className="px-6 py-4 text-white">
