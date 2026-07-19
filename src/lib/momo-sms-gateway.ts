@@ -312,20 +312,33 @@ async function upsertSmsReceipt(
     ? new Date(payload.receivedAt).toISOString()
     : new Date().toISOString();
 
-  const { error } = await supabase.from("momo_sms_receipts").upsert(
+  // Matching uses transaction_id + extractProofCode(); proof_code is optional
+  // until migration 039 is applied on production.
+  const baseRow = {
+    transaction_id: transactionId,
+    amount: Number(payload.amount),
+    method,
+    sender: payload.sender ?? null,
+    sender_phone: payload.senderPhone?.trim() || null,
+    sender_name: payload.senderName?.trim() || null,
+    raw_message: payload.rawMessage ?? null,
+    received_at: receivedAt,
+  };
+
+  let { error } = await supabase.from("momo_sms_receipts").upsert(
     {
-      transaction_id: transactionId,
+      ...baseRow,
       proof_code: extractProofCode(transactionId, method),
-      amount: Number(payload.amount),
-      method,
-      sender: payload.sender ?? null,
-      sender_phone: payload.senderPhone?.trim() || null,
-      sender_name: payload.senderName?.trim() || null,
-      raw_message: payload.rawMessage ?? null,
-      received_at: receivedAt,
     },
     { onConflict: "transaction_id", ignoreDuplicates: false }
   );
+
+  // Production may still lack proof_code (CREATE TABLE IF NOT EXISTS skipped ALTER).
+  if (error && /proof_code/i.test(error.message)) {
+    ({ error } = await supabase
+      .from("momo_sms_receipts")
+      .upsert(baseRow, { onConflict: "transaction_id", ignoreDuplicates: false }));
+  }
 
   if (error) return { ok: false, error: error.message };
   return { ok: true };
