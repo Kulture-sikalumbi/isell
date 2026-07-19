@@ -363,6 +363,50 @@ export async function getAllProfiles() {
   return data ?? [];
 }
 
+export interface CustomerSignupStats {
+  total: number;
+  today: number;
+  thisWeek: number;
+  thisMonth: number;
+}
+
+/** Counts customer accounts (role = user), including recent signup windows. */
+export async function getCustomerSignupStats(): Promise<CustomerSignupStats> {
+  const empty: CustomerSignupStats = { total: 0, today: 0, thisWeek: 0, thisMonth: 0 };
+  const supabase = getClient();
+  if (!supabase) return empty;
+
+  const now = new Date();
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0, 0, 0, 0);
+  const startOfWeek = new Date(startOfToday);
+  startOfWeek.setDate(startOfWeek.getDate() - 7);
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const customerFilter = () =>
+    supabase.from("profiles").select("id", { count: "exact", head: true }).eq("role", "user");
+
+  const [totalRes, todayRes, weekRes, monthRes] = await Promise.all([
+    customerFilter(),
+    customerFilter().gte("created_at", startOfToday.toISOString()),
+    customerFilter().gte("created_at", startOfWeek.toISOString()),
+    customerFilter().gte("created_at", startOfMonth.toISOString()),
+  ]);
+
+  for (const res of [totalRes, todayRes, weekRes, monthRes]) {
+    if (res.error) {
+      console.error("getCustomerSignupStats:", res.error.message);
+    }
+  }
+
+  return {
+    total: totalRes.count ?? 0,
+    today: todayRes.count ?? 0,
+    thisWeek: weekRes.count ?? 0,
+    thisMonth: monthRes.count ?? 0,
+  };
+}
+
 export function getAdminStats(payments: Payment[], credits: ResellerCredit[]) {
   const completed = payments.filter((p) => p.status === "completed");
   const revenue = completed.reduce((sum, p) => sum + Number(p.amount), 0);

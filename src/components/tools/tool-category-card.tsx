@@ -28,9 +28,8 @@ export function ToolCategoryCard({ category, onSelect, isAdmin }: ToolCategoryCa
     <div className="relative group w-full">
       <button
         type="button"
-        data-global-loading
         onClick={onSelect}
-        className="group w-full text-left"
+        className="group w-full text-left touch-manipulation"
       >
       <div
         className={cn(

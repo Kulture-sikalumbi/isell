@@ -13,7 +13,8 @@ import {
 } from "react";
 import { GlobalLoadingOverlay } from "@/components/layout/global-loading-overlay";
 
-const LOADING_SAFETY_MS = 12_000;
+/** Clear stuck indicators quickly — never leave the UI feeling frozen. */
+const LOADING_SAFETY_MS = 4_000;
 
 interface NavigationContextValue {
   isLoading: boolean;
@@ -51,6 +52,7 @@ function NavigationProgressInner({ children }: { children: React.ReactNode }) {
   const searchParams = useSearchParams();
   const [loadingCount, setLoadingCount] = useState(0);
   const safetyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loadingCountRef = useRef(0);
 
   const clearSafetyTimer = useCallback(() => {
     if (safetyTimerRef.current) {
@@ -59,16 +61,29 @@ function NavigationProgressInner({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const startLoading = useCallback(() => {
-    setLoadingCount((c) => c + 1);
+  const armSafetyTimer = useCallback(() => {
     clearSafetyTimer();
     safetyTimerRef.current = setTimeout(() => {
+      loadingCountRef.current = 0;
       setLoadingCount(0);
     }, LOADING_SAFETY_MS);
   }, [clearSafetyTimer]);
 
+  const startLoading = useCallback(() => {
+    // Avoid stacking: one visible indicator is enough (extra clicks used to
+    // keep the blocker up longer via a rising count).
+    if (loadingCountRef.current > 0) {
+      armSafetyTimer();
+      return;
+    }
+    loadingCountRef.current = 1;
+    setLoadingCount(1);
+    armSafetyTimer();
+  }, [armSafetyTimer]);
+
   const stopLoading = useCallback(() => {
-    setLoadingCount((c) => Math.max(0, c - 1));
+    loadingCountRef.current = 0;
+    setLoadingCount(0);
     clearSafetyTimer();
   }, [clearSafetyTimer]);
 
@@ -89,12 +104,16 @@ function NavigationProgressInner({ children }: { children: React.ReactNode }) {
   const isLoading = loadingCount > 0;
 
   useEffect(() => {
+    loadingCountRef.current = 0;
     setLoadingCount(0);
     clearSafetyTimer();
   }, [pathname, searchParams, clearSafetyTimer]);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
+      if (e.defaultPrevented || e.button !== 0) return;
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+
       const target = e.target as HTMLElement | null;
       if (!target) return;
 
@@ -123,15 +142,8 @@ function NavigationProgressInner({ children }: { children: React.ReactNode }) {
 
     document.addEventListener("click", handleClick, true);
 
-    function handleSubmit() {
-      startLoading();
-    }
-
-    document.addEventListener("submit", handleSubmit, true);
-
     return () => {
       document.removeEventListener("click", handleClick, true);
-      document.removeEventListener("submit", handleSubmit, true);
     };
   }, [pathname, startLoading]);
 

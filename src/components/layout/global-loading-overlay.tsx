@@ -2,13 +2,16 @@
 
 import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
-import { IPhoneSpinner } from "@/components/ui/iphone-spinner";
-import { acquireBodyScrollLock } from "@/lib/body-scroll-lock";
 
 interface GlobalLoadingOverlayProps {
   visible: boolean;
 }
 
+/**
+ * Non-blocking top progress bar for navigations / actions.
+ * Intentionally uses pointer-events-none so taps keep working —
+ * a full-screen blocker made the UI feel stuck until multiple clicks.
+ */
 export function GlobalLoadingOverlay({ visible }: GlobalLoadingOverlayProps) {
   const [mounted, setMounted] = useState(false);
 
@@ -16,24 +19,17 @@ export function GlobalLoadingOverlay({ visible }: GlobalLoadingOverlayProps) {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (!visible) return;
-    return acquireBodyScrollLock();
-  }, [visible]);
-
   if (!mounted || !visible) return null;
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[300] flex items-center justify-center bg-black/45 backdrop-blur-[3px] pointer-events-auto"
+      className="fixed top-0 left-0 right-0 z-[300] pointer-events-none"
       aria-live="polite"
       aria-busy="true"
+      role="progressbar"
     >
-      <div className="flex flex-col items-center gap-4 rounded-3xl border border-white/10 bg-[#0f1016]/95 px-10 py-10 shadow-2xl shadow-black/50 min-w-[140px]">
-        <div className="flex h-12 w-12 items-center justify-center">
-          <IPhoneSpinner size="lg" />
-        </div>
-        <p className="text-sm font-medium text-zinc-300">Please wait…</p>
+      <div className="h-[3px] w-full overflow-hidden bg-white/5">
+        <div className="nav-progress-bar h-full w-1/3 rounded-full bg-gradient-to-r from-cyan-400 via-violet-400 to-cyan-400" />
       </div>
     </div>,
     document.body

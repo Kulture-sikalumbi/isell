@@ -1,16 +1,17 @@
 import { AdminDashboard } from "@/components/admin/admin-dashboard";
 import { AdminShell } from "@/components/admin/admin-sidebar";
-import { getAllCategories, getAllTools } from "@/lib/data";
+import { getAllCategories, getAllTools, getCustomerSignupStats } from "@/lib/data";
 import { getAdminAttentionCounts, getPendingDeposits } from "@/lib/wallet";
 
 export const metadata = { title: "Admin Dashboard — iSell Unlocks" };
 
 export default async function AdminPage() {
-  const [categories, devices, pendingDeposits, attention] = await Promise.all([
+  const [categories, devices, pendingDeposits, attention, signupStats] = await Promise.all([
     getAllCategories(),
     getAllTools(),
     getPendingDeposits(),
     getAdminAttentionCounts(),
+    getCustomerSignupStats(),
   ]);
 
   const catalogTools = categories.filter((c) => c.slug !== "general");
@@ -24,6 +25,7 @@ export default async function AdminPage() {
       <AdminDashboard
         toolCount={catalogTools.length}
         deviceCount={devices.length}
+        signupStats={signupStats}
         attention={attention}
         readyDeposits={readyDeposits}
       />

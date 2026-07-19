@@ -8,16 +8,20 @@ import {
   Package,
   Plus,
   Smartphone,
+  UserPlus,
   Users,
   Wallet,
 } from "lucide-react";
 import { AdminQuickAction } from "@/components/admin/admin-quick-action";
 import { AdminPendingDepositsPanel } from "@/components/admin/admin-pending-deposits-panel";
+import { StatCard } from "@/components/admin/stat-card";
+import type { CustomerSignupStats } from "@/lib/data";
 import type { WalletDeposit } from "@/types/database";
 
 interface AdminDashboardProps {
   toolCount: number;
   deviceCount: number;
+  signupStats: CustomerSignupStats;
   attention: {
     awaitingOrders: number;
     pendingDeposits: number;
@@ -32,11 +36,56 @@ interface AdminDashboardProps {
 export function AdminDashboard({
   toolCount,
   deviceCount,
+  signupStats,
   attention,
   readyDeposits,
 }: AdminDashboardProps) {
   return (
     <div className="space-y-8">
+      <section>
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 mb-4">
+          <div>
+            <h2 className="text-lg font-semibold text-white">Customer signups</h2>
+            <p className="text-sm text-zinc-500 mt-0.5">
+              How many people have created accounts on the storefront
+            </p>
+          </div>
+          <Link
+            href="/admin/users"
+            className="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-cyan-400 transition-colors"
+          >
+            <Users className="h-3.5 w-3.5" />
+            View all customers
+          </Link>
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <StatCard
+            label="Total customers"
+            value={String(signupStats.total)}
+            icon={Users}
+            accent="cyan"
+          />
+          <StatCard
+            label="Signed up today"
+            value={String(signupStats.today)}
+            icon={UserPlus}
+            accent="emerald"
+          />
+          <StatCard
+            label="Last 7 days"
+            value={String(signupStats.thisWeek)}
+            icon={UserPlus}
+            accent="violet"
+          />
+          <StatCard
+            label="This month"
+            value={String(signupStats.thisMonth)}
+            icon={Users}
+            accent="amber"
+          />
+        </div>
+      </section>
+
       {attention.totalAttention > 0 && (
         <section>
           <h2 className="text-xs font-semibold uppercase tracking-wider text-amber-400/90 mb-3">
@@ -194,7 +243,7 @@ export function AdminDashboard({
           <AdminQuickAction
             href="/admin/users"
             title="Customers"
-            description="View accounts and manage admin access"
+            description={`${signupStats.total} signed up · manage accounts and admin access`}
             icon={Users}
             accent="cyan"
           />
