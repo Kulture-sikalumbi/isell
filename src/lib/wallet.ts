@@ -240,7 +240,7 @@ export async function getUserDeposits(userId: string): Promise<WalletDeposit[]> 
 
 export async function createDepositRequest(input: {
   userId: string;
-  amount: number;
+  amount?: number;
   method: DepositMethod;
   transactionId: string;
   senderPhone?: string;
@@ -248,18 +248,55 @@ export async function createDepositRequest(input: {
   userEmail?: string;
   userName?: string;
   currency?: string;
-}) {
+}): Promise<{ deposit: WalletDeposit } | { error: string }> {
   const supabase = createServiceClient();
-  if (!supabase) return null;
-
-  const amount = Number(input.amount);
-  if (!amount || amount <= 0) return null;
+  if (!supabase) return { error: "Database not configured" };
 
   const trimmedTxn = input.transactionId.trim();
-  if (!trimmedTxn) return null;
+  if (!trimmedTxn) return { error: "TID is required" };
 
-  const senderPhone = input.senderPhone?.trim() || null;
-  const senderName = input.senderName?.trim() || null;
+  const isMoMo = input.method === "mtn" || input.method === "airtel";
+  let amount = Number(input.amount);
+  let senderPhone = input.senderPhone?.trim() || null;
+  let senderName = input.senderName?.trim() || null;
+  let fullTransactionId = trimmedTxn;
+
+  if (isMoMo) {
+    const { resolveSmsReceiptForProof, normalizeCustomerProofInput } = await import(
+      "@/lib/momo-sms-gateway"
+    );
+    fullTransactionId = normalizeCustomerProofInput(input.method, trimmedTxn);
+
+    const resolved = await resolveSmsReceiptForProof({
+      method: input.method,
+      transactionId: fullTransactionId,
+      amount: Number.isFinite(amount) && amount > 0 ? amount : undefined,
+    });
+
+    if (resolved.ok) {
+      amount = Number(resolved.receipt.amount);
+      fullTransactionId = resolved.receipt.transaction_id;
+      senderPhone = resolved.receipt.sender_phone || senderPhone;
+      senderName = resolved.receipt.sender_name || senderName;
+    } else if (resolved.code === "ambiguous") {
+      return { error: resolved.error };
+    } else {
+      // SMS not in database yet — queue for admin unless user gave an amount hint.
+      if (!Number.isFinite(amount) || amount <= 0) {
+        return {
+          error:
+            "No matching payment in our system yet. Enter how much you sent, or wait a moment after your MoMo SMS arrives and try again.",
+        };
+      }
+      // Keep customer proof + amount; admin can verify manually when SMS arrives later.
+    }
+  } else if (!Number.isFinite(amount) || amount <= 0) {
+    return { error: "Enter a valid amount" };
+  }
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return { error: "Enter a valid amount" };
+  }
 
   const reference = `DEP-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
   const merchants = await getMerchantDetails(input.currency);
@@ -271,7 +308,7 @@ export async function createDepositRequest(input: {
       amount,
       currency: merchants.currency,
       method: input.method,
-      transaction_id: trimmedTxn,
+      transaction_id: fullTransactionId,
       sender_phone: senderPhone,
       sender_name: senderName,
       reference,
@@ -280,7 +317,7 @@ export async function createDepositRequest(input: {
     .select()
     .single();
 
-  if (error || !data) return null;
+  if (error || !data) return { error: error?.message || "Failed to submit deposit" };
 
   await notifyAdminNewDeposit({
     depositId: data.id,
@@ -290,12 +327,34 @@ export async function createDepositRequest(input: {
     currency: merchants.currency,
     method: input.method,
     reference,
-    transactionId: trimmedTxn,
+    transactionId: fullTransactionId,
     senderPhone,
     senderName,
   });
 
-  return data;
+  if (isMoMo) {
+    try {
+      const { tryAutoConfirmFromSmsReceipt } = await import("@/lib/momo-sms-gateway");
+      const matched = await tryAutoConfirmFromSmsReceipt({
+        depositId: data.id,
+        transactionId: fullTransactionId,
+        amount,
+        method: input.method,
+      });
+      if (matched.matched) {
+        const { data: refreshed } = await supabase
+          .from("wallet_deposits")
+          .select("*")
+          .eq("id", data.id)
+          .maybeSingle();
+        return { deposit: (refreshed ?? data) as WalletDeposit };
+      }
+    } catch {
+      // Non-fatal — deposit remains pending
+    }
+  }
+
+  return { deposit: data as WalletDeposit };
 }
 
 export async function confirmDeposit(depositId: string, adminNote?: string) {
@@ -770,8 +829,36 @@ export async function submitDepositTransactionId(
     senderName,
   });
 
+  let finalDeposit = {
+    ...deposit,
+    transaction_id: trimmedTxn,
+    sender_phone: senderPhone,
+    sender_name: senderName,
+  };
+
+  // Instant credit when merchant SMS already stored this proof code.
+  try {
+    const { tryAutoConfirmFromSmsReceipt } = await import("@/lib/momo-sms-gateway");
+    const matched = await tryAutoConfirmFromSmsReceipt({
+      depositId,
+      transactionId: trimmedTxn,
+      amount: Number(deposit.amount),
+      method: deposit.method,
+    });
+    if (matched.matched) {
+      const { data: refreshed } = await supabase
+        .from("wallet_deposits")
+        .select("*")
+        .eq("id", depositId)
+        .maybeSingle();
+      if (refreshed) finalDeposit = refreshed;
+    }
+  } catch {
+    // Non-fatal
+  }
+
   return {
     ok: true,
-    deposit: { ...deposit, transaction_id: trimmedTxn, sender_phone: senderPhone, sender_name: senderName },
+    deposit: finalDeposit,
   };
 }

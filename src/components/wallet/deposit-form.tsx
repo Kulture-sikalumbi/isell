@@ -131,11 +131,20 @@ function DepositSuccessModal({
             <X className="h-4 w-4" />
           </button>
 
-          <CheckCircle2 className="h-14 w-14 text-emerald-400 mx-auto" />
+          <CheckCircle2
+            className={`h-14 w-14 mx-auto ${isConfirmed ? "text-emerald-400" : "text-amber-300"}`}
+          />
           <h3 id="deposit-success-title" className="text-lg sm:text-xl font-semibold text-white">
-            {isRejected ? "Deposit was not completed" : "Deposit submitted"}
+            {isRejected
+              ? "Deposit was not completed"
+              : isConfirmed
+                ? "Wallet credited"
+                : "Deposit submitted"}
           </h3>
           <Badge variant={badgeVariant}>{badgeLabel}</Badge>
+          <p className="text-2xl font-semibold text-white">
+            {formatCurrency(Number(deposit.amount), deposit.currency)}
+          </p>
           <p className="text-sm text-zinc-400">
             Reference{" "}
             <span className="font-mono text-white">{deposit.reference}</span>
@@ -143,7 +152,9 @@ function DepositSuccessModal({
           <p className="text-sm text-zinc-500 leading-relaxed">
             {isRejected
               ? "This deposit could not be verified. Contact support if you already paid."
-              : "Your payment proof was received. Your wallet is credited once the payment is verified — usually within a few minutes. You&apos;ll get an inbox notification when it&apos;s confirmed."}
+              : isConfirmed
+                ? "Your MoMo payment matched instantly. The credited amount is exactly what the merchant phone received."
+                : "Payment proof received. If your code matches a payment already on our system, your wallet credits instantly. Otherwise an admin will verify manually."}
           </p>
           <Button type="button" variant="secondary" className="w-full" onClick={onMakeAnother}>
             Make another deposit
@@ -166,7 +177,7 @@ function DepositConfirmModal({
   onClose,
 }: {
   open: boolean;
-  amount: number;
+  amount: number | null;
   currency: string;
   merchantNumber: string;
   methodLabel: string;
@@ -186,6 +197,11 @@ function DepositConfirmModal({
   }, [open]);
 
   if (!open || !mounted) return null;
+
+  const amountLabel =
+    amount != null && amount > 0
+      ? formatCurrency(amount, currency)
+      : "your payment";
 
   return createPortal(
     <div
@@ -222,7 +238,7 @@ function DepositConfirmModal({
           </h3>
           <p className="mt-3 text-sm text-zinc-400 leading-relaxed break-words">
             Have you already sent{" "}
-            <strong className="text-white">{formatCurrency(amount, currency)}</strong> to{" "}
+            <strong className="text-white">{amountLabel}</strong> to{" "}
             <strong className="font-mono text-cyan-300 break-all">{merchantNumber}</strong> via{" "}
             <strong className="text-white">{label}</strong>?
           </p>
@@ -283,11 +299,10 @@ export function DepositForm({ merchants, currency, savedPaymentMethods = [] }: D
   const [paymentReminder, setPaymentReminder] = useState(false);
 
   const parsedAmount = Number(amount);
+  const hasAmount = Number.isFinite(parsedAmount) && parsedAmount >= 1;
   const merchantNumber = method ? merchantFor(method, merchants) : "";
   const methodMeta = methods.find((m) => m.id === method);
-  const savedMethodForDeposit = method
-    ? savedPaymentMethods.find((m) => m.method === method)
-    : undefined;
+  const isMoMoMethod = method === "mtn" || method === "airtel";
 
   useEffect(() => {
     if (method && !depositMethodsForCurrency(currency).includes(method)) {
@@ -313,13 +328,15 @@ export function DepositForm({ merchants, currency, savedPaymentMethods = [] }: D
       setSenderPhone(saved.account_identifier);
       setSenderName("");
     } else {
-      setSenderPhone(saved.account_identifier);
-      setSenderName(saved.account_name ?? "");
+      // MoMo no longer collects sender details from the user.
+      setSenderPhone("");
+      setSenderName("");
     }
   }, [method, savedPaymentMethods]);
 
   async function selectMethod(selected: DepositMethod) {
-    if (!amount || parsedAmount < 1) {
+    const crypto = isManualCryptoDeposit(selected);
+    if (crypto && (!amount || parsedAmount < 1)) {
       setError("Enter how much you want to deposit first");
       return;
     }
@@ -365,11 +382,11 @@ export function DepositForm({ merchants, currency, savedPaymentMethods = [] }: D
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          amount: parsedAmount,
+          amount: hasAmount ? parsedAmount : undefined,
           method,
           transaction_id: transactionId,
-          sender_phone: senderPhone,
-          sender_name: senderName,
+          sender_phone: isMoMoMethod ? undefined : senderPhone,
+          sender_name: isMoMoMethod ? undefined : senderName,
         }),
       });
       const data = await res.json();
@@ -427,7 +444,7 @@ export function DepositForm({ merchants, currency, savedPaymentMethods = [] }: D
         <>
           <DepositConfirmModal
             open={showConfirmModal}
-            amount={parsedAmount}
+            amount={hasAmount ? parsedAmount : null}
             currency={currency}
             merchantNumber={merchantNumber}
             methodLabel={label}
@@ -460,8 +477,11 @@ export function DepositForm({ merchants, currency, savedPaymentMethods = [] }: D
             {paymentReminder && (
               <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
                 Please finish the payment first. Send{" "}
-                <strong className="text-white">{formatCurrency(parsedAmount, currency)}</strong> to{" "}
-                <strong className="font-mono break-all">{merchantNumber}</strong>, then tap Confirm deposit.
+                <strong className="text-white">
+                  {hasAmount ? formatCurrency(parsedAmount, currency) : "your payment"}
+                </strong>{" "}
+                to <strong className="font-mono break-all">{merchantNumber}</strong>, then tap Confirm
+                deposit.
               </div>
             )}
 
@@ -554,7 +574,9 @@ export function DepositForm({ merchants, currency, savedPaymentMethods = [] }: D
                     </InstructionStep>
                     <InstructionStep n={ussd ? 3 : 2}>
                       Send{" "}
-                      <strong className="text-white">{formatCurrency(parsedAmount, currency)}</strong>{" "}
+                      <strong className="text-white">
+                        {hasAmount ? formatCurrency(parsedAmount, currency) : "any amount"}
+                      </strong>{" "}
                       to{" "}
                       <strong className="font-mono text-white">{merchantNumber}</strong>
                       <button
@@ -571,8 +593,11 @@ export function DepositForm({ merchants, currency, savedPaymentMethods = [] }: D
                       confirmation SMS from <strong className="text-white">{label}</strong>
                     </InstructionStep>
                     <InstructionStep n={ussd ? 5 : 4}>
-                      Tap <strong className="text-white">Confirm deposit</strong> below and enter your
-                      TID (Transaction ID)
+                      Tap <strong className="text-white">Confirm deposit</strong> and enter only the{" "}
+                      <strong className="text-white">code from your SMS</strong>
+                      {method === "airtel"
+                        ? " (last part, e.g. L21552)"
+                        : " (full 10-digit Financial Transaction ID)"}
                     </InstructionStep>
                   </>
                 )}
@@ -611,7 +636,7 @@ export function DepositForm({ merchants, currency, savedPaymentMethods = [] }: D
           <div>
             <h3 className="font-semibold text-white">Finish your deposit</h3>
             <p className="text-sm text-zinc-500">
-              {formatCurrency(parsedAmount, currency)} via {label}
+              {hasAmount ? `${formatCurrency(parsedAmount, currency)} via ${label}` : `via ${label}`}
             </p>
           </div>
         </div>
@@ -620,20 +645,16 @@ export function DepositForm({ merchants, currency, savedPaymentMethods = [] }: D
           <strong className="text-emerald-100">Great!</strong>{" "}
           {isCrypto
             ? "Enter your payment reference so admin can verify and credit your wallet."
-            : "Enter the details from your payment SMS to finish your deposit."}
-          {savedMethodForDeposit && (
-            <span className="block mt-1 text-emerald-200/70">
-              Sender details pre-filled from your saved {methodLabel(method)} — change them if you
-              paid from a different account.
-            </span>
-          )}
+            : "Enter the short code from your payment SMS. Your wallet credits the exact amount the merchant received — no phone or name needed."}
         </div>
 
         <div className="rounded-xl border-2 border-cyan-500/30 bg-black/50 p-5 sm:p-6 space-y-5 shadow-lg shadow-black/20">
           <div>
-            <p className="font-semibold text-white text-sm">Payment details</p>
+            <p className="font-semibold text-white text-sm">Payment proof</p>
             <p className="text-xs text-zinc-400 mt-1">
-              These must match the payment you just completed
+              {isMoMoMethod
+                ? "Only the short code from your MoMo SMS"
+                : "These must match the payment you just completed"}
             </p>
           </div>
 
@@ -645,8 +666,8 @@ export function DepositForm({ merchants, currency, savedPaymentMethods = [] }: D
                 : method === "binance"
                   ? "Binance order / transaction ID"
                   : method === "mtn"
-                    ? "Financial Transaction ID (from SMS)"
-                    : "TID (Transaction ID from SMS)"
+                    ? "Financial Transaction ID (10 digits from SMS)"
+                    : "Short TID code (last part from SMS)"
             }
             placeholder={
               method === "usdt_trc20"
@@ -654,14 +675,20 @@ export function DepositForm({ merchants, currency, savedPaymentMethods = [] }: D
                 : method === "binance"
                   ? "Paste the ID from your Binance Pay receipt"
                   : method === "mtn"
-                    ? "Paste the Financial Transaction ID from your MTN SMS"
-                    : "Paste the Transaction ID from your payment SMS"
+                    ? "e.g. 9297021577"
+                    : "e.g. L21552"
             }
             value={transactionId}
             onChange={(e) => setTransactionId(e.target.value)}
             required
             autoFocus
-            hint="Required — only available after a successful payment"
+            hint={
+              method === "airtel"
+                ? "From TID like PP260719.1058.L21552 — enter only L21552"
+                : method === "mtn"
+                  ? "Paste all 10 digits from your MTN MoMo SMS"
+                  : "Required — only available after a successful payment"
+            }
           />
 
           {method === "binance" && (
@@ -684,28 +711,6 @@ export function DepositForm({ merchants, currency, savedPaymentMethods = [] }: D
               onChange={(e) => setSenderPhone(e.target.value)}
               hint="Optional — helps admin verify on-chain"
             />
-          )}
-
-          {!isCrypto && (
-            <>
-              <Input
-                variant="emphasized"
-                label="Phone number you sent from"
-                placeholder="e.g. 0970105334"
-                value={senderPhone}
-                onChange={(e) => setSenderPhone(e.target.value)}
-                hint="Your MTN or Airtel number that made the payment"
-              />
-
-              <Input
-                variant="emphasized"
-                label="Your name on the MoMo account"
-                placeholder="e.g. John Banda"
-                value={senderName}
-                onChange={(e) => setSenderName(e.target.value)}
-                hint="Exactly as it appears on your mobile money account"
-              />
-            </>
           )}
         </div>
 
@@ -744,7 +749,8 @@ export function DepositForm({ merchants, currency, savedPaymentMethods = [] }: D
     <div className="space-y-5">
       <div>
         <p className="text-sm text-zinc-400 mb-3">
-          How much do you want to add to your wallet?
+          How much do you want to add?{" "}
+          <span className="text-zinc-500">(optional for MTN / Airtel — we credit what you actually sent)</span>
         </p>
 
         <p className="text-xs text-zinc-500 mb-2">Quick amounts</p>
@@ -773,11 +779,11 @@ export function DepositForm({ merchants, currency, savedPaymentMethods = [] }: D
         </div>
 
         <Input
-          label={`Deposit amount (${getCurrencyLabel(currency)})`}
+          label={`Deposit amount (${getCurrencyLabel(currency)}) — optional for MoMo`}
           type="number"
           min="1"
           step="0.01"
-          placeholder="e.g. 50"
+          placeholder="e.g. 50 (optional)"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           disabled={Boolean(loadingMethod)}

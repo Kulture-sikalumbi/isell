@@ -17,18 +17,23 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const amount = Number(body.amount);
+  const rawAmount = body.amount;
+  const amount =
+    rawAmount === "" || rawAmount === null || rawAmount === undefined
+      ? undefined
+      : Number(rawAmount);
   const method = body.method as DepositMethod;
   const transactionId = (body.transaction_id as string)?.trim();
   const senderPhone = (body.sender_phone as string)?.trim();
   const senderName = (body.sender_name as string)?.trim();
 
-  if (!amount || amount <= 0) {
-    return NextResponse.json({ error: "Enter a valid amount" }, { status: 400 });
-  }
-
   if (!validMethods.includes(method)) {
     return NextResponse.json({ error: "Select a payment method" }, { status: 400 });
+  }
+
+  const isMoMo = method === "mtn" || method === "airtel";
+  if (!isMoMo && (!amount || amount <= 0)) {
+    return NextResponse.json({ error: "Enter a valid amount" }, { status: 400 });
   }
 
   const currency = await getRequestCurrency();
@@ -37,7 +42,14 @@ export async function POST(request: Request) {
   }
 
   if (!transactionId) {
-    return NextResponse.json({ error: "TID is required" }, { status: 400 });
+    return NextResponse.json(
+      {
+        error: isMoMo
+          ? "Enter the short code from your MoMo SMS"
+          : "TID is required",
+      },
+      { status: 400 }
+    );
   }
 
   const merchants = await getMerchantDetails(currency);
@@ -52,9 +64,9 @@ export async function POST(request: Request) {
 
   const profile = await getCurrentProfile();
 
-  const deposit = await createDepositRequest({
+  const result = await createDepositRequest({
     userId: user.id,
-    amount,
+    amount: amount && amount > 0 ? amount : undefined,
     method,
     transactionId,
     senderPhone: senderPhone || undefined,
@@ -64,9 +76,9 @@ export async function POST(request: Request) {
     currency,
   });
 
-  if (!deposit) {
-    return NextResponse.json({ error: "Failed to submit deposit" }, { status: 500 });
+  if ("error" in result) {
+    return NextResponse.json({ error: result.error }, { status: 400 });
   }
 
-  return NextResponse.json({ deposit });
+  return NextResponse.json({ deposit: result.deposit });
 }

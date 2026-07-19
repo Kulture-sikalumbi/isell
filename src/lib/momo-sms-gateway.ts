@@ -26,6 +26,12 @@ export type MomoWebhookResult =
   | { ok: true; action: "already_confirmed"; depositId: string; reference: string }
   | { ok: true; action: "recorded"; depositId: string; reference: string; message: string }
   | {
+      ok: true;
+      action: "stored";
+      transactionId: string;
+      message: string;
+    }
+  | {
       ok: false;
       error: string;
       code: "unauthorized" | "invalid_payload" | "not_found" | "ambiguous" | "failed";
@@ -64,6 +70,63 @@ export function normalizeZambiaPhone(value?: string | null): string {
 
 export function normalizeTransactionId(value?: string | null): string {
   return (value ?? "").trim().toUpperCase();
+}
+
+/**
+ * Customer-facing proof identifier stored for matching.
+ * - Airtel dotted TID `PP260719.1058.L21552` → `L21552` (last segment only)
+ * - MTN Financial Transaction ID → full digits (typically 10 digits)
+ */
+export function extractProofCode(
+  transactionId?: string | null,
+  method?: MomoGatewayMethod | string | null
+): string {
+  const normalized = normalizeTransactionId(transactionId);
+  if (!normalized) return "";
+
+  if (method === "airtel" || (!method && normalized.includes("."))) {
+    const parts = normalized.split(".").filter(Boolean);
+    return parts[parts.length - 1] ?? normalized;
+  }
+
+  const digits = normalized.replace(/\D/g, "");
+  return digits || normalized;
+}
+
+/** Whether a customer-submitted value matches a stored MoMo transaction id. */
+export function transactionIdsMatch(
+  submitted?: string | null,
+  stored?: string | null,
+  method?: MomoGatewayMethod | string | null
+): boolean {
+  const left = normalizeTransactionId(submitted);
+  const right = normalizeTransactionId(stored);
+  if (!left || !right) return false;
+  if (left === right) return true;
+
+  const m = method as MomoGatewayMethod | undefined;
+  if (m === "airtel") {
+    return extractProofCode(left, "airtel") === extractProofCode(right, "airtel");
+  }
+  if (m === "mtn") {
+    const leftDigits = left.replace(/\D/g, "");
+    const rightDigits = right.replace(/\D/g, "");
+    return leftDigits.length > 0 && leftDigits === rightDigits;
+  }
+
+  // Unknown method — try both strategies.
+  if (extractProofCode(left, "airtel") === extractProofCode(right, "airtel")) return true;
+  const ld = left.replace(/\D/g, "");
+  const rd = right.replace(/\D/g, "");
+  return ld.length > 0 && ld === rd;
+}
+
+function proofCodesMatch(
+  a?: string | null,
+  b?: string | null,
+  method?: MomoGatewayMethod | string | null
+): boolean {
+  return transactionIdsMatch(a, b, method);
 }
 
 function amountsMatch(depositAmount: number, smsAmount: number): boolean {
@@ -121,8 +184,8 @@ function scoreDepositMatch(
   const payloadTxn = normalizeTransactionId(payload.transactionId);
   const depositTxn = normalizeTransactionId(deposit.transaction_id);
 
-  if (depositTxn && payloadTxn && depositTxn === payloadTxn) score += 100;
-  else if (depositTxn && payloadTxn && depositTxn !== payloadTxn) return -1;
+  if (depositTxn && payloadTxn && proofCodesMatch(depositTxn, payloadTxn, method)) score += 100;
+  else if (depositTxn && payloadTxn && !proofCodesMatch(depositTxn, payloadTxn, method)) return -1;
 
   const payloadPhone = normalizeZambiaPhone(payload.senderPhone);
   const depositPhone = normalizeZambiaPhone(deposit.sender_phone);
@@ -141,13 +204,15 @@ function scoreDepositMatch(
  */
 const MIN_AUTO_MATCH_SCORE = 45;
 
-async function findDepositByTransactionId(transactionId: string) {
+async function findDepositByTransactionId(
+  transactionId: string,
+  method?: MomoGatewayMethod | string
+) {
   const supabase = createServiceClient();
   if (!supabase) return null;
 
   const normalized = normalizeTransactionId(transactionId);
 
-  // Exact match first (customers usually paste as shown).
   const { data: exact } = await supabase
     .from("wallet_deposits")
     .select("*")
@@ -158,19 +223,40 @@ async function findDepositByTransactionId(transactionId: string) {
 
   if (exact) return exact as WalletDeposit;
 
-  // Case-insensitive fallback for lowercase pastes / Airtel TIDs.
-  const { data: pending } = await supabase
+  const { data: recent } = await supabase
+    .from("wallet_deposits")
+    .select("*")
+    .gte("created_at", matchWindowStartIso())
+    .order("created_at", { ascending: false })
+    .limit(80);
+
+  const soft = ((recent ?? []) as WalletDeposit[]).find((d) =>
+    transactionIdsMatch(normalized, d.transaction_id, method ?? d.method)
+  );
+  return soft ?? null;
+}
+
+async function findPendingDepositByProof(
+  method: MomoGatewayMethod,
+  transactionId: string
+): Promise<WalletDeposit | null> {
+  const supabase = createServiceClient();
+  if (!supabase) return null;
+
+  const { data } = await supabase
     .from("wallet_deposits")
     .select("*")
     .eq("status", "pending")
+    .eq("method", method)
     .gte("created_at", matchWindowStartIso())
     .order("created_at", { ascending: false })
-    .limit(50);
+    .limit(80);
 
-  const soft = ((pending ?? []) as WalletDeposit[]).find(
-    (d) => normalizeTransactionId(d.transaction_id) === normalized
+  return (
+    ((data ?? []) as WalletDeposit[]).find((d) =>
+      transactionIdsMatch(transactionId, d.transaction_id, method)
+    ) ?? null
   );
-  return soft ?? null;
 }
 
 async function findPendingDepositsForMatch(
@@ -214,125 +300,348 @@ async function attachGatewayMetadata(
   });
 }
 
-export async function processMomoSmsWebhook(
-  payload: MomoSmsWebhookPayload
-): Promise<MomoWebhookResult> {
-  const transactionId = normalizeTransactionId(payload.transactionId);
-  const amount = Number(payload.amount);
+async function upsertSmsReceipt(
+  payload: MomoSmsWebhookPayload,
+  method: MomoGatewayMethod,
+  transactionId: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = createServiceClient();
+  if (!supabase) return { ok: false, error: "Database not configured" };
 
-  if (!transactionId) {
-    return { ok: false, error: "transactionId is required", code: "invalid_payload" };
+  const receivedAt = payload.receivedAt
+    ? new Date(payload.receivedAt).toISOString()
+    : new Date().toISOString();
+
+  const { error } = await supabase.from("momo_sms_receipts").upsert(
+    {
+      transaction_id: transactionId,
+      proof_code: extractProofCode(transactionId, method),
+      amount: Number(payload.amount),
+      method,
+      sender: payload.sender ?? null,
+      sender_phone: payload.senderPhone?.trim() || null,
+      sender_name: payload.senderName?.trim() || null,
+      raw_message: payload.rawMessage ?? null,
+      received_at: receivedAt,
+    },
+    { onConflict: "transaction_id", ignoreDuplicates: false }
+  );
+
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+type SmsReceiptRow = {
+  id: string;
+  transaction_id: string;
+  proof_code: string | null;
+  amount: number;
+  method: string;
+  sender: string | null;
+  sender_phone: string | null;
+  sender_name: string | null;
+  raw_message: string | null;
+  received_at: string;
+  matched_deposit_id: string | null;
+};
+
+async function findUnmatchedReceiptsByProof(
+  method: string,
+  proofOrTxn: string
+): Promise<SmsReceiptRow[]> {
+  const supabase = createServiceClient();
+  if (!supabase) return [];
+
+  const normalized = normalizeTransactionId(proofOrTxn);
+  if (!normalized) return [];
+
+  const { data } = await supabase
+    .from("momo_sms_receipts")
+    .select("*")
+    .eq("method", method)
+    .is("matched_deposit_id", null)
+    .gte("received_at", matchWindowStartIso())
+    .order("received_at", { ascending: false })
+    .limit(40);
+
+  return ((data ?? []) as SmsReceiptRow[]).filter((row) =>
+    transactionIdsMatch(normalized, row.transaction_id, method)
+  );
+}
+
+async function getSmsReceiptByTransactionId(
+  transactionId: string
+): Promise<SmsReceiptRow | null> {
+  const supabase = createServiceClient();
+  if (!supabase) return null;
+
+  const { data } = await supabase
+    .from("momo_sms_receipts")
+    .select("*")
+    .eq("transaction_id", normalizeTransactionId(transactionId))
+    .maybeSingle();
+
+  return (data as SmsReceiptRow | null) ?? null;
+}
+
+async function markReceiptMatched(transactionId: string, depositId: string) {
+  const supabase = createServiceClient();
+  if (!supabase) return;
+  await supabase
+    .from("momo_sms_receipts")
+    .update({ matched_deposit_id: depositId })
+    .eq("transaction_id", normalizeTransactionId(transactionId))
+    .is("matched_deposit_id", null);
+}
+
+/**
+ * When a customer submits a (short) proof code, look up a stored SMS receipt and auto-confirm.
+ * SMS amount is the source of truth — user-entered amount is only a disambiguation hint.
+ */
+export async function tryAutoConfirmFromSmsReceipt(input: {
+  depositId: string;
+  transactionId: string;
+  amount?: number;
+  method: string;
+}): Promise<
+  | { matched: false; reason?: string }
+  | {
+      matched: true;
+      action: "confirmed" | "already_confirmed" | "recorded";
+      reference?: string;
+      balance?: number;
+      creditedAmount?: number;
+    }
+> {
+  const supabase = createServiceClient();
+  if (!supabase) return { matched: false, reason: "db" };
+
+  const submitted = normalizeTransactionId(input.transactionId);
+  if (!submitted) return { matched: false, reason: "empty" };
+
+  let receipts = await findUnmatchedReceiptsByProof(input.method, submitted);
+  if (receipts.length === 0) {
+    // Already-matched exact full TID (rare race) — fall through as no-op.
+    return { matched: false, reason: "not_found" };
   }
-  if (!Number.isFinite(amount) || amount <= 0) {
-    return { ok: false, error: "amount must be a positive number", code: "invalid_payload" };
+
+  const hintAmount = Number(input.amount);
+  if (receipts.length > 1 && Number.isFinite(hintAmount) && hintAmount > 0) {
+    const byAmount = receipts.filter((r) => amountsMatch(hintAmount, Number(r.amount)));
+    if (byAmount.length > 0) receipts = byAmount;
   }
 
-  const method = payload.method ?? mapSmsSenderToMethod(payload.sender);
-  if (!method) {
-    return {
-      ok: false,
-      error: "Could not determine payment method — pass method or a known sender id",
-      code: "invalid_payload",
-    };
+  if (receipts.length > 1) {
+    return { matched: false, reason: "ambiguous" };
   }
 
-  const existingByTxn = await findDepositByTransactionId(transactionId);
-  if (existingByTxn?.status === "confirmed") {
-    return {
-      ok: true,
-      action: "already_confirmed",
-      depositId: existingByTxn.id,
-      reference: existingByTxn.reference,
-    };
-  }
+  const receipt = receipts[0];
+  const fullTxn = normalizeTransactionId(receipt.transaction_id);
+  const smsAmount = Number(receipt.amount);
 
-  let deposit = existingByTxn?.status === "pending" ? existingByTxn : null;
+  const { data: deposit } = await supabase
+    .from("wallet_deposits")
+    .select("*")
+    .eq("id", input.depositId)
+    .maybeSingle();
 
-  if (!deposit) {
-    const candidates = await findPendingDepositsForMatch(method, amount);
-    const scored = candidates
-      .map((candidate) => ({
-        candidate,
-        score: scoreDepositMatch(candidate, payload, method),
-      }))
-      .filter((entry) => entry.score >= MIN_AUTO_MATCH_SCORE)
-      .sort((a, b) => {
-        if (b.score !== a.score) return b.score - a.score;
-        // Tie-break: newest pending deposit first
-        return (
-          new Date(b.candidate.created_at).getTime() -
-          new Date(a.candidate.created_at).getTime()
-        );
-      });
-
-    if (scored.length === 0) {
+  if (!deposit || deposit.status !== "pending") {
+    if (deposit?.status === "confirmed") {
       return {
-        ok: false,
-        error:
-          "No confident match — customer may not have submitted TID yet, or details differ. Admin can confirm manually.",
-        code: "not_found",
+        matched: true,
+        action: "already_confirmed",
+        reference: deposit.reference,
+        creditedAmount: Number(deposit.amount),
       };
     }
-
-    // Ambiguous only when top two share the exact same score AND were created within 2 minutes
-    // (two customers depositing the same amount at nearly the same time).
-    if (scored.length > 1 && scored[0].score === scored[1].score) {
-      const t0 = new Date(scored[0].candidate.created_at).getTime();
-      const t1 = new Date(scored[1].candidate.created_at).getTime();
-      if (Math.abs(t0 - t1) < 2 * 60 * 1000) {
-        return {
-          ok: false,
-          error: "Multiple pending deposits match — admin must confirm manually",
-          code: "ambiguous",
-        };
-      }
-    }
-
-    deposit = scored[0].candidate;
+    return { matched: false, reason: "deposit" };
   }
 
+  // Authority: SMS amount + full TID + sender details from the merchant phone.
+  const { error: syncError } = await supabase
+    .from("wallet_deposits")
+    .update({
+      amount: smsAmount,
+      transaction_id: fullTxn,
+      sender_phone: receipt.sender_phone || deposit.sender_phone,
+      sender_name: receipt.sender_name || deposit.sender_name,
+    })
+    .eq("id", deposit.id)
+    .eq("status", "pending");
+
+  if (syncError) return { matched: false, reason: syncError.message };
+
+  await attachGatewayMetadata(
+    deposit.id,
+    {
+      transactionId: fullTxn,
+      amount: smsAmount,
+      method: receipt.method as MomoGatewayMethod,
+      sender: receipt.sender ?? undefined,
+      senderPhone: receipt.sender_phone ?? undefined,
+      senderName: receipt.sender_name ?? undefined,
+      rawMessage: receipt.raw_message ?? undefined,
+      receivedAt: receipt.received_at,
+    },
+    "MATCHED_FROM_STORED_SMS"
+  );
+
+  await markReceiptMatched(fullTxn, deposit.id);
+
+  const autoConfirm = runtimeEnv("MOMO_SMS_AUTO_CONFIRM") !== "false";
+  if (!autoConfirm) {
+    await updateDepositProviderStatus({
+      depositId: deposit.id,
+      providerStatus: "AWAITING_ADMIN",
+      providerPayload: { matchedFromStoredSms: true },
+    });
+    return {
+      matched: true,
+      action: "recorded",
+      reference: deposit.reference,
+      creditedAmount: smsAmount,
+    };
+  }
+
+  const result = await confirmDepositFromProvider(
+    deposit.id,
+    `Auto-confirmed from stored MoMo SMS (${fullTxn})`
+  );
+
+  if (!result.ok) {
+    if (/already/i.test(result.error ?? "")) {
+      return {
+        matched: true,
+        action: "already_confirmed",
+        reference: deposit.reference,
+        creditedAmount: smsAmount,
+      };
+    }
+    return { matched: false, reason: result.error };
+  }
+
+  return {
+    matched: true,
+    action: result.alreadyConfirmed ? "already_confirmed" : "confirmed",
+    reference: deposit.reference,
+    balance: result.balance,
+    creditedAmount: smsAmount,
+  };
+}
+
+/** Resolve an unmatched SMS receipt for MoMo proof submit (before creating a deposit). */
+export async function resolveSmsReceiptForProof(input: {
+  method: string;
+  transactionId: string;
+  amount?: number;
+}): Promise<
+  | { ok: true; receipt: SmsReceiptRow }
+  | { ok: false; code: "not_found" | "ambiguous"; error: string }
+> {
+  let receipts = await findUnmatchedReceiptsByProof(input.method, input.transactionId);
+  if (receipts.length === 0) {
+    return {
+      ok: false,
+      code: "not_found",
+      error:
+        "No matching MoMo payment found yet. Make sure you paid this merchant, then enter the code from your SMS (Airtel: last part e.g. L21552 · MTN: full 10-digit Financial Transaction ID).",
+    };
+  }
+
+  const hintAmount = Number(input.amount);
+  if (receipts.length > 1 && Number.isFinite(hintAmount) && hintAmount > 0) {
+    const byAmount = receipts.filter((r) => amountsMatch(hintAmount, Number(r.amount)));
+    if (byAmount.length === 1) {
+      return { ok: true, receipt: byAmount[0] };
+    }
+    if (byAmount.length === 0) {
+      return {
+        ok: false,
+        code: "not_found",
+        error: "A payment with that code was found, but the amount does not match. Leave amount blank or use the exact amount you sent.",
+      };
+    }
+    receipts = byAmount;
+  }
+
+  if (receipts.length > 1) {
+    return {
+      ok: false,
+      code: "ambiguous",
+      error:
+        "More than one recent payment matches that code. Enter the exact amount you sent to finish instantly.",
+    };
+  }
+
+  return { ok: true, receipt: receipts[0] };
+}
+
+/** Normalize customer input before storing on a deposit row. */
+export function normalizeCustomerProofInput(
+  method: MomoGatewayMethod | string,
+  raw: string
+): string {
+  const trimmed = raw.trim();
+  if (method === "mtn") {
+    return trimmed.replace(/\D/g, "");
+  }
+  if (method === "airtel") {
+    if (trimmed.includes(".")) return extractProofCode(trimmed, "airtel");
+    return normalizeTransactionId(trimmed);
+  }
+  return normalizeTransactionId(trimmed);
+}
+
+async function confirmPendingDepositWithSms(
+  deposit: WalletDeposit,
+  payload: MomoSmsWebhookPayload,
+  method: MomoGatewayMethod,
+  transactionId: string,
+  amount: number
+): Promise<MomoWebhookResult> {
   const supabase = createServiceClient();
   if (!supabase) {
     return { ok: false, error: "Database not configured", code: "failed" };
   }
 
-  // Attach SMS TID / sender if customer has not submitted yet, or normalize case.
-  const depositTxn = normalizeTransactionId(deposit.transaction_id);
-  if (!depositTxn || depositTxn !== transactionId) {
-    // Never overwrite a different customer-submitted TID.
-    if (depositTxn && depositTxn !== transactionId) {
-      return {
-        ok: false,
-        error: "SMS TID does not match the TID already on this deposit",
-        code: "ambiguous",
-      };
-    }
-
-    const { error } = await supabase
-      .from("wallet_deposits")
-      .update({
-        transaction_id: transactionId,
-        sender_phone: payload.senderPhone?.trim() || deposit.sender_phone,
-        sender_name: payload.senderName?.trim() || deposit.sender_name,
-      })
-      .eq("id", deposit.id)
-      .eq("status", "pending");
-
-    if (error) {
-      return { ok: false, error: error.message, code: "failed" };
-    }
-  } else if (payload.senderPhone || payload.senderName) {
-    await supabase
-      .from("wallet_deposits")
-      .update({
-        sender_phone: payload.senderPhone?.trim() || deposit.sender_phone,
-        sender_name: payload.senderName?.trim() || deposit.sender_name,
-      })
-      .eq("id", deposit.id)
-      .eq("status", "pending");
+  if (deposit.status === "confirmed") {
+    await upsertSmsReceipt(payload, method, transactionId);
+    await markReceiptMatched(transactionId, deposit.id);
+    return {
+      ok: true,
+      action: "already_confirmed",
+      depositId: deposit.id,
+      reference: deposit.reference,
+    };
   }
 
+  if (deposit.status !== "pending") {
+    return { ok: false, error: "Deposit cannot be matched", code: "failed" };
+  }
+
+  const depositTxn = normalizeTransactionId(deposit.transaction_id);
+  if (depositTxn && !transactionIdsMatch(depositTxn, transactionId, method)) {
+    return {
+      ok: false,
+      error: "SMS TID does not match the TID already on this deposit",
+      code: "ambiguous",
+    };
+  }
+
+  await supabase
+    .from("wallet_deposits")
+    .update({
+      amount,
+      transaction_id: transactionId,
+      sender_phone: payload.senderPhone?.trim() || deposit.sender_phone,
+      sender_name: payload.senderName?.trim() || deposit.sender_name,
+    })
+    .eq("id", deposit.id)
+    .eq("status", "pending");
+
   await attachGatewayMetadata(deposit.id, payload, "MATCHED");
+  await upsertSmsReceipt(payload, method, transactionId);
+  await markReceiptMatched(transactionId, deposit.id);
 
   const autoConfirm = runtimeEnv("MOMO_SMS_AUTO_CONFIRM") !== "false";
   if (!autoConfirm) {
@@ -350,7 +659,6 @@ export async function processMomoSmsWebhook(
     };
   }
 
-  // Guard: another webhook/request may have confirmed while we were matching.
   const { data: latest } = await supabase
     .from("wallet_deposits")
     .select("status, reference")
@@ -372,7 +680,6 @@ export async function processMomoSmsWebhook(
   );
 
   if (!result.ok) {
-    // Race: confirm_wallet_deposit may report already processed.
     if (/already/i.test(result.error ?? "")) {
       return {
         ok: true,
@@ -400,4 +707,120 @@ export async function processMomoSmsWebhook(
     reference: deposit.reference,
     balance: result.balance,
   };
+}
+
+export async function processMomoSmsWebhook(
+  payload: MomoSmsWebhookPayload
+): Promise<MomoWebhookResult> {
+  const transactionId = normalizeTransactionId(payload.transactionId);
+  const amount = Number(payload.amount);
+
+  if (!transactionId) {
+    return { ok: false, error: "transactionId is required", code: "invalid_payload" };
+  }
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return { ok: false, error: "amount must be a positive number", code: "invalid_payload" };
+  }
+
+  const method = payload.method ?? mapSmsSenderToMethod(payload.sender);
+  if (!method) {
+    return {
+      ok: false,
+      error: "Could not determine payment method — pass method or a known sender id",
+      code: "invalid_payload",
+    };
+  }
+
+  // Idempotent: receipt already linked to a confirmed deposit (prevents double credit on app retry).
+  const existingReceipt = await getSmsReceiptByTransactionId(transactionId);
+  if (existingReceipt?.matched_deposit_id) {
+    const supabase = createServiceClient();
+    const { data: linked } = supabase
+      ? await supabase
+          .from("wallet_deposits")
+          .select("id, status, reference")
+          .eq("id", existingReceipt.matched_deposit_id)
+          .maybeSingle()
+      : { data: null };
+
+    if (linked?.status === "confirmed") {
+      return {
+        ok: true,
+        action: "already_confirmed",
+        depositId: linked.id,
+        reference: linked.reference,
+      };
+    }
+  }
+
+  const existingByTxn = await findDepositByTransactionId(transactionId, method);
+  if (existingByTxn?.status === "confirmed") {
+    await upsertSmsReceipt(payload, method, transactionId);
+    await markReceiptMatched(transactionId, existingByTxn.id);
+    return {
+      ok: true,
+      action: "already_confirmed",
+      depositId: existingByTxn.id,
+      reference: existingByTxn.reference,
+    };
+  }
+
+  let deposit = existingByTxn?.status === "pending" ? existingByTxn : null;
+
+  if (!deposit) {
+    deposit = await findPendingDepositByProof(method, transactionId);
+  }
+
+  if (deposit) {
+    return confirmPendingDepositWithSms(deposit, payload, method, transactionId, amount);
+  }
+
+  const candidates = await findPendingDepositsForMatch(method, amount);
+  const scored = candidates
+    .map((candidate) => ({
+      candidate,
+      score: scoreDepositMatch(candidate, payload, method),
+    }))
+    .filter((entry) => entry.score >= MIN_AUTO_MATCH_SCORE)
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return (
+        new Date(b.candidate.created_at).getTime() -
+        new Date(a.candidate.created_at).getTime()
+      );
+    });
+
+  if (scored.length === 0) {
+    const stored = await upsertSmsReceipt(payload, method, transactionId);
+    if (!stored.ok) {
+      return { ok: false, error: stored.error, code: "failed", retryable: true };
+    }
+    return {
+      ok: true,
+      action: "stored",
+      transactionId,
+      message: "SMS receipt stored — will confirm when customer submits this TID",
+    };
+  }
+
+  if (scored.length > 1 && scored[0].score === scored[1].score) {
+    const t0 = new Date(scored[0].candidate.created_at).getTime();
+    const t1 = new Date(scored[1].candidate.created_at).getTime();
+    if (Math.abs(t0 - t1) < 2 * 60 * 1000) {
+      await upsertSmsReceipt(payload, method, transactionId);
+      return {
+        ok: false,
+        error: "Multiple pending deposits match — admin must confirm manually",
+        code: "ambiguous",
+      };
+    }
+  }
+
+  return confirmPendingDepositWithSms(
+    scored[0].candidate,
+    payload,
+    method,
+    transactionId,
+    amount
+  );
 }
