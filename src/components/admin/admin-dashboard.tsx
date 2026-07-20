@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   Bell,
   CreditCard,
+  Download,
   ExternalLink,
   Layers,
   MessageCircle,
@@ -15,6 +16,7 @@ import {
 import { AdminQuickAction } from "@/components/admin/admin-quick-action";
 import { AdminPendingDepositsPanel } from "@/components/admin/admin-pending-deposits-panel";
 import { StatCard } from "@/components/admin/stat-card";
+import { getSmsGatewayApkDownloadUrl } from "@/lib/momo-sms-gateway";
 import type { CustomerSignupStats } from "@/lib/data";
 import type { WalletDeposit } from "@/types/database";
 
@@ -40,6 +42,8 @@ export function AdminDashboard({
   attention,
   readyDeposits,
 }: AdminDashboardProps) {
+  const smsGatewayApkUrl = getSmsGatewayApkDownloadUrl();
+
   return (
     <div className="space-y-8">
       <section>
@@ -201,6 +205,23 @@ export function AdminDashboard({
             icon={ExternalLink}
             accent="amber"
             external
+          />
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-lg font-semibold text-white mb-4">Merchant tools</h2>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <AdminQuickAction
+            href="/admin/downloads"
+            title="SMS Forwarder app"
+            description={
+              smsGatewayApkUrl
+                ? "Download the Android APK for the merchant deposit phone"
+                : "Download page — set MOMO_SMS_GATEWAY_APK_URL in Azure to enable the link"
+            }
+            icon={smsGatewayApkUrl ? Download : Smartphone}
+            accent="emerald"
           />
         </div>
       </section>

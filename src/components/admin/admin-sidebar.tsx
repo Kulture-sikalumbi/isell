@@ -16,6 +16,7 @@ import {
   X,
   MoreHorizontal,
   ArrowDownToLine,
+  Download,
 } from "lucide-react";
 import { AdminHeader } from "@/components/admin/admin-header";
 import { AdminNavBadge, useAdminAttentionCounts } from "@/components/admin/admin-nav-badges";
@@ -61,7 +62,8 @@ const sections: NavSection[] = [
       { href: "/admin/users", label: "Customers", icon: Users, badgeKey: null },
       { href: "/admin/ledger", label: "Accounting", icon: CreditCard, badgeKey: null },
       { href: "/admin/credits", label: "Credits", icon: Package, badgeKey: null },
-        { href: "/admin/settings", label: "Settings", icon: Settings, badgeKey: null },
+      { href: "/admin/downloads", label: "Downloads", icon: Download, badgeKey: null },
+      { href: "/admin/settings", label: "Settings", icon: Settings, badgeKey: null },
     ],
   },
 ];
