@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import { CheckCircle2, Copy, ChevronRight, Loader2, Smartphone, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MomoTidHelpLink, MomoTidHelpModal } from "@/components/wallet/momo-tid-help-modal";
 import { Badge } from "@/components/ui/badge";
 import { PaymentMethodLogo } from "@/components/payments/payment-method-logo";
 import { AirtelMoneyIcon, MtnMoMoIcon } from "@/components/payments/payment-method-icons";
@@ -297,12 +298,36 @@ export function DepositForm({ merchants, currency, savedPaymentMethods = [] }: D
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [paymentReminder, setPaymentReminder] = useState(false);
+  const [showTidHelp, setShowTidHelp] = useState(false);
+  const [tidHelpMethod, setTidHelpMethod] = useState<"mtn" | "airtel" | null>(null);
+  const [tidHelpSeen, setTidHelpSeen] = useState<{ mtn: boolean; airtel: boolean }>({
+    mtn: false,
+    airtel: false,
+  });
 
   const parsedAmount = Number(amount);
   const hasAmount = Number.isFinite(parsedAmount) && parsedAmount >= 1;
   const merchantNumber = method ? merchantFor(method, merchants) : "";
   const methodMeta = methods.find((m) => m.id === method);
   const isMoMoMethod = method === "mtn" || method === "airtel";
+
+  function openTidHelp(selected: "mtn" | "airtel") {
+    setTidHelpMethod(selected);
+    setShowTidHelp(true);
+  }
+
+  function closeTidHelp() {
+    if (tidHelpMethod) {
+      setTidHelpSeen((prev) => ({ ...prev, [tidHelpMethod]: true }));
+    }
+    setShowTidHelp(false);
+  }
+
+  function maybeShowTidHelp(selected: "mtn" | "airtel") {
+    if (!tidHelpSeen[selected]) {
+      openTidHelp(selected);
+    }
+  }
 
   useEffect(() => {
     if (method && !depositMethodsForCurrency(currency).includes(method)) {
@@ -420,6 +445,9 @@ export function DepositForm({ merchants, currency, savedPaymentMethods = [] }: D
     setPaymentConfirmed(false);
     setShowConfirmModal(false);
     setPaymentReminder(false);
+    setShowTidHelp(false);
+    setTidHelpMethod(null);
+    setTidHelpSeen({ mtn: false, airtel: false });
     setError("");
   }
 
@@ -458,8 +486,15 @@ export function DepositForm({ merchants, currency, savedPaymentMethods = [] }: D
               setPaymentConfirmed(true);
               setPaymentReminder(false);
               setError("");
+              if (method === "mtn" || method === "airtel") {
+                maybeShowTidHelp(method);
+              }
             }}
           />
+
+          {tidHelpMethod && (
+            <MomoTidHelpModal open={showTidHelp} method={tidHelpMethod} onClose={closeTidHelp} />
+          )}
 
           <div className="space-y-6">
             <div className="flex items-center gap-3">
@@ -593,11 +628,31 @@ export function DepositForm({ merchants, currency, savedPaymentMethods = [] }: D
                       confirmation SMS from <strong className="text-white">{label}</strong>
                     </InstructionStep>
                     <InstructionStep n={ussd ? 5 : 4}>
-                      Tap <strong className="text-white">Confirm deposit</strong> and enter only the{" "}
+                      Tap <strong className="text-white">Confirm deposit</strong> and enter the{" "}
                       <strong className="text-white">code from your SMS</strong>
-                      {method === "airtel"
-                        ? " (last part, e.g. L21552)"
-                        : " (full 10-digit Financial Transaction ID)"}
+                      {method === "airtel" ? (
+                        <>
+                          {" "}
+                          — the <strong className="text-white">last 6 characters</strong> of the
+                          transaction ID (e.g. N80400).{" "}
+                          <MomoTidHelpLink
+                            method="airtel"
+                            onOpen={() => openTidHelp("airtel")}
+                            className="inline-flex items-center gap-1 text-cyan-400 hover:text-cyan-300"
+                          />
+                        </>
+                      ) : (
+                        <>
+                          {" "}
+                          — all <strong className="text-white">10 digits</strong> of the Financial
+                          Transaction ID.{" "}
+                          <MomoTidHelpLink
+                            method="mtn"
+                            onOpen={() => openTidHelp("mtn")}
+                            className="inline-flex items-center gap-1 text-cyan-400 hover:text-cyan-300"
+                          />
+                        </>
+                      )}
                     </InstructionStep>
                   </>
                 )}
@@ -631,6 +686,10 @@ export function DepositForm({ merchants, currency, savedPaymentMethods = [] }: D
 
     return (
       <form onSubmit={handleSubmitDeposit} className="space-y-6">
+        {tidHelpMethod && (
+          <MomoTidHelpModal open={showTidHelp} method={tidHelpMethod} onClose={closeTidHelp} />
+        )}
+
         <div className="flex items-center gap-3">
           <MethodIcon icon={methodMeta?.icon} />
           <div>
@@ -653,10 +712,18 @@ export function DepositForm({ merchants, currency, savedPaymentMethods = [] }: D
             <p className="font-semibold text-white text-sm">Payment proof</p>
             <p className="text-xs text-zinc-400 mt-1">
               {isMoMoMethod
-                ? "Only the short code from your MoMo SMS"
+                ? method === "airtel"
+                  ? "Enter the last 6 characters from your Airtel SMS (full ID also works)"
+                  : "Enter all 10 digits from your MTN MoMo SMS"
                 : "These must match the payment you just completed"}
             </p>
           </div>
+
+          {isMoMoMethod && (
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <MomoTidHelpLink method={method} onOpen={() => openTidHelp(method)} />
+            </div>
+          )}
 
           <Input
             variant="emphasized"
@@ -666,8 +733,8 @@ export function DepositForm({ merchants, currency, savedPaymentMethods = [] }: D
                 : method === "binance"
                   ? "Binance order / transaction ID"
                   : method === "mtn"
-                    ? "Financial Transaction ID (10 digits from SMS)"
-                    : "Short TID code (last part from SMS)"
+                    ? "Financial Transaction ID (10 digits)"
+                    : "Transaction ID code (last 6 characters)"
             }
             placeholder={
               method === "usdt_trc20"
@@ -676,17 +743,22 @@ export function DepositForm({ merchants, currency, savedPaymentMethods = [] }: D
                   ? "Paste the ID from your Binance Pay receipt"
                   : method === "mtn"
                     ? "e.g. 9297021577"
-                    : "e.g. L21552"
+                    : "e.g. N80400"
             }
             value={transactionId}
             onChange={(e) => setTransactionId(e.target.value)}
+            onFocus={() => {
+              if (method === "mtn" || method === "airtel") {
+                maybeShowTidHelp(method);
+              }
+            }}
             required
             autoFocus
             hint={
               method === "airtel"
-                ? "From TID like PP260719.1058.L21552 — enter only L21552"
+                ? "From a line like 241014.2029.N80400 — type N80400, or paste the full ID"
                 : method === "mtn"
-                  ? "Paste all 10 digits from your MTN MoMo SMS"
+                  ? "Paste all 10 digits from Financial Transaction Id in your MTN SMS"
                   : "Required — only available after a successful payment"
             }
           />

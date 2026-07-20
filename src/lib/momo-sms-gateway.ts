@@ -60,6 +60,48 @@ export function mapSmsSenderToMethod(sender?: string): MomoGatewayMethod | null 
   return null;
 }
 
+function normalizeSenderKey(value: string): string {
+  return value.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function looksLikePersonalPhone(value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  const digits = trimmed.replace(/\D/g, "");
+  if (digits.length >= 9) return true;
+  if (/^\+?\d{7,}$/.test(trimmed.replace(/[\s()-]/g, ""))) return true;
+  return false;
+}
+
+function classifyTrustedMoMoSender(sender?: string | null): MomoGatewayMethod | null {
+  if (!sender?.trim()) return null;
+  if (looksLikePersonalPhone(sender)) return null;
+
+  const key = normalizeSenderKey(sender);
+  if (!key) return null;
+
+  if (
+    key === "momo" ||
+    key.includes("mtnmomo") ||
+    key.includes("momomtn") ||
+    key.includes("mtnmobilemoney") ||
+    /^momo.*mtn$/.test(key) ||
+    /^mtn.*momo$/.test(key)
+  ) {
+    return "mtn";
+  }
+
+  // Real ZM Airtel Money inbox label: "AirtelMoney".
+  if (key.includes("airtelmoney")) return "airtel";
+
+  return null;
+}
+
+/** Reject forwarded / spoofed SMS that did not arrive from official MoMo short codes. */
+export function isTrustedMoMoGatewaySender(sender?: string | null): boolean {
+  return classifyTrustedMoMoSender(sender) !== null;
+}
+
 export function normalizeZambiaPhone(value?: string | null): string {
   if (!value) return "";
   const digits = value.replace(/\D/g, "");
@@ -557,7 +599,7 @@ export async function resolveSmsReceiptForProof(input: {
       ok: false,
       code: "not_found",
       error:
-        "No matching MoMo payment found yet. Make sure you paid this merchant, then enter the code from your SMS (Airtel: last part e.g. L21552 · MTN: full 10-digit Financial Transaction ID).",
+        "No matching MoMo payment found yet. Make sure you paid this merchant, then enter the code from your SMS (Airtel: last 6 characters e.g. N80400 · MTN: full 10-digit Financial Transaction ID).",
     };
   }
 
@@ -740,6 +782,23 @@ export async function processMomoSmsWebhook(
     return {
       ok: false,
       error: "Could not determine payment method — pass method or a known sender id",
+      code: "invalid_payload",
+    };
+  }
+
+  if (!isTrustedMoMoGatewaySender(payload.sender)) {
+    return {
+      ok: false,
+      error:
+        "SMS sender is not a trusted MTN MoMo or Airtel Money channel (personal numbers and forwards are rejected)",
+      code: "invalid_payload",
+    };
+  }
+
+  if (classifyTrustedMoMoSender(payload.sender) !== method) {
+    return {
+      ok: false,
+      error: "SMS sender does not match the claimed payment method",
       code: "invalid_payload",
     };
   }
