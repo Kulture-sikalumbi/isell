@@ -40,6 +40,19 @@ export type MomoWebhookResult =
 
 const PROVIDER = "momo_sms_gateway";
 
+/** Admin-only APK download link (e.g. GitHub release asset URL). Set in Azure App Settings. */
+export function getSmsGatewayApkDownloadUrl(): string | undefined {
+  const url = runtimeEnv("MOMO_SMS_GATEWAY_APK_URL");
+  if (!url) return undefined;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return undefined;
+    return parsed.toString();
+  } catch {
+    return undefined;
+  }
+}
+
 export function isMomoSmsGatewayAuthorized(request: Request): boolean {
   const token = runtimeEnv("MOMO_SMS_GATEWAY_TOKEN");
   if (!token) return false;

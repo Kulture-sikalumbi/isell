@@ -1,6 +1,7 @@
 import { AdminShell } from "@/components/admin/admin-sidebar";
 import { CurrencyRateForm } from "@/components/admin/currency-rate-form";
 import { MerchantAccountsForm } from "@/components/admin/merchant-accounts-form";
+import { SmsGatewayDownloadPanel } from "@/components/admin/sms-gateway-download-panel";
 import { getCurrencyRateSettings, getMerchantDepositSettings } from "@/lib/site-settings";
 
 export const metadata = { title: "Settings — Admin" };
@@ -13,8 +14,10 @@ export default async function AdminSettingsPage() {
   const rate = settings.usdToZmwRate;
 
   return (
-    <AdminShell title="Settings" description="Exchange rate and customer deposit accounts">
+    <AdminShell title="Settings" description="Exchange rate, deposit accounts, and merchant tools">
       <div className="max-w-2xl space-y-6">
+        <SmsGatewayDownloadPanel />
+
         <section className="glass rounded-2xl p-6 border border-white/10">
           <h2 className="text-lg font-semibold text-white mb-2">Customer deposit accounts</h2>
           <p className="text-sm text-zinc-500 mb-4">
