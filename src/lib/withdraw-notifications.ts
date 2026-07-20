@@ -1,5 +1,6 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import { sendEmailToAdmins } from "@/lib/email";
+import { shouldSendAdminAlertEmails } from "@/lib/email-policy";
 import { formatSiteCurrency } from "@/lib/currency";
 import { getServerEmailEnv } from "@/lib/runtime-env";
 import { depositMethodLabel } from "@/lib/deposit-methods";
@@ -39,6 +40,8 @@ export async function notifyAdminNewWithdrawal(input: {
   });
 
   const appUrl = getServerEmailEnv().appUrl || "http://localhost:3000";
+  if (!shouldSendAdminAlertEmails()) return;
+
   await sendEmailToAdmins({
     subject: title,
     html: `

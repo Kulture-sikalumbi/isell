@@ -5,6 +5,12 @@ import {
   sendOrderProcessingEmail,
   sendOrderRejectedEmail,
 } from "@/lib/email";
+import {
+  shouldSendCustomerActivationReadyEmail,
+  shouldSendCustomerDepositConfirmedEmail,
+  shouldSendCustomerOrderProcessingEmail,
+  shouldSendCustomerOrderRejectedEmail,
+} from "@/lib/email-policy";
 import { formatSiteCurrency } from "@/lib/currency";
 import { getServerEmailEnv } from "@/lib/runtime-env";
 import { createServiceClient } from "@/lib/supabase/server";
@@ -103,7 +109,7 @@ export async function notifyActivationReady(input: {
   });
 
   const emailContext = await getCustomerEmailContext(input.userId);
-  if (!emailContext) return;
+  if (!emailContext || !shouldSendCustomerActivationReadyEmail()) return;
 
   await sendActivationReadyEmail({
     to: emailContext.email,
@@ -131,7 +137,7 @@ export async function notifyDepositConfirmed(input: {
   });
 
   const emailContext = await getCustomerEmailContext(input.userId);
-  if (!emailContext) return;
+  if (!emailContext || !shouldSendCustomerDepositConfirmedEmail()) return;
 
   await sendDepositConfirmedEmail({
     to: emailContext.email,
@@ -163,7 +169,7 @@ export async function notifyOrderRefunded(input: {
   });
 
   const emailContext = await getCustomerEmailContext(input.userId);
-  if (!emailContext) return;
+  if (!emailContext || !shouldSendCustomerOrderRejectedEmail()) return;
 
   await sendOrderRejectedEmail({
     to: emailContext.email,
@@ -205,12 +211,13 @@ export async function notifyOrderProcessing(input: {
     userId: input.userId,
     type: "order_processing",
     title: `Order received: ${input.toolName}`,
-    message: "Payment received. We're processing your activation — we'll email your key and add it to Activations when ready.",
+    message:
+      "Payment received. We're processing your activation — your key will appear in Activations when ready.",
     link: "/dashboard?tab=orders",
   });
 
   const emailContext = await getCustomerEmailContext(input.userId);
-  if (!emailContext) return;
+  if (!emailContext || !shouldSendCustomerOrderProcessingEmail()) return;
 
   const amountLabel =
     input.amount != null && input.currency

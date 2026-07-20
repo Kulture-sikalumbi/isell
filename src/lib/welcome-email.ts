@@ -1,4 +1,5 @@
 import { sendWelcomeEmail } from "@/lib/email";
+import { shouldSendCustomerWelcomeEmail } from "@/lib/email-policy";
 import { createServiceClient } from "@/lib/supabase/server";
 import { notifyUser } from "@/lib/user-notifications";
 import { getServerEmailEnv } from "@/lib/runtime-env";
@@ -41,7 +42,7 @@ async function loadWelcomeProfile(userId: string, hint?: WelcomeAuthHint) {
   };
 }
 
-/** Send welcome email + in-app tip once per customer account. Skips admins. */
+/** Send welcome in-app tip once per customer. Email only if EMAIL_SEND_WELCOME=true. Skips admins. */
 export async function sendWelcomeEmailIfNeeded(
   userId: string,
   hint?: WelcomeAuthHint
@@ -64,15 +65,17 @@ export async function sendWelcomeEmailIfNeeded(
   const customerName = profile.full_name?.trim() || hint?.fullName?.trim() || null;
   const email = profile.email.trim();
 
-  const sent = await sendWelcomeEmail({
-    to: email,
-    customerName,
-    appUrl,
-  });
+  if (shouldSendCustomerWelcomeEmail()) {
+    const sent = await sendWelcomeEmail({
+      to: email,
+      customerName,
+      appUrl,
+    });
 
-  if (!sent) {
-    console.error("[welcome-email] Resend failed for", email);
-    return false;
+    if (!sent) {
+      console.error("[welcome-email] Resend failed for", email);
+      return false;
+    }
   }
 
   const { data: claimed } = await supabase

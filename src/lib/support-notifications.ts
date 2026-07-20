@@ -1,5 +1,6 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import { sendEmailToAdmins } from "@/lib/email";
+import { shouldSendAdminAlertEmails } from "@/lib/email-policy";
 import { getServerEmailEnv } from "@/lib/runtime-env";
 
 export async function notifyAdminSupportMessage(input: {
@@ -22,6 +23,8 @@ export async function notifyAdminSupportMessage(input: {
   });
 
   const appUrl = getServerEmailEnv().appUrl || "http://localhost:3000";
+  if (!shouldSendAdminAlertEmails()) return;
+
   await sendEmailToAdmins({
     subject: title,
     html: `

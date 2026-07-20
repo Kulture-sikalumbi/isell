@@ -1,6 +1,7 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import { alertAdminNewOrder } from "@/lib/admin-alerts";
 import { sendAdminOrderEmail } from "@/lib/email";
+import { shouldSendAdminAlertEmails } from "@/lib/email-policy";
 import { formatSiteCurrency, resolveDisplayCurrency } from "@/lib/currency";
 import { formatOrderNumber } from "@/lib/order-number";
 import { getServerEmailEnv } from "@/lib/runtime-env";
@@ -26,14 +27,7 @@ export async function notifyAdminNewOrder(payment: Payment & { tool?: Tool }) {
 
   const appUrl = getServerEmailEnv().appUrl || "http://localhost:3000";
 
-  await Promise.all([
-    sendAdminOrderEmail({
-      toolName: tool.name,
-      hardwareId: payment.hardware_id,
-      amount: amountLabel,
-      reference: orderRef,
-      appUrl,
-    }),
+  const sideEffects: Promise<unknown>[] = [
     alertAdminNewOrder({
       toolName: tool.name,
       hardwareId: payment.hardware_id,
@@ -42,5 +36,19 @@ export async function notifyAdminNewOrder(payment: Payment & { tool?: Tool }) {
       reference: orderRef,
       appUrl,
     }),
-  ]);
+  ];
+
+  if (shouldSendAdminAlertEmails()) {
+    sideEffects.push(
+      sendAdminOrderEmail({
+        toolName: tool.name,
+        hardwareId: payment.hardware_id,
+        amount: amountLabel,
+        reference: orderRef,
+        appUrl,
+      })
+    );
+  }
+
+  await Promise.all(sideEffects);
 }

@@ -2,6 +2,11 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { resolvePostLoginPath, sanitizeNextPath } from "@/lib/post-login";
 import { sendWelcomeEmailIfNeeded } from "@/lib/welcome-email";
+import {
+  DEFAULT_DISPLAY_CURRENCY,
+  displayCurrencyCookieOptions,
+  ensureDefaultDisplayCurrencyForUser,
+} from "@/lib/display-currency-preference";
 
 function profileIsAdmin(role: string | null | undefined) {
   return role === "admin";
@@ -89,10 +94,31 @@ export async function GET(request: NextRequest) {
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role")
+      .select("role, display_currency")
       .eq("id", user.id)
       .single();
     destination = resolvePostLoginPath(safeNext, profileIsAdmin(profile?.role));
+
+    if (profile?.role !== "admin") {
+      const currency =
+        (await ensureDefaultDisplayCurrencyForUser(user.id)) ?? DEFAULT_DISPLAY_CURRENCY;
+      const cookie = displayCurrencyCookieOptions(currency);
+      response.cookies.set(cookie.name, cookie.value, {
+        path: cookie.path,
+        sameSite: cookie.sameSite,
+        maxAge: cookie.maxAge,
+      });
+      response.cookies.set("site_currency", currency, {
+        path: "/",
+        sameSite: "lax",
+        maxAge: cookie.maxAge,
+      });
+      response.cookies.set("site_country", currency === "ZMW" ? "ZM" : "US", {
+        path: "/",
+        sameSite: "lax",
+        maxAge: cookie.maxAge,
+      });
+    }
   }
 
   if (destination !== safeNext) {

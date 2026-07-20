@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentProfile, getCurrentUser, isAdmin } from "@/lib/auth";
+import { ensureDefaultDisplayCurrencyForUser } from "@/lib/display-currency-preference";
 import { resolvePostLoginPath, sanitizeNextPath } from "@/lib/post-login";
 import { sendWelcomeEmailIfNeeded } from "@/lib/welcome-email";
 
@@ -21,6 +22,10 @@ export async function GET(request: Request) {
   }
 
   const profile = await getCurrentProfile();
+  if (profile?.role !== "admin") {
+    await ensureDefaultDisplayCurrencyForUser(user.id);
+  }
+
   const { searchParams } = new URL(request.url);
   const next = sanitizeNextPath(searchParams.get("next"));
 

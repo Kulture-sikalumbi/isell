@@ -4,6 +4,8 @@ import { createServiceClient } from "@/lib/supabase/server";
 
 export type DisplayCurrency = "ZMW" | "USD";
 
+export const DEFAULT_DISPLAY_CURRENCY: DisplayCurrency = "USD";
+
 export const DISPLAY_CURRENCY_COOKIE = "display_currency";
 
 export function normalizeDisplayCurrency(value?: string | null): DisplayCurrency | null {
@@ -69,6 +71,28 @@ export async function saveDisplayCurrencyPreference(
   }
 
   return { ok: true };
+}
+
+/** First-time customers land in USD — they can switch to ZMW from the menu later. */
+export async function ensureDefaultDisplayCurrencyForUser(
+  userId: string
+): Promise<DisplayCurrency | null> {
+  const supabase = createServiceClient();
+  if (!supabase) return null;
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, display_currency")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (!profile || profile.role === "admin") return null;
+
+  const existing = normalizeDisplayCurrency(profile.display_currency);
+  if (existing) return existing;
+
+  const result = await saveDisplayCurrencyPreference(userId, DEFAULT_DISPLAY_CURRENCY);
+  return result.ok ? DEFAULT_DISPLAY_CURRENCY : null;
 }
 
 export function displayCurrencyCookieOptions(currency: DisplayCurrency) {

@@ -6,7 +6,10 @@ import { CustomerDepositPromptGate } from "@/components/wallet/customer-deposit-
 import { WelcomeEmailTrigger } from "@/components/auth/welcome-email-trigger";
 import { CurrencyPreferenceGate } from "@/components/currency/currency-preference-gate";
 import { getCurrentProfile, getCurrentUser } from "@/lib/auth";
-import { normalizeDisplayCurrency } from "@/lib/display-currency-preference";
+import {
+  ensureDefaultDisplayCurrencyForUser,
+  normalizeDisplayCurrency,
+} from "@/lib/display-currency-preference";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +19,11 @@ export default async function StoreLayout({
   children: React.ReactNode;
 }) {
   const [user, profile] = await Promise.all([getCurrentUser(), getCurrentProfile()]);
-  const displayCurrency = normalizeDisplayCurrency(profile?.display_currency);
+  let displayCurrency = normalizeDisplayCurrency(profile?.display_currency);
+
+  if (user && profile?.role !== "admin" && !displayCurrency) {
+    displayCurrency = await ensureDefaultDisplayCurrencyForUser(user.id);
+  }
 
   return (
     <>
