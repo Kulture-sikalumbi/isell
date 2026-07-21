@@ -24,7 +24,10 @@ export function shouldSendCustomerOrderProcessingEmail(): boolean {
   return envFlag("EMAIL_SEND_ORDER_PROCESSING", false);
 }
 
-/** Final wallet credit — keep on by default. */
+/**
+ * Final wallet credit for crypto / manual deposits — keep on by default.
+ * MTN / Airtel never send deposit emails (see notifyDepositConfirmed).
+ */
 export function shouldSendCustomerDepositConfirmedEmail(): boolean {
   return envFlag("EMAIL_SEND_DEPOSIT_CONFIRMED", true);
 }

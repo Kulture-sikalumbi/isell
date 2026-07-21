@@ -14,6 +14,7 @@ import {
 import { formatSiteCurrency } from "@/lib/currency";
 import { getServerEmailEnv } from "@/lib/runtime-env";
 import { createServiceClient } from "@/lib/supabase/server";
+import type { DepositMethod } from "@/types/database";
 
 async function getCustomerEmailContext(userId: string) {
   const email = await getUserEmail(userId);
@@ -127,6 +128,8 @@ export async function notifyDepositConfirmed(input: {
   userId: string;
   amount: number;
   currency: string;
+  /** Skip Resend for MTN/Airtel — in-app only (saves monthly email credits). */
+  method?: DepositMethod | string | null;
 }) {
   await notifyUser({
     userId: input.userId,
@@ -135,6 +138,9 @@ export async function notifyDepositConfirmed(input: {
     message: `${formatSiteCurrency(input.amount, input.currency)} was added to your wallet. You can buy activations now.`,
     link: "/dashboard?tab=wallet",
   });
+
+  // Mobile money: never send deposit-confirmed emails (admin or customer).
+  if (input.method === "mtn" || input.method === "airtel") return;
 
   const emailContext = await getCustomerEmailContext(input.userId);
   if (!emailContext || !shouldSendCustomerDepositConfirmedEmail()) return;

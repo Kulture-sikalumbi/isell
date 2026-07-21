@@ -3,7 +3,7 @@ import { sendEmailToAdmins } from "@/lib/email";
 import { shouldSendAdminAlertEmails } from "@/lib/email-policy";
 import { formatSiteCurrency } from "@/lib/currency";
 import { getServerEmailEnv } from "@/lib/runtime-env";
-import { DEPOSIT_METHOD_LABELS } from "@/lib/deposit-methods";
+import { DEPOSIT_METHOD_LABELS, isMobileMoneyMethod } from "@/lib/deposit-methods";
 import type { DepositMethod } from "@/types/database";
 
 const methodLabels = DEPOSIT_METHOD_LABELS;
@@ -20,6 +20,10 @@ export async function notifyAdminNewDeposit(input: {
   senderPhone?: string | null;
   senderName?: string | null;
 }) {
+  // MTN / Airtel: no admin inbox or Resend emails — SMS auto-confirm handles
+  // matches; unmatched TIDs stay pending in the deposits table without alerts.
+  if (isMobileMoneyMethod(input.method)) return;
+
   const supabase = createServiceClient();
   if (!supabase) return;
 

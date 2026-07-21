@@ -281,14 +281,15 @@ export async function createDepositRequest(input: {
     } else if (resolved.code === "ambiguous") {
       return { error: resolved.error };
     } else {
-      // SMS not in database yet — queue for admin unless user gave an amount hint.
+      // SMS not in database yet — keep pending for later match / manual review.
+      // No admin email or inbox alert for MoMo (see notifyAdminNewDeposit).
       if (!Number.isFinite(amount) || amount <= 0) {
         return {
           error:
             "No matching payment in our system yet. Enter how much you sent, or wait a moment after your MoMo SMS arrives and try again.",
         };
       }
-      // Keep customer proof + amount; admin can verify manually when SMS arrives later.
+      // Keep customer proof + amount; SMS may arrive later and auto-confirm.
     }
   } else if (!Number.isFinite(amount) || amount <= 0) {
     return { error: "Enter a valid amount" };
@@ -363,7 +364,7 @@ export async function confirmDeposit(depositId: string, adminNote?: string) {
 
   const { data: deposit } = await supabase
     .from("wallet_deposits")
-    .select("status, transaction_id, user_id, amount, currency")
+    .select("status, transaction_id, user_id, amount, currency, method")
     .eq("id", depositId)
     .single();
 
@@ -389,6 +390,7 @@ export async function confirmDeposit(depositId: string, adminNote?: string) {
       userId: deposit.user_id,
       amount: Number(deposit.amount),
       currency: deposit.currency,
+      method: deposit.method,
     });
   }
   return result;
@@ -736,7 +738,7 @@ export async function confirmDepositFromProvider(depositId: string, providerNote
 
   const { data } = await supabase
     .from("wallet_deposits")
-    .select("status, user_id, amount, currency")
+    .select("status, user_id, amount, currency, method")
     .eq("id", depositId)
     .maybeSingle();
 
@@ -758,6 +760,7 @@ export async function confirmDepositFromProvider(depositId: string, providerNote
     userId: data.user_id,
     amount: Number(data.amount),
     currency: data.currency,
+    method: data.method,
   });
 
   return { ok: true, balance: typed.balance };
