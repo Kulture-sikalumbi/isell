@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/auth";
+import { getAdminDisplayCurrency } from "@/lib/display-currency-preference";
 import { recordMerchantWithdrawal } from "@/lib/ledger";
 
 export async function POST(request: Request) {
@@ -12,8 +13,9 @@ export async function POST(request: Request) {
   const amount = Number(body.amount);
   const description = (body.description as string)?.trim();
   const note = (body.note as string)?.trim();
+  const currency = await getAdminDisplayCurrency();
 
-  const result = await recordMerchantWithdrawal({ amount, description, note });
+  const result = await recordMerchantWithdrawal({ amount, description, note, currency });
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }

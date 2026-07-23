@@ -1,4 +1,5 @@
-import { getSiteCurrency } from "@/lib/currency";
+import { getUsdToZmwRate } from "@/lib/currency-rates";
+import { convertCurrency, getSiteCurrency, resolveDisplayCurrency } from "@/lib/currency";
 import { createServiceClient } from "@/lib/supabase/server";
 import type { LedgerEntry, Payment } from "@/types/database";
 
@@ -22,6 +23,15 @@ export interface MerchantAccountingSummary extends LedgerSummary {
   depositCount: number;
 }
 
+function toDisplayAmount(
+  amount: number,
+  fromCurrency: string | null | undefined,
+  displayCurrency: string,
+  rate: number | null
+): number {
+  return convertCurrency(amount, fromCurrency, displayCurrency, rate);
+}
+
 export async function recordPaymentLedger(payment: Payment) {
   const supabase = createServiceClient();
   if (!supabase || payment.status !== "completed") return;
@@ -43,25 +53,34 @@ export async function recordPaymentLedger(payment: Payment) {
   });
 }
 
-function sumLedgerTotals(entries: Pick<LedgerEntry, "entry_type" | "amount">[]) {
+function sumLedgerTotals(
+  entries: Pick<LedgerEntry, "entry_type" | "amount" | "currency">[],
+  displayCurrency: string,
+  rate: number | null
+) {
   let totalIn = 0;
   let totalOut = 0;
   for (const e of entries) {
-    const amt = Number(e.amount);
+    const amt = toDisplayAmount(Number(e.amount), e.currency, displayCurrency, rate);
     if (e.entry_type === "payment_in") totalIn += amt;
     else totalOut += amt;
   }
   return { totalIn, totalOut };
 }
 
-export async function getLedgerSummary(): Promise<LedgerSummary> {
+export async function getLedgerSummary(
+  displayCurrency?: string | null
+): Promise<LedgerSummary> {
+  const currency = resolveDisplayCurrency(displayCurrency ?? getSiteCurrency());
   const supabase = createServiceClient();
   if (!supabase) {
-    return { balance: 0, totalIn: 0, totalOut: 0, currency: getSiteCurrency(), entries: [] };
+    return { balance: 0, totalIn: 0, totalOut: 0, currency, entries: [] };
   }
 
+  const rate = await getUsdToZmwRate();
+
   const [{ data: allForTotals }, { data: recent }] = await Promise.all([
-    supabase.from("ledger_entries").select("entry_type, amount"),
+    supabase.from("ledger_entries").select("entry_type, amount, currency"),
     supabase
       .from("ledger_entries")
       .select("*")
@@ -69,21 +88,24 @@ export async function getLedgerSummary(): Promise<LedgerSummary> {
       .limit(100),
   ]);
 
-  const list = recent ?? [];
-  const { totalIn, totalOut } = sumLedgerTotals(allForTotals ?? []);
+  const list = (recent ?? []) as LedgerEntry[];
+  const { totalIn, totalOut } = sumLedgerTotals(allForTotals ?? [], currency, rate);
 
   return {
     balance: totalIn - totalOut,
     totalIn,
     totalOut,
-    currency: list[0]?.currency ?? getSiteCurrency(),
+    currency,
     entries: list,
   };
 }
 
-export async function getMerchantAccountingSummary(): Promise<MerchantAccountingSummary> {
+export async function getMerchantAccountingSummary(
+  displayCurrency?: string | null
+): Promise<MerchantAccountingSummary> {
+  const currency = resolveDisplayCurrency(displayCurrency ?? getSiteCurrency());
   const supabase = createServiceClient();
-  const base = await getLedgerSummary();
+  const base = await getLedgerSummary(currency);
 
   if (!supabase) {
     return {
@@ -98,11 +120,13 @@ export async function getMerchantAccountingSummary(): Promise<MerchantAccounting
     };
   }
 
+  const rate = await getUsdToZmwRate();
+
   const [walletsRes, paymentsRes, depositsRes, depositLedgerRes] = await Promise.all([
-    supabase.from("user_wallets").select("balance"),
+    supabase.from("user_wallets").select("balance, currency"),
     supabase
       .from("payments")
-      .select("amount, platform_fee")
+      .select("amount, platform_fee, currency")
       .eq("provider", "wallet")
       .eq("status", "completed"),
     supabase
@@ -111,28 +135,29 @@ export async function getMerchantAccountingSummary(): Promise<MerchantAccounting
       .eq("status", "confirmed"),
     supabase
       .from("ledger_entries")
-      .select("amount")
+      .select("amount, currency")
       .eq("entry_type", "payment_in")
       .not("deposit_id", "is", null),
   ]);
 
   const customerWalletLiability = (walletsRes.data ?? []).reduce(
-    (sum, w) => sum + Number(w.balance),
+    (sum, w) => sum + toDisplayAmount(Number(w.balance), w.currency, currency, rate),
     0
   );
 
   const walletPayments = paymentsRes.data ?? [];
   const platformFeesEarned = walletPayments.reduce(
-    (sum, p) => sum + Number(p.platform_fee ?? 0),
+    (sum, p) =>
+      sum + toDisplayAmount(Number(p.platform_fee ?? 0), p.currency, currency, rate),
     0
   );
   const walletOrderVolume = walletPayments.reduce(
-    (sum, p) => sum + Number(p.amount ?? 0),
+    (sum, p) => sum + toDisplayAmount(Number(p.amount ?? 0), p.currency, currency, rate),
     0
   );
 
   const depositsReceivedTotal = (depositLedgerRes.data ?? []).reduce(
-    (sum, e) => sum + Number(e.amount),
+    (sum, e) => sum + toDisplayAmount(Number(e.amount), e.currency, currency, rate),
     0
   );
 
@@ -152,6 +177,7 @@ export async function recordMerchantWithdrawal(input: {
   amount: number;
   description?: string;
   note?: string;
+  currency?: string;
 }) {
   const supabase = createServiceClient();
   if (!supabase) return { ok: false, error: "Database not configured" };
@@ -161,7 +187,7 @@ export async function recordMerchantWithdrawal(input: {
     return { ok: false, error: "Enter a valid amount" };
   }
 
-  const currency = getSiteCurrency();
+  const currency = resolveDisplayCurrency(input.currency ?? getSiteCurrency());
   const description =
     input.description?.trim() ||
     `Merchant withdrawal${input.note ? `: ${input.note}` : ""}`;
@@ -180,6 +206,7 @@ export async function recordMerchantWithdrawal(input: {
 export async function recordMerchantReconciliation(input: {
   actualMerchantBalance: number;
   note?: string;
+  currency?: string;
 }) {
   const supabase = createServiceClient();
   if (!supabase) return { ok: false, error: "Database not configured" };
@@ -189,7 +216,8 @@ export async function recordMerchantReconciliation(input: {
     return { ok: false, error: "Enter the balance shown on your merchant phone" };
   }
 
-  const summary = await getLedgerSummary();
+  const displayCurrency = resolveDisplayCurrency(input.currency ?? getSiteCurrency());
+  const summary = await getLedgerSummary(displayCurrency);
   const diff = actual - summary.balance;
 
   if (Math.abs(diff) < 0.01) {
@@ -220,6 +248,6 @@ export async function recordMerchantReconciliation(input: {
 
   if (error) return { ok: false, error: error.message };
 
-  const updated = await getLedgerSummary();
+  const updated = await getLedgerSummary(displayCurrency);
   return { ok: true, matched: false, diff, balance: updated.balance };
 }

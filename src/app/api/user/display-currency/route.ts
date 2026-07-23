@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentProfile, getCurrentUser } from "@/lib/auth";
 import {
   displayCurrencyCookieOptions,
-  ensureDefaultDisplayCurrencyForUser,
+  ensureAdminDisplayCurrency,
   normalizeDisplayCurrency,
   saveDisplayCurrencyPreference,
 } from "@/lib/display-currency-preference";
@@ -16,13 +16,13 @@ export async function GET() {
   const profile = await getCurrentProfile();
   let currency = normalizeDisplayCurrency(profile?.display_currency);
 
-  if (!currency && profile?.role !== "admin") {
-    currency = await ensureDefaultDisplayCurrencyForUser(user.id);
+  if (!currency && profile?.role === "admin") {
+    currency = await ensureAdminDisplayCurrency(user.id);
   }
 
   return NextResponse.json({
     currency,
-    needsSelection: false,
+    needsSelection: profile?.role !== "admin" && !currency,
   });
 }
 

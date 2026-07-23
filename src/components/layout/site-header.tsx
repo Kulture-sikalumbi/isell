@@ -6,7 +6,10 @@ import { getUnreadUserNotificationCount } from "@/lib/user-notifications";
 import { getAdminAttentionCounts, getWalletDisplaySnapshot } from "@/lib/wallet";
 import { BrandWordmark } from "@/components/brand/brand-wordmark";
 import { SiteNav, type SiteNavUser } from "@/components/layout/site-nav";
-import { normalizeDisplayCurrency } from "@/lib/display-currency-preference";
+import {
+  getAdminDisplayCurrency,
+  normalizeDisplayCurrency,
+} from "@/lib/display-currency-preference";
 
 export async function SiteHeader() {
   const user = await getCurrentUser();
@@ -32,8 +35,9 @@ export async function SiteHeader() {
     };
 
     if (isAdmin) {
+      const adminCurrency = await getAdminDisplayCurrency();
       const [accounting, attention] = await Promise.all([
-        getMerchantAccountingSummary(),
+        getMerchantAccountingSummary(adminCurrency),
         getAdminAttentionCounts(),
       ]);
       navUser = {
@@ -41,6 +45,7 @@ export async function SiteHeader() {
         merchantBalance: accounting.processedSalesVolume,
         platformFees: accounting.platformFeesEarned,
         merchantCurrency: accounting.currency,
+        displayCurrency: adminCurrency,
         adminAttention: attention.totalAttention,
         pendingDeposits: attention.pendingDeposits,
         awaitingOrders: attention.awaitingOrders,

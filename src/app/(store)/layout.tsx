@@ -7,7 +7,7 @@ import { WelcomeEmailTrigger } from "@/components/auth/welcome-email-trigger";
 import { CurrencyPreferenceGate } from "@/components/currency/currency-preference-gate";
 import { getCurrentProfile, getCurrentUser } from "@/lib/auth";
 import {
-  ensureDefaultDisplayCurrencyForUser,
+  ensureAdminDisplayCurrency,
   normalizeDisplayCurrency,
 } from "@/lib/display-currency-preference";
 
@@ -21,8 +21,8 @@ export default async function StoreLayout({
   const [user, profile] = await Promise.all([getCurrentUser(), getCurrentProfile()]);
   let displayCurrency = normalizeDisplayCurrency(profile?.display_currency);
 
-  if (user && profile?.role !== "admin" && !displayCurrency) {
-    displayCurrency = await ensureDefaultDisplayCurrencyForUser(user.id);
+  if (user && profile?.role === "admin" && !displayCurrency) {
+    displayCurrency = await ensureAdminDisplayCurrency(user.id);
   }
 
   return (

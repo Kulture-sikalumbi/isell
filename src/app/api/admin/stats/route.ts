@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/auth";
 import { getCustomerSignupStats } from "@/lib/data";
+import { getAdminDisplayCurrency } from "@/lib/display-currency-preference";
 import { getMerchantAccountingSummary } from "@/lib/ledger";
 import { getAdminAttentionCounts } from "@/lib/wallet";
 
@@ -10,9 +11,11 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
+  const displayCurrency = await getAdminDisplayCurrency();
+
   const [counts, accounting, signups] = await Promise.all([
     getAdminAttentionCounts(),
-    getMerchantAccountingSummary(),
+    getMerchantAccountingSummary(displayCurrency),
     getCustomerSignupStats(),
   ]);
 

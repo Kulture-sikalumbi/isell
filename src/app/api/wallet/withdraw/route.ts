@@ -2,10 +2,6 @@ import { NextResponse } from "next/server";
 import { getCurrentProfile, getCurrentUser } from "@/lib/auth";
 import { getPaymentMethodForUser } from "@/lib/payment-methods";
 import { getRequestCurrency } from "@/lib/request-currency";
-import {
-  isDepositMethodAllowedForCurrency,
-  mobileMoneyUnavailableMessage,
-} from "@/lib/deposit-methods";
 import { getOrCreateWallet } from "@/lib/wallet";
 import { createWithdrawalRequest, getUserWithdrawals } from "@/lib/withdrawals";
 
@@ -41,11 +37,6 @@ export async function POST(request: Request) {
   }
 
   const currency = await getRequestCurrency();
-
-  if (!isDepositMethodAllowedForCurrency(paymentMethod.method, currency)) {
-    return NextResponse.json({ error: mobileMoneyUnavailableMessage() }, { status: 400 });
-  }
-
   await getOrCreateWallet(user.id, currency);
 
   const result = await createWithdrawalRequest({

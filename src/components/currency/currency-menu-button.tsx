@@ -10,7 +10,6 @@ interface CurrencyMenuButtonProps {
   currentCurrency?: DisplayCurrency | null;
   variant?: "drawer" | "dropdown";
   active?: boolean;
-  admin?: boolean;
   /** When set, parent owns the picker modal (avoids unmount when drawer/dropdown closes). */
   onOpenPicker?: () => void;
   onNavigate?: () => void;
@@ -26,7 +25,6 @@ export function CurrencyMenuButton({
   currentCurrency,
   variant = "drawer",
   active = false,
-  admin = false,
   onOpenPicker,
   onNavigate,
 }: CurrencyMenuButtonProps) {
@@ -43,8 +41,6 @@ export function CurrencyMenuButton({
     onNavigate?.();
     setOpen(true);
   }
-
-  if (admin) return null;
 
   if (variant === "dropdown") {
     return (

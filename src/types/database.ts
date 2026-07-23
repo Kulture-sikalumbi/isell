@@ -121,6 +121,13 @@ export interface WalletDeposit {
   user_id: string;
   amount: number;
   currency: string;
+  /** Credited wallet amount after FX at confirm; null while pending */
+  settled_amount: number | null;
+  settled_currency: string | null;
+  /** USD→ZMW rate locked at confirm when conversion was needed */
+  fx_usd_to_zmw: number | null;
+  fx_source: string | null;
+  fx_locked_at: string | null;
   method: DepositMethod;
   transaction_id: string | null;
   provider: string | null;
@@ -143,6 +150,9 @@ export interface WalletTransaction {
   amount: number;
   balance_after: number;
   currency: string;
+  source_amount: number | null;
+  source_currency: string | null;
+  fx_usd_to_zmw: number | null;
   description: string | null;
   deposit_id: string | null;
   payment_id: string | null;

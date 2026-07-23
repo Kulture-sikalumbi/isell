@@ -3,9 +3,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import { resolvePostLoginPath, sanitizeNextPath } from "@/lib/post-login";
 import { sendWelcomeEmailIfNeeded } from "@/lib/welcome-email";
 import {
-  DEFAULT_DISPLAY_CURRENCY,
   displayCurrencyCookieOptions,
+  ensureAdminDisplayCurrency,
   ensureDefaultDisplayCurrencyForUser,
+  normalizeDisplayCurrency,
 } from "@/lib/display-currency-preference";
 
 function profileIsAdmin(role: string | null | undefined) {
@@ -99,9 +100,8 @@ export async function GET(request: NextRequest) {
       .single();
     destination = resolvePostLoginPath(safeNext, profileIsAdmin(profile?.role));
 
-    if (profile?.role !== "admin") {
-      const currency =
-        (await ensureDefaultDisplayCurrencyForUser(user.id)) ?? DEFAULT_DISPLAY_CURRENCY;
+    if (profile?.role === "admin") {
+      const currency = await ensureAdminDisplayCurrency(user.id);
       const cookie = displayCurrencyCookieOptions(currency);
       response.cookies.set(cookie.name, cookie.value, {
         path: cookie.path,
@@ -118,6 +118,29 @@ export async function GET(request: NextRequest) {
         sameSite: "lax",
         maxAge: cookie.maxAge,
       });
+    } else {
+      // Existing preference only — first-time users pick via CurrencyPreferenceGate
+      const currency =
+        (await ensureDefaultDisplayCurrencyForUser(user.id)) ??
+        normalizeDisplayCurrency(profile?.display_currency);
+      if (currency) {
+        const cookie = displayCurrencyCookieOptions(currency);
+        response.cookies.set(cookie.name, cookie.value, {
+          path: cookie.path,
+          sameSite: cookie.sameSite,
+          maxAge: cookie.maxAge,
+        });
+        response.cookies.set("site_currency", currency, {
+          path: "/",
+          sameSite: "lax",
+          maxAge: cookie.maxAge,
+        });
+        response.cookies.set("site_country", currency === "ZMW" ? "ZM" : "US", {
+          path: "/",
+          sameSite: "lax",
+          maxAge: cookie.maxAge,
+        });
+      }
     }
   }
 

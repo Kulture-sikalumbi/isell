@@ -1,5 +1,4 @@
 import { cn } from "@/lib/utils";
-import { depositMethodsForCurrency } from "@/lib/deposit-methods";
 import { PaymentMethodLogo } from "@/components/payments/payment-method-logo";
 
 interface IconProps {
@@ -92,20 +91,14 @@ const LOGO_METHODS = ["mtn", "airtel", "binance", "usdt"] as const;
 export function PaymentMethodsRow({
   showWallet = true,
   showMomo = true,
-  currency,
+  currency: _currency,
   className,
 }: PaymentMethodsRowProps) {
-  const depositMethods = LOGO_METHODS.filter((method) =>
-    depositMethodsForCurrency(currency).includes(
-      method === "usdt" ? "usdt_trc20" : method
-    )
-  );
-
   return (
     <div className={cn("flex items-center gap-2", className)}>
       {showWallet && <WalletPayIcon />}
       {showMomo &&
-        depositMethods.map((method) => (
+        LOGO_METHODS.map((method) => (
           <PaymentMethodLogo key={method} method={method} size="sm" />
         ))}
     </div>

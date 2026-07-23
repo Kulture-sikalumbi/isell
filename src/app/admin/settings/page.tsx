@@ -32,8 +32,9 @@ export default async function AdminSettingsPage() {
         <section className="glass rounded-2xl p-6 border border-white/10">
           <h2 className="text-lg font-semibold text-white mb-2">USD to ZMW exchange rate</h2>
           <p className="text-sm text-zinc-500 mb-4">
-            This value is used when converting USD prices for Zambia. Live FX updates this automatically
-            when available, and you can override it here if needed.
+            Used when funds land in a different currency than the wallet (and for UI display).
+            Each deposit locks the rate at confirm time — later rate changes do not revalue past
+            balances. Live FX updates this automatically; override here if needed.
           </p>
           <CurrencyRateForm initialRate={rate} />
 

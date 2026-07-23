@@ -25,13 +25,13 @@ const OPTIONS: {
   {
     id: "ZMW",
     title: "Zambia",
-    subtitle: "Prices and wallet in Kwacha (K)",
+    subtitle: "Prices and wallet in Kwacha (K) — all payment methods available",
     icon: MapPin,
   },
   {
     id: "USD",
     title: "International",
-    subtitle: "Prices and wallet in US Dollars ($)",
+    subtitle: "Prices and wallet in US Dollars ($) — all payment methods available",
     icon: Globe,
   },
 ];
@@ -105,8 +105,8 @@ export function CurrencyPickerModal({
           </h2>
           <p className="mt-2 text-sm text-zinc-400 leading-relaxed">
             {required
-              ? "Pick how you want prices and wallet balance shown. You can change this later from the menu."
-              : "Switch between Kwacha for Zambia and US Dollars for international payments."}
+              ? "Pick how you want prices and wallet balance shown. MTN, Airtel, Binance, and USDT stay available either way. You can change this later from the menu."
+              : "Switch between Kwacha for Zambia and US Dollars for international. Display only — your stored balances are unchanged."}
           </p>
 
           <div className="mt-6 space-y-3">

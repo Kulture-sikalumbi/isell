@@ -93,7 +93,10 @@ export function AdminDepositsTable({ initialDeposits }: AdminDepositsTableProps)
                   )}
                 </td>
                 <td className="px-6 py-4 text-emerald-400 font-medium">
-                  {formatCurrency(d.amount, d.currency)}
+                  <div>{formatCurrency(d.amount, d.currency)}</div>
+                  <p className="text-[10px] text-zinc-500 font-normal mt-0.5">
+                    Paid · settles to wallet at confirm-time FX
+                  </p>
                 </td>
                 <td className="px-6 py-4">
                   <Badge variant="info">{methodLabels[d.method]}</Badge>

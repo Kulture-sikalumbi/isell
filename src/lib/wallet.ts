@@ -1,5 +1,7 @@
 import { getSiteCurrency } from "@/lib/currency";
 import { getUsdToZmwRate } from "@/lib/currency-rates";
+import { getFxSnapshot, planWalletSettlement } from "@/lib/deposit-settlement";
+import { settlementCurrencyForMethod } from "@/lib/deposit-methods";
 import { convertCurrency, resolveDisplayCurrency } from "@/lib/format-currency";
 import { calculatePlatformFee } from "@/lib/platform-fee";
 import { convertToolAmount, getToolPriceCurrency } from "@/lib/tool-pricing";
@@ -260,6 +262,7 @@ export async function createDepositRequest(input: {
   let senderPhone = input.senderPhone?.trim() || null;
   let senderName = input.senderName?.trim() || null;
   let fullTransactionId = trimmedTxn;
+  let amountFromSms = false;
 
   if (isMoMo) {
     const { resolveSmsReceiptForProof, normalizeCustomerProofInput } = await import(
@@ -275,6 +278,7 @@ export async function createDepositRequest(input: {
 
     if (resolved.ok) {
       amount = Number(resolved.receipt.amount);
+      amountFromSms = true;
       fullTransactionId = resolved.receipt.transaction_id;
       senderPhone = resolved.receipt.sender_phone || senderPhone;
       senderName = resolved.receipt.sender_name || senderName;
@@ -299,15 +303,25 @@ export async function createDepositRequest(input: {
     return { error: "Enter a valid amount" };
   }
 
+  const displayCurrency = resolveDisplayCurrency(input.currency);
+  // MoMo settles in ZMW; crypto settles in USD — independent of UI display preference.
+  const settleCurrency = settlementCurrencyForMethod(input.method);
+  const rate = displayCurrency !== settleCurrency ? await getUsdToZmwRate() : null;
+
+  // SMS amounts are already ZMW. Customer-typed amounts are in display currency.
+  if (!amountFromSms) {
+    amount = convertCurrency(amount, displayCurrency, settleCurrency, rate);
+  }
+
   const reference = `DEP-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-  const merchants = await getMerchantDetails(input.currency);
+  await getMerchantDetails(settleCurrency);
 
   const { data, error } = await supabase
     .from("wallet_deposits")
     .insert({
       user_id: input.userId,
       amount,
-      currency: merchants.currency,
+      currency: settleCurrency,
       method: input.method,
       transaction_id: fullTransactionId,
       sender_phone: senderPhone,
@@ -325,7 +339,7 @@ export async function createDepositRequest(input: {
     userEmail: input.userEmail ?? "unknown",
     userName: input.userName,
     amount,
-    currency: merchants.currency,
+    currency: settleCurrency,
     method: input.method,
     reference,
     transactionId: fullTransactionId,
@@ -364,7 +378,7 @@ export async function confirmDeposit(depositId: string, adminNote?: string) {
 
   const { data: deposit } = await supabase
     .from("wallet_deposits")
-    .select("status, transaction_id, user_id, amount, currency, method")
+    .select("status, transaction_id")
     .eq("id", depositId)
     .single();
 
@@ -376,24 +390,87 @@ export async function confirmDeposit(depositId: string, adminNote?: string) {
     return { ok: false, error: "Customer has not submitted TID yet" };
   }
 
+  return settleAndConfirmDeposit(depositId, adminNote ?? null);
+}
+
+async function settleAndConfirmDeposit(
+  depositId: string,
+  adminNote: string | null
+): Promise<
+  | {
+      ok: true;
+      balance?: number;
+      settled_amount?: number;
+      settled_currency?: string;
+      alreadyConfirmed?: boolean;
+    }
+  | { ok: false; error: string }
+> {
+  const supabase = createServiceClient();
+  if (!supabase) return { ok: false, error: "Database not configured" };
+
+  const { data: deposit } = await supabase
+    .from("wallet_deposits")
+    .select("status, transaction_id, user_id, amount, currency, method")
+    .eq("id", depositId)
+    .single();
+
+  if (!deposit) return { ok: false, error: "Deposit not found" };
+  if (deposit.status === "confirmed") return { ok: true, alreadyConfirmed: true };
+  if (deposit.status !== "pending") {
+    return { ok: false, error: "Deposit already processed" };
+  }
+
+  const wallet = await getOrCreateWallet(deposit.user_id);
+  if (!wallet) return { ok: false, error: "Could not load wallet" };
+
+  const fx = await getFxSnapshot();
+  const plan = planWalletSettlement({
+    sourceAmount: Number(deposit.amount),
+    sourceCurrency: deposit.currency,
+    walletCurrency: wallet.currency,
+    fx,
+  });
+
+  if ("error" in plan) return { ok: false, error: plan.error };
+
   const { data, error } = await supabase.rpc("confirm_wallet_deposit", {
     p_deposit_id: depositId,
-    p_admin_note: adminNote ?? null,
+    p_admin_note: adminNote,
+    p_settled_amount: plan.settledAmount,
+    p_settled_currency: plan.settledCurrency,
+    p_fx_usd_to_zmw: plan.fxUsdToZmw,
+    p_fx_source: plan.fxSource,
   });
 
   if (error) return { ok: false, error: error.message };
 
-  const result = data as { ok: boolean; error?: string; balance?: number };
-  if (result.ok && deposit) {
-    const { notifyDepositConfirmed } = await import("@/lib/user-notifications");
-    await notifyDepositConfirmed({
-      userId: deposit.user_id,
-      amount: Number(deposit.amount),
-      currency: deposit.currency,
-      method: deposit.method,
-    });
+  const result = data as {
+    ok: boolean;
+    error?: string;
+    balance?: number;
+    settled_amount?: number;
+    settled_currency?: string;
+  };
+
+  if (!result.ok) {
+    return { ok: false, error: result.error || "Failed to confirm deposit" };
   }
-  return result;
+
+  const { notifyDepositConfirmed } = await import("@/lib/user-notifications");
+  await notifyDepositConfirmed({
+    userId: deposit.user_id,
+    amount: Number(result.settled_amount ?? plan.settledAmount),
+    currency: String(result.settled_currency ?? plan.settledCurrency),
+    method: deposit.method,
+  });
+
+  return {
+    ok: true,
+    balance: result.balance,
+    settled_amount: Number(result.settled_amount ?? plan.settledAmount),
+    settled_currency: String(result.settled_currency ?? plan.settledCurrency),
+  };
 }
 
 export async function rejectDeposit(depositId: string, adminNote?: string) {
@@ -642,14 +719,17 @@ export async function createDepositIntent(input: {
   if (!amount || amount <= 0) return null;
 
   const reference = `DEP-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-  const merchants = await getMerchantDetails(input.currency);
+  const displayCurrency = resolveDisplayCurrency(input.currency);
+  const settleCurrency = settlementCurrencyForMethod(input.method);
+  const rate = displayCurrency !== settleCurrency ? await getUsdToZmwRate() : null;
+  const settledAmount = convertCurrency(amount, displayCurrency, settleCurrency, rate);
 
   const { data, error } = await supabase
     .from("wallet_deposits")
     .insert({
       user_id: input.userId,
-      amount,
-      currency: merchants.currency,
+      amount: settledAmount,
+      currency: settleCurrency,
       method: input.method,
       transaction_id: null,
       reference,
@@ -733,37 +813,10 @@ export async function updateDepositProviderStatus(input: {
 }
 
 export async function confirmDepositFromProvider(depositId: string, providerNote?: string) {
-  const supabase = createServiceClient();
-  if (!supabase) return { ok: false, error: "Database not configured" };
-
-  const { data } = await supabase
-    .from("wallet_deposits")
-    .select("status, user_id, amount, currency, method")
-    .eq("id", depositId)
-    .maybeSingle();
-
-  if (!data) return { ok: false, error: "Deposit not found" };
-  if (data.status === "confirmed") return { ok: true, alreadyConfirmed: true };
-  if (data.status !== "pending") return { ok: false, error: "Deposit cannot be confirmed" };
-
-  const { data: result, error } = await supabase.rpc("confirm_wallet_deposit", {
-    p_deposit_id: depositId,
-    p_admin_note: providerNote ?? "Auto-confirmed from provider callback",
-  });
-  if (error) return { ok: false, error: error.message };
-
-  const typed = result as { ok: boolean; error?: string; balance?: number };
-  if (!typed.ok) return { ok: false, error: typed.error || "Failed to confirm deposit" };
-
-  const { notifyDepositConfirmed } = await import("@/lib/user-notifications");
-  await notifyDepositConfirmed({
-    userId: data.user_id,
-    amount: Number(data.amount),
-    currency: data.currency,
-    method: data.method,
-  });
-
-  return { ok: true, balance: typed.balance };
+  return settleAndConfirmDeposit(
+    depositId,
+    providerNote ?? "Auto-confirmed from provider callback"
+  );
 }
 
 export async function submitDepositTransactionId(

@@ -53,6 +53,16 @@ export function WalletTransactionsList({ transactions }: WalletTransactionsListP
                   {isCredit ? "+" : ""}
                   {formatCurrency(tx.amount, tx.currency)}
                 </p>
+                {tx.source_amount != null &&
+                  tx.source_currency &&
+                  tx.source_currency !== tx.currency && (
+                    <p className="text-[10px] text-zinc-500">
+                      from {formatCurrency(Number(tx.source_amount), tx.source_currency)}
+                      {tx.fx_usd_to_zmw
+                        ? ` @ ${Number(tx.fx_usd_to_zmw).toFixed(2)}`
+                        : ""}
+                    </p>
+                  )}
                 <p className="text-[10px] text-zinc-600">
                   Bal {formatCurrency(tx.balance_after, tx.currency)}
                 </p>

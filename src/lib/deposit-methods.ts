@@ -8,6 +8,14 @@ export const DEPOSIT_METHOD_LABELS: Record<DepositMethod, string> = {
   other: "Other",
 };
 
+/** All customer-facing deposit / payout methods — always shown regardless of display currency. */
+export const ALL_DEPOSIT_METHODS: DepositMethod[] = [
+  "mtn",
+  "airtel",
+  "binance",
+  "usdt_trc20",
+];
+
 export function depositMethodLabel(method: DepositMethod): string {
   return DEPOSIT_METHOD_LABELS[method] ?? method;
 }
@@ -26,28 +34,32 @@ export function isZambiaWalletCurrency(currency?: string | null): boolean {
   return currency?.trim().toUpperCase() === "ZMW";
 }
 
-const ZAMBIA_DEPOSIT_METHODS: DepositMethod[] = ["mtn", "airtel", "binance", "usdt_trc20"];
-const INTERNATIONAL_DEPOSIT_METHODS: DepositMethod[] = ["binance", "usdt_trc20"];
+/**
+ * Settlement currency for a payment rail (independent of UI display preference).
+ * MoMo settles in ZMW; crypto rails settle in USD.
+ */
+export function settlementCurrencyForMethod(method: DepositMethod): "ZMW" | "USD" {
+  return isMobileMoneyMethod(method) ? "ZMW" : "USD";
+}
 
-export function depositMethodsForCurrency(currency?: string | null): DepositMethod[] {
-  return isZambiaWalletCurrency(currency)
-    ? ZAMBIA_DEPOSIT_METHODS
-    : INTERNATIONAL_DEPOSIT_METHODS;
+/** @deprecated Display currency no longer filters methods — always returns all rails. */
+export function depositMethodsForCurrency(_currency?: string | null): DepositMethod[] {
+  return ALL_DEPOSIT_METHODS;
 }
 
 export function userPaymentMethodTypesForCurrency(
-  currency?: string | null
+  _currency?: string | null
 ): UserPaymentMethodType[] {
-  return depositMethodsForCurrency(currency) as UserPaymentMethodType[];
+  return ALL_DEPOSIT_METHODS as UserPaymentMethodType[];
 }
 
 export function isDepositMethodAllowedForCurrency(
   method: DepositMethod,
-  currency?: string | null
+  _currency?: string | null
 ): boolean {
-  return depositMethodsForCurrency(currency).includes(method);
+  return ALL_DEPOSIT_METHODS.includes(method) || method === "other";
 }
 
 export function mobileMoneyUnavailableMessage(): string {
-  return "MTN and Airtel are only available for Zambia (K) accounts. Switch currency in the menu for mobile money.";
+  return "That payment method is not available.";
 }

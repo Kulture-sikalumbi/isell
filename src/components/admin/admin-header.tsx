@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   Bell,
   CreditCard,
@@ -10,10 +11,12 @@ import {
   ShoppingCart,
   Wallet,
 } from "lucide-react";
+import { AdminCurrencyToggle } from "@/components/admin/admin-currency-toggle";
 import { useAdminAttentionCounts } from "@/components/admin/admin-nav-badges";
 import { ConnectionStatus } from "@/components/layout/connection-status";
 import { MerchantHeaderChip } from "@/components/layout/merchant-header-chip";
 import { useLiveAdminStats } from "@/hooks/use-live-admin-stats";
+import type { DisplayCurrency } from "@/lib/display-currency-preference";
 import { cn } from "@/lib/utils";
 
 const quickLinks = [
@@ -26,7 +29,28 @@ const quickLinks = [
 export function AdminHeader() {
   const pathname = usePathname();
   const counts = useAdminAttentionCounts();
-  const { merchantBalance, merchantCurrency, platformFees } = useLiveAdminStats();
+  const [displayCurrency, setDisplayCurrency] = useState<DisplayCurrency>("ZMW");
+  const { merchantBalance, merchantCurrency, platformFees, refresh } = useLiveAdminStats({
+    merchantCurrency: displayCurrency,
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/user/display-currency");
+        if (!res.ok) return;
+        const data = await res.json();
+        const code = data.currency === "USD" || data.currency === "ZMW" ? data.currency : "ZMW";
+        if (!cancelled) setDisplayCurrency(code);
+      } catch {
+        // keep default
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <header className="sticky top-0 z-30 border-b border-white/10 bg-[#06070b]/80 backdrop-blur-xl">
@@ -70,6 +94,16 @@ export function AdminHeader() {
 
           <div className="hidden md:block h-8 w-px bg-white/10 mx-1" />
 
+          <AdminCurrencyToggle
+            current={displayCurrency}
+            compact
+            className="hidden sm:flex"
+            onChanged={(currency) => {
+              setDisplayCurrency(currency);
+              refresh();
+            }}
+          />
+
           <div className="hidden md:block">
             <MerchantHeaderChip
               balance={merchantBalance}
@@ -89,7 +123,6 @@ export function AdminHeader() {
         </div>
       </div>
 
-      {/* Mobile attention strip */}
       {counts.totalAttention > 0 && (
         <div className="sm:hidden border-t border-white/5 px-4 py-2 flex gap-2 overflow-x-auto">
           {counts.pendingDeposits > 0 && (
@@ -129,6 +162,17 @@ export function AdminHeader() {
           )}
         </div>
       )}
+
+      <div className="sm:hidden border-t border-white/5 px-4 py-2 flex justify-end">
+        <AdminCurrencyToggle
+          current={displayCurrency}
+          compact
+          onChanged={(currency) => {
+            setDisplayCurrency(currency);
+            refresh();
+          }}
+        />
+      </div>
     </header>
   );
 }

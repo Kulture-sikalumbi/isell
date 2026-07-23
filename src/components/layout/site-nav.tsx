@@ -352,7 +352,7 @@ function SiteNavShell({ user, pathname }: SiteNavProps & { pathname: string }) {
                 </Link>
               ))}
 
-              {user && !user.isAdmin && (
+              {user && (
                 <CurrencyMenuButton
                   currentCurrency={user.displayCurrency}
                   onNavigate={() => setOpen(false)}

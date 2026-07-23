@@ -6,6 +6,9 @@ export type DisplayCurrency = "ZMW" | "USD";
 
 export const DEFAULT_DISPLAY_CURRENCY: DisplayCurrency = "USD";
 
+/** Admin panel default when no preference is saved — Zambia (K). */
+export const DEFAULT_ADMIN_DISPLAY_CURRENCY: DisplayCurrency = "ZMW";
+
 export const DISPLAY_CURRENCY_COOKIE = "display_currency";
 
 export function normalizeDisplayCurrency(value?: string | null): DisplayCurrency | null {
@@ -37,6 +40,12 @@ export async function getDisplayCurrencyPreference(): Promise<DisplayCurrency | 
 
   const cookieStore = await cookies();
   return normalizeDisplayCurrency(cookieStore.get(DISPLAY_CURRENCY_COOKIE)?.value);
+}
+
+/** Admin panel display currency — preference first, else ZMW (site native). */
+export async function getAdminDisplayCurrency(): Promise<DisplayCurrency> {
+  const preferred = await getDisplayCurrencyPreference();
+  return preferred ?? DEFAULT_ADMIN_DISPLAY_CURRENCY;
 }
 
 export async function saveDisplayCurrencyPreference(
@@ -73,7 +82,10 @@ export async function saveDisplayCurrencyPreference(
   return { ok: true };
 }
 
-/** First-time customers land in USD — they can switch to ZMW from the menu later. */
+/**
+ * First-time customers must pick ZMW or USD via the currency picker.
+ * Does not auto-write a preference — returns null until they choose.
+ */
 export async function ensureDefaultDisplayCurrencyForUser(
   userId: string
 ): Promise<DisplayCurrency | null> {
@@ -88,11 +100,18 @@ export async function ensureDefaultDisplayCurrencyForUser(
 
   if (!profile || profile.role === "admin") return null;
 
-  const existing = normalizeDisplayCurrency(profile.display_currency);
+  return normalizeDisplayCurrency(profile.display_currency);
+}
+
+/** Ensure admins have a display preference (defaults to ZMW without blocking UI). */
+export async function ensureAdminDisplayCurrency(
+  userId: string
+): Promise<DisplayCurrency> {
+  const existing = await getUserDisplayCurrency(userId);
   if (existing) return existing;
 
-  const result = await saveDisplayCurrencyPreference(userId, DEFAULT_DISPLAY_CURRENCY);
-  return result.ok ? DEFAULT_DISPLAY_CURRENCY : null;
+  const result = await saveDisplayCurrencyPreference(userId, DEFAULT_ADMIN_DISPLAY_CURRENCY);
+  return result.ok ? DEFAULT_ADMIN_DISPLAY_CURRENCY : DEFAULT_ADMIN_DISPLAY_CURRENCY;
 }
 
 export function displayCurrencyCookieOptions(currency: DisplayCurrency) {

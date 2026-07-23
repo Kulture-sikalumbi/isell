@@ -4,11 +4,6 @@ import {
   createUserPaymentMethod,
   getUserPaymentMethods,
 } from "@/lib/payment-methods";
-import { getRequestCurrency } from "@/lib/request-currency";
-import {
-  isDepositMethodAllowedForCurrency,
-  mobileMoneyUnavailableMessage,
-} from "@/lib/deposit-methods";
 import type { UserPaymentMethodType } from "@/types/database";
 
 export async function GET() {
@@ -29,14 +24,9 @@ export async function POST(request: Request) {
 
   const body = await request.json();
   const method = body.method as UserPaymentMethodType;
-  const currency = await getRequestCurrency();
-
-  if (!isDepositMethodAllowedForCurrency(method, currency)) {
-    return NextResponse.json({ error: mobileMoneyUnavailableMessage() }, { status: 400 });
-  }
 
   const result = await createUserPaymentMethod(user.id, {
-    method: body.method,
+    method,
     accountIdentifier: body.account_identifier ?? body.accountIdentifier,
     accountName: body.account_name ?? body.accountName,
     label: body.label,

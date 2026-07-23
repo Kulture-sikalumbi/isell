@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { CheckCircle2, Copy, ChevronRight, Loader2, Smartphone, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { MomoTidHelpLink, MomoTidHelpModal } from "@/components/wallet/momo-tid-
 import { Badge } from "@/components/ui/badge";
 import { PaymentMethodLogo } from "@/components/payments/payment-method-logo";
 import { AirtelMoneyIcon, MtnMoMoIcon } from "@/components/payments/payment-method-icons";
-import { depositMethodLabel, depositMethodsForCurrency, isManualCryptoDeposit } from "@/lib/deposit-methods";
+import { depositMethodLabel, isManualCryptoDeposit } from "@/lib/deposit-methods";
 import { getCurrencyLabel } from "@/lib/format-currency";
 import { cn, formatCurrency } from "@/lib/utils";
 import { useConnectivityOptional } from "@/components/layout/connectivity-provider";
@@ -279,11 +279,7 @@ function InstructionStep({
 export function DepositForm({ merchants, currency, savedPaymentMethods = [] }: DepositFormProps) {
   const router = useRouter();
   const connectivity = useConnectivityOptional();
-  const methods = useMemo(
-    () =>
-      ALL_METHOD_OPTIONS.filter((m) => depositMethodsForCurrency(currency).includes(m.id)),
-    [currency]
-  );
+  const methods = ALL_METHOD_OPTIONS;
   const [step, setStep] = useState<"pick" | "pay" | "done">("pick");
   const [method, setMethod] = useState<DepositMethod | null>(null);
   const [amount, setAmount] = useState("");
@@ -328,13 +324,6 @@ export function DepositForm({ merchants, currency, savedPaymentMethods = [] }: D
       openTidHelp(selected);
     }
   }
-
-  useEffect(() => {
-    if (method && !depositMethodsForCurrency(currency).includes(method)) {
-      setMethod(null);
-      setStep("pick");
-    }
-  }, [currency, method]);
 
   // Optional convenience only — without saved methods, every field stays manual.
   useEffect(() => {

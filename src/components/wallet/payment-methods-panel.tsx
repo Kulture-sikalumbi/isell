@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { PaymentMethodLogo } from "@/components/payments/payment-method-logo";
 import { AirtelMoneyIcon, MtnMoMoIcon } from "@/components/payments/payment-method-icons";
-import { depositMethodLabel, isMobileMoneyMethod, userPaymentMethodTypesForCurrency } from "@/lib/deposit-methods";
+import { depositMethodLabel, userPaymentMethodTypesForCurrency } from "@/lib/deposit-methods";
 import { cn } from "@/lib/utils";
 import type { UserPaymentMethod, UserPaymentMethodType } from "@/types/database";
 
@@ -50,10 +50,10 @@ interface PaymentMethodsPanelProps {
   currency: string;
 }
 
-export function PaymentMethodsPanel({ initialMethods, currency }: PaymentMethodsPanelProps) {
+export function PaymentMethodsPanel({ initialMethods, currency: _currency }: PaymentMethodsPanelProps) {
   const router = useRouter();
-  const methodOptions = userPaymentMethodTypesForCurrency(currency);
-  const visibleMethods = initialMethods.filter((m) => !isMobileMoneyMethod(m.method) || methodOptions.includes(m.method));
+  const methodOptions = userPaymentMethodTypesForCurrency();
+  const visibleMethods = initialMethods;
   const defaultMethod = methodOptions.includes("binance") ? "binance" : "usdt_trc20";
   const [methods, setMethods] = useState(visibleMethods);
   const [showForm, setShowForm] = useState(false);
@@ -85,9 +85,7 @@ export function PaymentMethodsPanel({ initialMethods, currency }: PaymentMethods
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to save");
 
-      setMethods((prev) => [data.method, ...prev].filter(
-        (m) => !isMobileMoneyMethod(m.method) || methodOptions.includes(m.method)
-      ));
+      setMethods((prev) => [data.method, ...prev]);
       setShowForm(false);
       setAccountIdentifier("");
       setAccountName("");

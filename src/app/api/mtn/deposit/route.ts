@@ -1,10 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { getRequestCurrency } from "@/lib/request-currency";
-import {
-  isDepositMethodAllowedForCurrency,
-  mobileMoneyUnavailableMessage,
-} from "@/lib/deposit-methods";
 import { initiateMtnRequestToPay } from "@/lib/mtn-momo";
 import { createDepositIntent, setDepositProviderReference } from "@/lib/wallet";
 
@@ -15,10 +11,6 @@ export async function POST(request: Request) {
   }
 
   const currency = await getRequestCurrency();
-  if (!isDepositMethodAllowedForCurrency("mtn", currency)) {
-    return NextResponse.json({ error: mobileMoneyUnavailableMessage() }, { status: 400 });
-  }
-
   const body = await request.json();
   const amount = Number(body.amount);
   const phoneNumber = String(body.phone_number ?? "").trim();
@@ -43,7 +35,7 @@ export async function POST(request: Request) {
 
   try {
     const payment = await initiateMtnRequestToPay({
-      amount,
+      amount: Number(deposit.amount),
       currency: deposit.currency,
       phoneNumber,
       externalId: deposit.reference,

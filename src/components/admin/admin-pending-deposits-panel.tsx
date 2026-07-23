@@ -66,7 +66,8 @@ export function AdminPendingDepositsPanel({
             </Badge>
           </h2>
           <p className="text-sm text-zinc-500">
-            Verify mobile money on your phone, then confirm with one click.
+            Verify payment, then confirm. Funds convert into the customer&apos;s wallet currency using
+            the USD→ZMW rate locked at that moment.
           </p>
         </div>
         {compact && deposits.length > 0 && (
@@ -96,6 +97,7 @@ export function AdminPendingDepositsPanel({
                 <span className="text-emerald-400 ml-2">
                   {formatCurrency(d.amount, d.currency)}
                 </span>
+                <span className="ml-1 text-[10px] text-zinc-500 font-normal">paid</span>
               </p>
               <p className="text-xs text-zinc-500 mt-1">
                 {methodLabels[d.method]}
