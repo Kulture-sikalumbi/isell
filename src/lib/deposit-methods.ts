@@ -1,3 +1,4 @@
+import { convertCurrency, formatSiteCurrency, resolveDisplayCurrency } from "@/lib/format-currency";
 import type { DepositMethod, UserPaymentMethodType } from "@/types/database";
 
 export const DEPOSIT_METHOD_LABELS: Record<DepositMethod, string> = {
@@ -40,6 +41,38 @@ export function isZambiaWalletCurrency(currency?: string | null): boolean {
  */
 export function settlementCurrencyForMethod(method: DepositMethod): "ZMW" | "USD" {
   return isMobileMoneyMethod(method) ? "ZMW" : "USD";
+}
+
+/**
+ * Amount the customer must send on the rail, with dual label when display ≠ rail.
+ * MoMo + USD wallet: "$10.00 (K180.00)". Crypto stays USD on the rail.
+ */
+export function formatDepositSendAmount(
+  amount: number,
+  displayCurrency: string,
+  method: DepositMethod,
+  usdToZmwRate?: number | null
+): string {
+  const display = resolveDisplayCurrency(displayCurrency);
+  const settle = settlementCurrencyForMethod(method);
+  const displayLabel = formatSiteCurrency(amount, display);
+
+  if (display === settle) return displayLabel;
+
+  if (!usdToZmwRate || usdToZmwRate <= 0) {
+    return isMobileMoneyMethod(method)
+      ? `${displayLabel} (pay in ZMW)`
+      : `${displayLabel} (pay in USD)`;
+  }
+
+  const railAmount = convertCurrency(amount, display, settle, usdToZmwRate);
+  const railLabel = formatSiteCurrency(railAmount, settle);
+  return `${displayLabel} (${railLabel})`;
+}
+
+/** True when MoMo pay UI should stress that phones accept ZMW only. */
+export function momoRequiresZmwNotice(displayCurrency?: string | null): boolean {
+  return resolveDisplayCurrency(displayCurrency) !== "ZMW";
 }
 
 /** @deprecated Display currency no longer filters methods — always returns all rails. */

@@ -25,13 +25,13 @@ const OPTIONS: {
   {
     id: "ZMW",
     title: "Zambia",
-    subtitle: "Prices and wallet in Kwacha (K) — all payment methods available",
+    subtitle: "Prices and wallet in Kwacha (K) — MTN, Airtel, Binance & USDT available",
     icon: MapPin,
   },
   {
     id: "USD",
     title: "International",
-    subtitle: "Prices and wallet in US Dollars ($) — all payment methods available",
+    subtitle: "Prices and wallet in US Dollars ($) — MoMo still works (pays in ZMW)",
     icon: Globe,
   },
 ];
@@ -105,8 +105,8 @@ export function CurrencyPickerModal({
           </h2>
           <p className="mt-2 text-sm text-zinc-400 leading-relaxed">
             {required
-              ? "Pick how you want prices and wallet balance shown. MTN, Airtel, Binance, and USDT stay available either way. You can change this later from the menu."
-              : "Switch between Kwacha for Zambia and US Dollars for international. Display only — your stored balances are unchanged."}
+              ? "Pick how you want prices and wallet balance shown. You only need to choose once — change it later from the menu anytime. MTN and Airtel always collect ZMW; Binance and USDT stay in USD."
+              : "Switch between Kwacha for Zambia and US Dollars for international. Display only — your stored balances are unchanged. MoMo pays in ZMW; crypto stays USD."}
           </p>
 
           <div className="mt-6 space-y-3">

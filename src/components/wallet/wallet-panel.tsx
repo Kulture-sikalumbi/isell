@@ -12,6 +12,7 @@ import type { UserPaymentMethod, WalletWithdrawal } from "@/types/database";
 interface WalletPanelProps {
   balance: number;
   currency: string;
+  fxRate?: number | null;
   merchants: {
     mtn: string;
     airtel: string;
@@ -27,6 +28,7 @@ interface WalletPanelProps {
 export function WalletPanel({
   balance,
   currency,
+  fxRate = null,
   merchants,
   pendingDepositCount,
   paymentMethods,
@@ -63,7 +65,8 @@ export function WalletPanel({
         <div className="glass rounded-2xl p-5 sm:p-6 border border-white/10">
           <DepositForm
             merchants={merchants}
-            currency={merchants.currency}
+            currency={currency}
+            fxRate={fxRate}
             savedPaymentMethods={paymentMethods}
           />
           <div className="mt-6 pt-6 border-t border-white/10">

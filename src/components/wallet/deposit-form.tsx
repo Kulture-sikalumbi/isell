@@ -10,7 +10,12 @@ import { MomoTidHelpLink, MomoTidHelpModal } from "@/components/wallet/momo-tid-
 import { Badge } from "@/components/ui/badge";
 import { PaymentMethodLogo } from "@/components/payments/payment-method-logo";
 import { AirtelMoneyIcon, MtnMoMoIcon } from "@/components/payments/payment-method-icons";
-import { depositMethodLabel, isManualCryptoDeposit } from "@/lib/deposit-methods";
+import {
+  depositMethodLabel,
+  formatDepositSendAmount,
+  isManualCryptoDeposit,
+  momoRequiresZmwNotice,
+} from "@/lib/deposit-methods";
 import { getCurrencyLabel } from "@/lib/format-currency";
 import { cn, formatCurrency } from "@/lib/utils";
 import { useConnectivityOptional } from "@/components/layout/connectivity-provider";
@@ -29,6 +34,8 @@ interface MerchantDetails {
 interface DepositFormProps {
   merchants: MerchantDetails;
   currency: string;
+  /** Live/manual USD→ZMW rate for MoMo checkout conversion when wallet is USD. */
+  fxRate?: number | null;
   savedPaymentMethods?: UserPaymentMethod[];
 }
 
@@ -169,8 +176,7 @@ function DepositSuccessModal({
 
 function DepositConfirmModal({
   open,
-  amount,
-  currency,
+  amountLabel,
   merchantNumber,
   methodLabel: label,
   onYes,
@@ -178,8 +184,7 @@ function DepositConfirmModal({
   onClose,
 }: {
   open: boolean;
-  amount: number | null;
-  currency: string;
+  amountLabel: string;
   merchantNumber: string;
   methodLabel: string;
   onYes: () => void;
@@ -198,11 +203,6 @@ function DepositConfirmModal({
   }, [open]);
 
   if (!open || !mounted) return null;
-
-  const amountLabel =
-    amount != null && amount > 0
-      ? formatCurrency(amount, currency)
-      : "your payment";
 
   return createPortal(
     <div
@@ -276,7 +276,12 @@ function InstructionStep({
   );
 }
 
-export function DepositForm({ merchants, currency, savedPaymentMethods = [] }: DepositFormProps) {
+export function DepositForm({
+  merchants,
+  currency,
+  fxRate = null,
+  savedPaymentMethods = [],
+}: DepositFormProps) {
   const router = useRouter();
   const connectivity = useConnectivityOptional();
   const methods = ALL_METHOD_OPTIONS;
@@ -306,6 +311,12 @@ export function DepositForm({ merchants, currency, savedPaymentMethods = [] }: D
   const merchantNumber = method ? merchantFor(method, merchants) : "";
   const methodMeta = methods.find((m) => m.id === method);
   const isMoMoMethod = method === "mtn" || method === "airtel";
+  const showMomoZmwNotice = momoRequiresZmwNotice(currency);
+
+  function sendAmountLabel(forMethod: DepositMethod): string {
+    if (!hasAmount) return "your payment";
+    return formatDepositSendAmount(parsedAmount, currency, forMethod, fxRate);
+  }
 
   function openTidHelp(selected: "mtn" | "airtel") {
     setTidHelpMethod(selected);
@@ -461,8 +472,7 @@ export function DepositForm({ merchants, currency, savedPaymentMethods = [] }: D
         <>
           <DepositConfirmModal
             open={showConfirmModal}
-            amount={hasAmount ? parsedAmount : null}
-            currency={currency}
+            amountLabel={sendAmountLabel(method)}
             merchantNumber={merchantNumber}
             methodLabel={label}
             onClose={() => setShowConfirmModal(false)}
@@ -501,11 +511,27 @@ export function DepositForm({ merchants, currency, savedPaymentMethods = [] }: D
             {paymentReminder && (
               <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
                 Please finish the payment first. Send{" "}
-                <strong className="text-white">
-                  {hasAmount ? formatCurrency(parsedAmount, currency) : "your payment"}
-                </strong>{" "}
-                to <strong className="font-mono break-all">{merchantNumber}</strong>, then tap Confirm
+                <strong className="text-white">{sendAmountLabel(method)}</strong> to{" "}
+                <strong className="font-mono break-all">{merchantNumber}</strong>, then tap Confirm
                 deposit.
+              </div>
+            )}
+
+            {!isCrypto && showMomoZmwNotice && (
+              <div className="rounded-xl border border-cyan-500/25 bg-cyan-500/5 px-4 py-3 text-sm text-cyan-100/90">
+                <strong className="text-cyan-50">MTN &amp; Airtel accept ZMW only.</strong>{" "}
+                {hasAmount ? (
+                  <>
+                    Send{" "}
+                    <strong className="text-white">{sendAmountLabel(method)}</strong> on your phone —
+                    your wallet is credited in {getCurrencyLabel(currency)}.
+                  </>
+                ) : (
+                  <>
+                    Enter any Kwacha amount on your phone — we convert to{" "}
+                    {getCurrencyLabel(currency)} when crediting your wallet.
+                  </>
+                )}
               </div>
             )}
 
@@ -540,8 +566,8 @@ export function DepositForm({ merchants, currency, savedPaymentMethods = [] }: D
                       </button>
                     </InstructionStep>
                     <InstructionStep n={3}>
-                      Send the equivalent of{" "}
-                      <strong className="text-white">{formatCurrency(parsedAmount, currency)}</strong>{" "}
+                      Send{" "}
+                      <strong className="text-white">{sendAmountLabel(method)}</strong>{" "}
                       (admin credits your wallet after verification)
                     </InstructionStep>
                     <InstructionStep n={4}>
@@ -574,8 +600,8 @@ export function DepositForm({ merchants, currency, savedPaymentMethods = [] }: D
                       </button>
                     </InstructionStep>
                     <InstructionStep n={4}>
-                      Send USDT equivalent to{" "}
-                      <strong className="text-white">{formatCurrency(parsedAmount, currency)}</strong> wallet credit
+                      Send{" "}
+                      <strong className="text-white">{sendAmountLabel(method)}</strong> in USDT
                     </InstructionStep>
                     <InstructionStep n={5}>
                       Copy the blockchain <strong className="text-white">TxID / transaction hash</strong> after it confirms
@@ -599,7 +625,7 @@ export function DepositForm({ merchants, currency, savedPaymentMethods = [] }: D
                     <InstructionStep n={ussd ? 3 : 2}>
                       Send{" "}
                       <strong className="text-white">
-                        {hasAmount ? formatCurrency(parsedAmount, currency) : "any amount"}
+                        {hasAmount ? sendAmountLabel(method) : "any amount (ZMW)"}
                       </strong>{" "}
                       to{" "}
                       <strong className="font-mono text-white">{merchantNumber}</strong>
@@ -684,7 +710,7 @@ export function DepositForm({ merchants, currency, savedPaymentMethods = [] }: D
           <div>
             <h3 className="font-semibold text-white">Finish your deposit</h3>
             <p className="text-sm text-zinc-500">
-              {hasAmount ? `${formatCurrency(parsedAmount, currency)} via ${label}` : `via ${label}`}
+              {hasAmount ? `${sendAmountLabel(method)} via ${label}` : `via ${label}`}
             </p>
           </div>
         </div>
@@ -814,6 +840,14 @@ export function DepositForm({ merchants, currency, savedPaymentMethods = [] }: D
           <span className="text-zinc-500">(optional for MTN / Airtel — we credit what you actually sent)</span>
         </p>
 
+        {showMomoZmwNotice && (
+          <p className="text-xs text-cyan-300/80 mb-3 leading-relaxed">
+            MTN &amp; Airtel always charge in Zambian Kwacha (ZMW). If you pick mobile money, checkout
+            shows your {getCurrencyLabel(currency)} amount and the Kwacha you must send. Binance Pay
+            and USDT stay in USD.
+          </p>
+        )}
+
         <p className="text-xs text-zinc-500 mb-2">Quick amounts</p>
         <div className="flex flex-wrap gap-2 mb-4">
           {AMOUNT_PRESETS.map((preset) => {
@@ -859,6 +893,11 @@ export function DepositForm({ merchants, currency, savedPaymentMethods = [] }: D
             const number = merchantFor(m.id, merchants);
             const isLoading = loadingMethod === m.id;
             const disabled = Boolean(loadingMethod) || !number;
+            const isMoMo = m.id === "mtn" || m.id === "airtel";
+            const preview =
+              hasAmount && isMoMo && showMomoZmwNotice
+                ? formatDepositSendAmount(parsedAmount, currency, m.id, fxRate)
+                : null;
 
             return (
               <button
@@ -888,8 +927,12 @@ export function DepositForm({ merchants, currency, savedPaymentMethods = [] }: D
                   ) : (
                     <p className="text-xs text-zinc-500 mt-0.5">
                       {m.id === "binance" || m.id === "usdt_trc20"
-                        ? "Pay then submit reference for verification"
-                        : "Pay on your phone, then confirm deposit"}
+                        ? "Pay in USD, then submit reference for verification"
+                        : showMomoZmwNotice
+                          ? preview
+                            ? `Send ${preview} on your phone (ZMW)`
+                            : "Pays in ZMW on your phone, then confirm deposit"
+                          : "Pay on your phone, then confirm deposit"}
                     </p>
                   )}
                 </div>

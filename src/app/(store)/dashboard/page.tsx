@@ -24,6 +24,7 @@ import {
 import { getUserPaymentMethods } from "@/lib/payment-methods";
 import { getPendingWithdrawalForUser } from "@/lib/withdrawals";
 import { getRequestCurrency } from "@/lib/request-currency";
+import { getUsdToZmwRate } from "@/lib/currency-rates";
 import { getUserNotifications, getUnreadUserNotificationCount } from "@/lib/user-notifications";
 
 export const metadata = {
@@ -56,7 +57,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const isWalletArea = tab === "wallet" || tab === "history";
   const displayCurrency = await getRequestCurrency();
 
-  const [activations, orders, walletSnapshot, notifications, inboxUnread, pendingDeposits, paymentMethods, pendingWithdrawal] =
+  const [activations, orders, walletSnapshot, notifications, inboxUnread, pendingDeposits, paymentMethods, pendingWithdrawal, fxRate] =
     await Promise.all([
       getActivations(user.id),
       getUserPayments(user.id),
@@ -66,6 +67,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       getPendingWalletDeposits(user.id),
       isWalletArea ? getUserPaymentMethods(user.id) : Promise.resolve([]),
       isWalletArea ? getPendingWithdrawalForUser(user.id) : Promise.resolve(null),
+      isWalletArea ? getUsdToZmwRate() : Promise.resolve(null),
   ]);
 
   const merchants = await getMerchantDetails(displayCurrency);
@@ -138,6 +140,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             <WalletPanel
               balance={balance}
               currency={displayCurrency}
+              fxRate={fxRate}
               merchants={merchants}
               pendingDepositCount={pendingDeposits.length}
               paymentMethods={paymentMethods}
