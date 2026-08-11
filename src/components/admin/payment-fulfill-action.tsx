@@ -24,6 +24,7 @@ export function PaymentFulfillAction({ payment }: PaymentFulfillActionProps) {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [code, setCode] = useState("");
+  const [adminNote, setAdminNote] = useState("");
   const [whitelistOnly, setWhitelistOnly] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -57,6 +58,7 @@ export function PaymentFulfillAction({ payment }: PaymentFulfillActionProps) {
         body: JSON.stringify({
           activation_code: code,
           whitelist_only: whitelistOnly,
+          admin_note: adminNote.trim() || undefined,
         }),
       });
       const data = await res.json();
@@ -185,6 +187,21 @@ export function PaymentFulfillAction({ payment }: PaymentFulfillActionProps) {
                   />
                   Device registered on server (no code to send)
                 </label>
+
+                <div>
+                  <label className="block text-xs text-zinc-400 mb-1.5">
+                    Note for customer (optional)
+                  </label>
+                  <textarea
+                    value={adminNote}
+                    onChange={(e) => setAdminNote(e.target.value)}
+                    placeholder="Instructions, comments, or guidelines for the customer…"
+                    disabled={loading}
+                    rows={3}
+                    maxLength={1000}
+                    className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-zinc-500 focus:border-amber-500/50 focus:outline-none resize-none"
+                  />
+                </div>
 
                 {error && (
                   <p className="text-sm text-red-400 rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2">

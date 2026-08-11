@@ -90,6 +90,7 @@ export interface Payment {
   fulfillment_status: FulfillmentStatus | null;
   platform_fee: number;
   refund_note: string | null;
+  admin_note: string | null;
   refunded_at: string | null;
   created_at: string;
   completed_at: string | null;

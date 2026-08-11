@@ -77,6 +77,16 @@ export default async function ToolDetailPage({ params }: ToolDetailPageProps) {
               />
             </div>
             <h1 className="text-3xl sm:text-4xl font-bold mb-4">{tool.name}</h1>
+            {tool.icon_url && (
+              <div className="mb-6 flex justify-center lg:justify-start">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={tool.icon_url}
+                  alt={tool.name}
+                  className="h-48 w-auto rounded-2xl object-contain border border-white/10 bg-black/20 p-2"
+                />
+              </div>
+            )}
             <p className="text-zinc-400 leading-relaxed mb-8">{tool.description}</p>
 
             <div className="glass rounded-2xl p-6 space-y-4 mb-8">

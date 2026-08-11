@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Check, Copy, KeyRound, Loader2, Wallet } from "lucide-react";
+import { Check, CheckCircle, Copy, KeyRound, Loader2, Wallet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ReceiptDownloadButton } from "@/components/dashboard/receipt-download-button";
@@ -58,7 +58,16 @@ export function OrderCard({ payment, activation }: OrderCardProps) {
   return (
     <div className="glass rounded-2xl p-6 border border-white/10">
       <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
-        <div>
+        <div className="flex items-start gap-3">
+          {payment.tool?.icon_url && (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={payment.tool.icon_url}
+              alt=""
+              className="h-12 w-12 rounded-xl object-cover border border-white/10 shrink-0"
+            />
+          )}
+          <div>
           <h3 className="font-semibold text-white">
             {payment.tool?.name ?? "Tool order"}
           </h3>
@@ -68,6 +77,7 @@ export function OrderCard({ payment, activation }: OrderCardProps) {
               <span className="text-cyan-500/80 ml-2">· Paid from wallet</span>
             )}
           </p>
+          </div>
         </div>
         <Badge variant={status.variant}>{status.label}</Badge>
       </div>
@@ -106,6 +116,28 @@ export function OrderCard({ payment, activation }: OrderCardProps) {
                     Reason
                   </span>
                   {payment.refund_note}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {payment.status === "completed" && payment.fulfillment_status === "fulfilled" && !isRefunded && (
+        <div className="mt-4 rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-4">
+          <div className="flex items-start gap-3">
+            <Check className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-emerald-200">Order completed successfully</p>
+              <p className="text-sm text-zinc-400 mt-1">
+                Your order has been processed and delivered.
+              </p>
+              {payment.admin_note && (
+                <p className="text-sm text-zinc-400 mt-2 rounded-lg bg-black/30 border border-white/5 px-3 py-2 leading-relaxed">
+                  <span className="text-zinc-600 text-xs uppercase tracking-wide block mb-1">
+                    Note from admin
+                  </span>
+                  {payment.admin_note}
                 </p>
               )}
             </div>

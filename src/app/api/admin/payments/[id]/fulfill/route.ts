@@ -18,6 +18,7 @@ export async function POST(request: Request, { params }: RouteParams) {
   const body = await request.json();
   const activationCode = (body.activation_code as string)?.trim();
   const whitelistOnly = Boolean(body.whitelist_only);
+  const adminNote = (body.admin_note as string)?.trim() || null;
 
   if (!activationCode && !whitelistOnly) {
     return NextResponse.json(
@@ -75,7 +76,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
   await supabase
     .from("payments")
-    .update({ fulfillment_status: "fulfilled" })
+    .update({ fulfillment_status: "fulfilled", admin_note: adminNote })
     .eq("id", id);
 
   const toolName = (payment.tool as Tool | null)?.name ?? "your tool";

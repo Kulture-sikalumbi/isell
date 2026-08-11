@@ -73,6 +73,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     identifier_label: legacyIds.identifier_label,
     identifier_placeholder: legacyIds.identifier_placeholder,
     identifier_instructions: body.identifier_instructions || null,
+    icon_url: (body.icon_url as string)?.trim() || null,
     is_active: body.is_active ?? true,
   };
 

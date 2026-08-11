@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Plus, Save, Settings2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Save, Settings2, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,6 +26,14 @@ import {
   type ToolFormField,
 } from "@/lib/tool-form-fields";
 import type { Tool, ToolCategory, ToolFulfillmentMode } from "@/types/database";
+
+function extractPublicToolLogoPath(url: string): string | null {
+  const marker = "/storage/v1/object/public/logos/";
+  const idx = url.indexOf(marker);
+  if (idx === -1) return null;
+  const path = url.slice(idx + marker.length).split("?")[0]?.trim();
+  return path && path.startsWith("tools/") ? path : null;
+}
 
 interface ToolFormProps {
   tool?: Tool;
@@ -70,10 +78,15 @@ export function ToolForm({
     form_help_title: tool?.form_help_title ?? "",
     identifier_instructions:
       tool?.identifier_instructions ?? DEFAULT_IMEI_INSTRUCTIONS,
+    icon_url: tool?.icon_url ?? "",
     is_active: tool?.is_active ?? true,
     directApi: buildDirectApiFormState(tool),
   });
   const [submitting, setSubmitting] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [logoPath, setLogoPath] = useState<string | null>(
+    tool?.icon_url ? extractPublicToolLogoPath(tool.icon_url) : null
+  );
   const [error, setError] = useState("");
 
   const isManual = form.fulfillment_mode === "manual";
@@ -87,6 +100,48 @@ export function ToolForm({
       ...prev,
       directApi: { ...prev.directApi, [field]: value },
     }));
+  }
+
+  async function uploadToolLogo(file: File) {
+    setUploading(true);
+    setError("");
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      body.append("toolName", form.name || "tool");
+      if (logoPath) body.append("previousPath", logoPath);
+
+      const res = await fetch("/api/admin/tools/logo", { method: "POST", body });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Upload failed");
+      update("icon_url", String(result.url || ""));
+      setLogoPath(typeof result.path === "string" ? result.path : null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function removeToolLogo() {
+    setError("");
+    const path = logoPath || (form.icon_url.trim() ? extractPublicToolLogoPath(form.icon_url.trim()) : null);
+    if (path) {
+      setUploading(true);
+      try {
+        await fetch("/api/admin/tools/logo", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ path }),
+        });
+      } catch {
+        // ignore delete errors
+      } finally {
+        setUploading(false);
+      }
+    }
+    setLogoPath(null);
+    update("icon_url", "");
   }
 
   async function submitPayload(
@@ -138,6 +193,7 @@ export function ToolForm({
         form_help_title: form.form_help_title.trim() || null,
         identifier_instructions: form.identifier_instructions.trim() || null,
         ...legacyIds,
+        icon_url: form.icon_url.trim() || null,
         is_active: form.is_active,
       };
 
@@ -219,6 +275,55 @@ export function ToolForm({
           onChange={(e) => update("description", e.target.value)}
           placeholder="Short description customers see on the storefront"
         />
+        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-4">
+          <p className="text-sm font-medium text-zinc-300">Device thumbnail</p>
+          <p className="text-xs text-zinc-500 -mt-2">
+            Optional image shown to customers — e.g. a photo of the device model
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="inline-flex cursor-pointer">
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                className="hidden"
+                disabled={uploading || submitting}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void uploadToolLogo(file);
+                  e.currentTarget.value = "";
+                }}
+              />
+              <span className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-zinc-300 hover:bg-white/[0.06] transition-colors">
+                <Upload className="h-4 w-4" />
+                {uploading ? "Uploading…" : "Upload image"}
+              </span>
+            </label>
+            {form.icon_url.trim() && (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={removeToolLogo}
+                disabled={uploading || submitting}
+              >
+                <X className="h-4 w-4" />
+                Remove
+              </Button>
+            )}
+          </div>
+          {form.icon_url.trim() && (
+            <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={form.icon_url.trim()}
+                alt="Device thumbnail preview"
+                className="h-16 w-16 rounded-lg object-cover border border-white/10"
+              />
+              <p className="text-xs text-zinc-500">Thumbnail preview</p>
+            </div>
+          )}
+        </div>
+
         <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-4">
           <p className="text-sm font-medium text-zinc-300">Desktop downloads</p>
           <p className="text-xs text-zinc-500 -mt-2">

@@ -55,11 +55,20 @@ export function ToolCard({
         <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-cyan-500/5 to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
 
         <div className="flex items-start justify-between gap-3 mb-4">
-          <div
-            className={`inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br ${accentColors[colorIndex]} border border-white/10 shrink-0`}
-          >
-            <Cpu className="h-5 w-5 text-white/80" />
-          </div>
+          {tool.icon_url ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={tool.icon_url}
+              alt=""
+              className="h-12 w-12 rounded-xl object-cover border border-white/10 shrink-0"
+            />
+          ) : (
+            <div
+              className={`inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br ${accentColors[colorIndex]} border border-white/10 shrink-0`}
+            >
+              <Cpu className="h-5 w-5 text-white/80" />
+            </div>
+          )}
           <Badge variant="info" className="text-[10px] shrink-0">
             {getCustomerIdentifierLabel(tool.identifier_label)}
           </Badge>
