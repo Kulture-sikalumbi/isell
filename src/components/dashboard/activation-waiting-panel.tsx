@@ -34,7 +34,7 @@ export function ActivationWaitingPanel({ paymentId, onDone }: ActivationWaitingP
 
   useEffect(() => {
     let cancelled = false;
-    let interval: ReturnType<typeof setInterval>;
+    const intervalRef: { current?: ReturnType<typeof setInterval> } = {};
 
     async function fetchStatus() {
       try {
@@ -54,7 +54,7 @@ export function ActivationWaitingPanel({ paymentId, onDone }: ActivationWaitingP
     }
 
     fetchStatus();
-    interval = setInterval(fetchStatus, 5000);
+    intervalRef.current = setInterval(fetchStatus, 5000);
 
     const unsubRealtime = subscribeToActivation(paymentId, () => {
       if (!cancelled) fetchStatus();
@@ -62,7 +62,7 @@ export function ActivationWaitingPanel({ paymentId, onDone }: ActivationWaitingP
 
     return () => {
       cancelled = true;
-      clearInterval(interval);
+      if (intervalRef.current) clearInterval(intervalRef.current);
       unsubRealtime?.();
     };
   }, [paymentId, onDone]);
@@ -84,7 +84,7 @@ export function ActivationWaitingPanel({ paymentId, onDone }: ActivationWaitingP
     return (
       <div className="glass rounded-2xl p-10 text-center">
         <Loader2 className="h-10 w-10 text-cyan-400 animate-spin mx-auto mb-4" />
-        <p className="text-white font-medium">Starting activation...</p>
+        <p className="text-white font-medium">Starting order processing...</p>
       </div>
     );
   }
@@ -94,7 +94,7 @@ export function ActivationWaitingPanel({ paymentId, onDone }: ActivationWaitingP
       <div className="space-y-4">
         <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
           <CheckCircle2 className="h-4 w-4 shrink-0" />
-          Your activation is ready!
+          Your order result is ready!
         </div>
         <ActivationCard activation={status.activation} />
       </div>
@@ -120,11 +120,11 @@ export function ActivationWaitingPanel({ paymentId, onDone }: ActivationWaitingP
         </div>
 
         <Badge variant={isManualWait ? "warning" : "info"} className="mb-3">
-          {isManualWait ? "Awaiting processing" : "Generating activation key"}
+          {isManualWait ? "Awaiting processing" : "Generating order result"}
         </Badge>
 
         <h3 className="text-xl font-bold text-white mb-2">
-          {isManualWait ? "We're preparing your activation" : "Please wait for your key"}
+          {isManualWait ? "We're preparing your order result" : "Please wait while we finish processing"}
         </h3>
 
         <p className="text-sm text-zinc-400 mb-2">
@@ -144,8 +144,8 @@ export function ActivationWaitingPanel({ paymentId, onDone }: ActivationWaitingP
           <p className="flex items-start gap-2">
             <Mail className="h-4 w-4 text-cyan-400 shrink-0 mt-0.5" />
             <span>
-              <strong className="text-zinc-200">You can leave this page.</strong> We'll email your key when
-              it's ready, and it will appear in your{" "}
+              <strong className="text-zinc-200">You can leave this page.</strong> We&apos;ll email your result when
+              it&apos;s ready, and it will appear in your{" "}
               <Link href="/dashboard?tab=activations" className="text-cyan-400 hover:text-cyan-300">
                 Activations
               </Link>{" "}
@@ -169,7 +169,7 @@ export function ActivationWaitingPanel({ paymentId, onDone }: ActivationWaitingP
 
         <div className="flex items-center gap-2 text-xs text-zinc-600 mt-6">
           <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-          Still watching for your key{polls > 0 ? " · synced" : ""}
+          Still watching for your result{polls > 0 ? " · synced" : ""}
         </div>
       </div>
     </div>

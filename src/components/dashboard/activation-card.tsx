@@ -36,7 +36,7 @@ export function ActivationCard({ activation }: ActivationCardProps) {
             {getCustomerIdentifierLabel(activation.tool?.identifier_label)}: {activation.hardware_id}
           </p>
         </div>
-        <Badge variant="success">Active</Badge>
+        <Badge variant="success">Completed</Badge>
       </div>
 
       {isWhitelist ? (

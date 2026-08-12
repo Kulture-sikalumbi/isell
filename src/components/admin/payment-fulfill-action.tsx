@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { ImagePlus, KeyRound, Loader2, Mail, Send, X } from "lucide-react";
+import { CheckCircle2, ImagePlus, Loader2, Mail, Send, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CopyableValue } from "@/components/ui/copyable-value";
 import {
@@ -14,6 +14,14 @@ import { CheckoutFieldsDisplay } from "@/components/orders/checkout-fields-displ
 import { useNavigationLoading } from "@/components/layout/navigation-progress";
 import { acquireBodyScrollLock } from "@/lib/body-scroll-lock";
 import { uploadCompressedOrderSuccessImage } from "@/lib/image-upload";
+
+const QUICK_SUCCESS_NOTES = [
+  "Order processed successfully",
+  "Service completed successfully",
+  "Device registration completed successfully",
+  "Your request has been completed",
+  "Processing completed successfully",
+] as const;
 
 interface PaymentFulfillActionProps {
   payment: AdminPaymentRow;
@@ -58,7 +66,7 @@ export function PaymentFulfillAction({ payment }: PaymentFulfillActionProps) {
         paymentId: payment.id,
         file,
       });
-      setSuccessThumbnailUrl(uploaded.publicUrl);
+      setSuccessThumbnailUrl(`data:${uploaded.contentType};base64,${uploaded.base64Data}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Image upload failed");
     } finally {
@@ -79,7 +87,8 @@ export function PaymentFulfillAction({ payment }: PaymentFulfillActionProps) {
           activation_code: code,
           whitelist_only: whitelistOnly,
           admin_note: adminNote,
-          success_thumbnail_url: successThumbnailUrl.trim() || undefined,
+          success_thumbnail_url: successThumbnailUrl.startsWith("data:") ? undefined : successThumbnailUrl.trim() || undefined,
+          success_thumbnail_data_url: successThumbnailUrl.startsWith("data:") ? successThumbnailUrl : undefined,
         }),
       });
       const data = await res.json();
@@ -131,14 +140,14 @@ export function PaymentFulfillAction({ payment }: PaymentFulfillActionProps) {
 
                 <div className="flex items-center gap-3 pr-8">
                   <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 border border-amber-500/30">
-                    <KeyRound className="h-5 w-5 text-amber-300" />
+                    <CheckCircle2 className="h-5 w-5 text-amber-300" />
                   </div>
                   <div>
                     <p
                       id="fulfill-key-title"
                       className="text-xs font-semibold text-amber-200 uppercase tracking-wide"
                     >
-                      Send activation key
+                      Complete order
                     </p>
                     <p className="text-base text-white font-semibold">{payment.tool?.name}</p>
                   </div>
@@ -170,7 +179,7 @@ export function PaymentFulfillAction({ payment }: PaymentFulfillActionProps) {
                         />
                       )}
                       <p className="text-xs text-zinc-500 mt-1">
-                        Also saved to customer Activations tab instantly.
+                        Also saved to the customer dashboard instantly.
                       </p>
                     </div>
                   </div>
@@ -195,7 +204,7 @@ export function PaymentFulfillAction({ payment }: PaymentFulfillActionProps) {
                   type="text"
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
-                  placeholder="Paste activation key"
+                  placeholder="Paste order code or completion result"
                   disabled={whitelistOnly || loading}
                   autoFocus
                   className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-zinc-500 focus:border-amber-500/50 focus:outline-none"
@@ -209,17 +218,34 @@ export function PaymentFulfillAction({ payment }: PaymentFulfillActionProps) {
                     disabled={loading}
                     className="rounded"
                   />
-                  Device registered on server (no code to send)
+                  Completed without a code (service done on server)
                 </label>
 
                 <div>
                   <label className="block text-xs text-zinc-400 mb-1.5">
                     Note for customer (optional)
                   </label>
+                  <div className="mb-2 flex flex-wrap gap-2">
+                    {QUICK_SUCCESS_NOTES.map((preset) => (
+                      <button
+                        key={preset}
+                        type="button"
+                        disabled={loading}
+                        onClick={() => setAdminNote(preset)}
+                        className={`rounded-lg border px-2.5 py-1.5 text-xs transition-colors ${
+                          adminNote.trim() === preset
+                            ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-100"
+                            : "border-white/10 bg-white/5 text-zinc-400 hover:border-white/20 hover:text-zinc-200"
+                        }`}
+                      >
+                        {preset}
+                      </button>
+                    ))}
+                  </div>
                   <textarea
                     value={adminNote}
                     onChange={(e) => setAdminNote(e.target.value)}
-                    placeholder={"Example:\nYour device has been unlocked\nLocation: ON\nIMEI: 234843444675"}
+                    placeholder={"Example:\nOrder processed successfully\nLocation: ON\nIMEI: 234843444675"}
                     disabled={loading}
                     rows={5}
                     maxLength={1000}
@@ -266,6 +292,9 @@ export function PaymentFulfillAction({ payment }: PaymentFulfillActionProps) {
                   <p className="mt-1.5 text-[11px] text-zinc-500">
                     Images are compressed before upload and appear on both admin and customer sides.
                   </p>
+                  <p className="text-[11px] text-zinc-500">
+                    If your storage bucket is private to browsers, uploads still work because the server saves them for admin.
+                  </p>
                 </div>
 
                 {error && (
@@ -286,7 +315,7 @@ export function PaymentFulfillAction({ payment }: PaymentFulfillActionProps) {
                     ) : (
                       <Send className="h-4 w-4" />
                     )}
-                    Send to customer
+                    Complete & send to customer
                   </Button>
                   <Button
                     type="button"
@@ -312,8 +341,8 @@ export function PaymentFulfillAction({ payment }: PaymentFulfillActionProps) {
         className="gap-2 bg-amber-500/20 text-amber-100 border border-amber-500/40 hover:bg-amber-500/30"
         onClick={() => setOpen(true)}
       >
-        <KeyRound className="h-3.5 w-3.5" />
-        Send key
+        <CheckCircle2 className="h-3.5 w-3.5" />
+        Complete order
       </Button>
       {modal}
     </>

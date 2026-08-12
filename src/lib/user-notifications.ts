@@ -104,8 +104,8 @@ export async function notifyActivationReady(input: {
   await notifyUser({
     userId: input.userId,
     type: "activation_ready",
-    title: `Activation ready: ${input.toolName}`,
-    message: `Your activation for ${input.toolName} (${input.hardwareId}) is ready. Tap to view your key.`,
+    title: `Order completed: ${input.toolName}`,
+    message: `Your order for ${input.toolName} (${input.hardwareId}) is ready. Tap to view the result.`,
     link: `/dashboard?tab=activations&wait=${input.paymentId}`,
   });
 

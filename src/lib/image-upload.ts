@@ -1,7 +1,5 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
-
 const MAX_DIMENSION = 1400;
 const JPEG_QUALITY = 0.78;
 const MAX_INPUT_FILE_BYTES = 12 * 1024 * 1024;
@@ -65,24 +63,22 @@ export async function uploadCompressedOrderSuccessImage(input: {
     throw new Error("Image is too large. Please upload a file under 12MB");
   }
 
-  const supabase = createClient();
-  if (!supabase) throw new Error("Storage is not configured");
-
   const compressed = await compressImage(input.file);
   if (compressed.size > 2 * 1024 * 1024) {
     throw new Error("Compressed image is still too large. Try a smaller image");
   }
-  const path = `order-success/${input.paymentId}/${Date.now()}.jpg`;
 
-  const { error } = await supabase.storage
-    .from("order-success-images")
-    .upload(path, compressed, {
-      contentType: "image/jpeg",
-      upsert: true,
-    });
+  const arrayBuffer = await compressed.arrayBuffer();
+  const bytes = new Uint8Array(arrayBuffer);
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  }
 
-  if (error) throw new Error(error.message);
-
-  const { data } = supabase.storage.from("order-success-images").getPublicUrl(path);
-  return { path, publicUrl: data.publicUrl };
+  return {
+    fileName: `${input.paymentId}.jpg`,
+    contentType: "image/jpeg",
+    base64Data: btoa(binary),
+  };
 }

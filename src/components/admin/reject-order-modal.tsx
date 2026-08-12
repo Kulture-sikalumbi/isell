@@ -14,11 +14,15 @@ import { useNavigationLoading } from "@/components/layout/navigation-progress";
 import { acquireBodyScrollLock } from "@/lib/body-scroll-lock";
 
 const QUICK_REASONS = [
-  "Wrong IMEI / device ID",
-  "Unable to activate this device",
+  "Invalid IMEI / serial number",
+  "Suspicious activity detected",
+  "Activation failed",
+  "Processing failed",
   "Tool not supported for this model",
   "Duplicate order",
   "Customer requested cancellation",
+  "Payment proof mismatch",
+  "Order details do not match the selected service",
 ] as const;
 
 interface RejectOrderModalProps {

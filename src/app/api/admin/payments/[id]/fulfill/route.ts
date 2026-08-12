@@ -20,9 +20,13 @@ export async function POST(request: Request, { params }: RouteParams) {
   const whitelistOnly = Boolean(body.whitelist_only);
   const rawAdminNote = typeof body.admin_note === "string" ? body.admin_note : "";
   const adminNote = rawAdminNote.trim().length > 0 ? rawAdminNote : null;
-  const successThumbnailUrl =
+  let successThumbnailUrl =
     typeof body.success_thumbnail_url === "string" && body.success_thumbnail_url.trim().length > 0
       ? body.success_thumbnail_url.trim()
+      : null;
+  const successThumbnailDataUrl =
+    typeof body.success_thumbnail_data_url === "string" && body.success_thumbnail_data_url.startsWith("data:")
+      ? body.success_thumbnail_data_url
       : null;
 
   if (!activationCode && !whitelistOnly) {
@@ -42,6 +46,30 @@ export async function POST(request: Request, { params }: RouteParams) {
     .select("*, tool:tools(*)")
     .eq("id", id)
     .single();
+
+  if (successThumbnailDataUrl) {
+    const match = successThumbnailDataUrl.match(/^data:(.+);base64,(.+)$/);
+    if (!match) {
+      return NextResponse.json({ error: "Invalid image upload payload" }, { status: 400 });
+    }
+
+    const [, contentType, base64Data] = match;
+    const filePath = `order-success/${id}/${Date.now()}.jpg`;
+    const buffer = Buffer.from(base64Data, "base64");
+    const { error: uploadError } = await supabase.storage
+      .from("order-success-images")
+      .upload(filePath, buffer, {
+        contentType,
+        upsert: true,
+      });
+
+    if (uploadError) {
+      return NextResponse.json({ error: uploadError.message }, { status: 400 });
+    }
+
+    const { data: publicUrl } = supabase.storage.from("order-success-images").getPublicUrl(filePath);
+    successThumbnailUrl = publicUrl.publicUrl;
+  }
 
   if (!payment) {
     return NextResponse.json({ error: "Payment not found" }, { status: 404 });

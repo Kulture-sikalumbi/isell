@@ -57,15 +57,16 @@ export function OrderDetailModal({
           <div className="space-y-4 px-4 py-4">
             <div>
               <p className="break-all font-mono text-[15px] text-zinc-200">{payment.hardware_id}</p>
-              <div className="mt-2">
+              <div className="mt-2 flex flex-wrap gap-2">
                 <Badge variant="success">Success</Badge>
+                <Badge variant="info">Order processed successfully</Badge>
               </div>
             </div>
 
             <div className="rounded-xl border border-white/8 bg-[#202943] px-3 py-3">
               <div className="mb-2 flex items-center justify-between gap-2">
                 <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
-                  Code
+                  Result
                 </span>
                 {hasCode && !isDeviceRegistered && (
                   <button
@@ -81,7 +82,7 @@ export function OrderDetailModal({
 
               {isDeviceRegistered ? (
                 <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-3 text-sm text-emerald-100">
-                  Device registered — check the tool for access.
+                  Service completed successfully — check the tool for access.
                 </div>
               ) : hasCode ? (
                 <div className="rounded-lg border border-white/8 bg-[#1a2033] px-3 py-3 font-mono text-sm text-white break-all">
@@ -89,7 +90,7 @@ export function OrderDetailModal({
                 </div>
               ) : (
                 <div className="rounded-lg border border-white/8 bg-[#1a2033] px-3 py-3 text-sm text-zinc-400">
-                  Activation code not available yet.
+                  Order processed successfully.
                 </div>
               )}
 

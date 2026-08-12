@@ -34,7 +34,7 @@ function orderStatus(payment: Payment): {
     return { label: "Processing", variant: "info" };
   }
   if (payment.fulfillment_status === "fulfilled") {
-    return { label: "Activation ready", variant: "success" };
+    return { label: "Order processed successfully", variant: "success" };
   }
   return { label: "Paid", variant: "success" };
 }
@@ -133,9 +133,9 @@ export function OrderCard({ payment, activation }: OrderCardProps) {
             <div className="flex items-center gap-2">
               <Check className="h-5 w-5 text-emerald-400 shrink-0" />
               <div>
-                <p className="text-sm font-semibold text-emerald-200">Order completed successfully</p>
+                <p className="text-sm font-semibold text-emerald-200">Order processed successfully</p>
                 <p className="text-xs text-emerald-100/70 mt-0.5">
-                  Your order has been processed and delivered.
+                  Your order has been completed successfully.
                 </p>
               </div>
             </div>
@@ -170,7 +170,7 @@ export function OrderCard({ payment, activation }: OrderCardProps) {
         <div className="mt-4 rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-4">
           <div className="flex items-center gap-2 mb-2">
             <KeyRound className="h-4 w-4 text-emerald-400" />
-            <p className="text-sm font-medium text-emerald-200">Your activation key</p>
+            <p className="text-sm font-medium text-emerald-200">Order code / result</p>
           </div>
           {activation.activation_code === "DEVICE_REGISTERED" ? (
             <p className="text-sm text-emerald-100/90">
@@ -203,9 +203,9 @@ export function OrderCard({ payment, activation }: OrderCardProps) {
           <div className="flex items-start gap-3">
             <Loader2 className="h-5 w-5 text-cyan-400 animate-spin shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm text-cyan-100 font-medium">Waiting for activation</p>
+              <p className="text-sm text-cyan-100 font-medium">Waiting for completion</p>
               <p className="text-xs text-zinc-500 mt-0.5">
-                Payment received — your key will be emailed and added to Activations when ready. You can
+                Payment received — your order result will be emailed and added to your dashboard when ready. You can
                 leave this page.
               </p>
             </div>
@@ -243,7 +243,7 @@ export function OrderCard({ payment, activation }: OrderCardProps) {
               href="/dashboard?tab=activations"
               className="text-cyan-400 hover:text-cyan-300"
             >
-              All activations
+              View results
             </Link>
           </span>
         )}
