@@ -18,7 +18,7 @@ const PAGE_TABLES: Record<string, string[]> = {
 export function AdminRealtimeRefresh() {
   const router = useRouter();
   const pathname = usePathname();
-  const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastRefreshRef = useRef(0);
 
   const refresh = useCallback(() => {
