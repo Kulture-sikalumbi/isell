@@ -22,7 +22,7 @@ export function AdminRealtimeRefresh() {
   const lastRefreshRef = useRef(0);
 
   const refresh = useCallback(() => {
-    clearTimeout(timeoutRef.current);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
 
     const elapsed = Date.now() - lastRefreshRef.current;
     const delay = Math.max(DEBOUNCE_MS - elapsed, 500);
@@ -43,7 +43,7 @@ export function AdminRealtimeRefresh() {
 
     return () => {
       unsub?.();
-      clearTimeout(timeoutRef.current);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, [pathname, refresh]);
 
