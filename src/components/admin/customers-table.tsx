@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { MessageCircle } from "lucide-react";
 import { RoleToggle } from "@/components/admin/role-toggle";
+import { AdminWalletCreditModal } from "@/components/admin/admin-wallet-credit-modal";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { CustomerProfile, Profile } from "@/types/database";
 
@@ -27,6 +28,7 @@ export function CustomersTable({
                 <th className="px-4 sm:px-6 py-4 font-medium">Email</th>
                 <th className="px-4 sm:px-6 py-4 font-medium">Orders</th>
                 <th className="px-4 sm:px-6 py-4 font-medium">Total spent</th>
+                <th className="px-4 sm:px-6 py-4 font-medium">Wallet</th>
                 <th className="px-4 sm:px-6 py-4 font-medium">Joined</th>
                 <th className="px-4 sm:px-6 py-4 font-medium">Actions</th>
               </tr>
@@ -45,17 +47,29 @@ export function CustomersTable({
                   <td className="px-4 sm:px-6 py-4 text-emerald-400">
                     {formatCurrency(c.total_spent)}
                   </td>
+                  <td className="px-4 sm:px-6 py-4 text-cyan-300">
+                    {formatCurrency(c.wallet_balance ?? 0, c.wallet_currency ?? undefined)}
+                  </td>
                   <td className="px-4 sm:px-6 py-4 text-zinc-500">
                     {formatDate(c.created_at)}
                   </td>
                   <td className="px-4 sm:px-6 py-4">
-                    <Link
-                      href={`/admin/messages?user=${c.id}`}
-                      className="inline-flex items-center gap-1.5 text-xs text-cyan-400 hover:text-cyan-300"
-                    >
-                      <MessageCircle className="h-3.5 w-3.5" />
-                      Message
-                    </Link>
+                    <div className="flex flex-col items-start gap-2">
+                      <Link
+                        href={`/admin/messages?user=${c.id}`}
+                        className="inline-flex items-center gap-1.5 text-xs text-cyan-400 hover:text-cyan-300"
+                      >
+                        <MessageCircle className="h-3.5 w-3.5" />
+                        Message
+                      </Link>
+                      <AdminWalletCreditModal
+                        userId={c.id}
+                        email={c.email}
+                        fullName={c.full_name}
+                        walletCurrency={c.wallet_currency ?? c.display_currency}
+                        walletBalance={c.wallet_balance ?? 0}
+                      />
+                    </div>
                   </td>
                 </tr>
               ))}

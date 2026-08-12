@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/auth";
+import { creditUserWalletByAdmin } from "@/lib/admin-wallet-credit";
 import { createServiceClient } from "@/lib/supabase/server";
 import type { UserRole } from "@/types/database";
 
@@ -44,4 +45,31 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
 
   return NextResponse.json({ success: true, profile: data });
+}
+
+export async function POST(request: Request, { params }: RouteParams) {
+  const admin = await getAdminUser();
+  if (!admin) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
+  const { id } = await params;
+  const body = await request.json().catch(() => ({}));
+  const amount = Number(body.amount);
+  const currency = typeof body.currency === "string" ? body.currency : "";
+  const note = typeof body.note === "string" ? body.note : null;
+
+  const result = await creditUserWalletByAdmin({
+    userId: id,
+    amount,
+    currency,
+    adminNote: note,
+    adminEmail: admin.email ?? null,
+  });
+
+  if (!result.ok) {
+    return NextResponse.json({ error: result.error }, { status: 400 });
+  }
+
+  return NextResponse.json(result);
 }

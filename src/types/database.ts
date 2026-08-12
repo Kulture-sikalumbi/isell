@@ -91,6 +91,7 @@ export interface Payment {
   platform_fee: number;
   refund_note: string | null;
   admin_note: string | null;
+  success_thumbnail_url: string | null;
   refunded_at: string | null;
   created_at: string;
   completed_at: string | null;
@@ -257,6 +258,8 @@ export interface LedgerEntry {
 export interface CustomerProfile extends Profile {
   orders_count: number;
   total_spent: number;
+  wallet_balance?: number;
+  wallet_currency?: string | null;
 }
 
 export interface AdminNotification {

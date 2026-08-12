@@ -7,7 +7,7 @@ import type {
   AdminNotification,
   CustomerProfile,
   Payment,
-  Profile,
+
   ResellerCredit,
   Tool,
   ToolCategory,
@@ -321,13 +321,15 @@ export async function getCustomersWithStats(): Promise<CustomerProfile[]> {
   const supabase = getClient();
   if (!supabase) return [];
 
-  const [profilesRes, paymentsRes] = await Promise.all([
+  const [profilesRes, paymentsRes, walletsRes] = await Promise.all([
     supabase.from("profiles").select("*").order("created_at", { ascending: false }),
     supabase.from("payments").select("user_id, amount, status").eq("status", "completed"),
+    supabase.from("user_wallets").select("user_id, balance, currency"),
   ]);
 
   const profiles = profilesRes.data ?? [];
   const payments = paymentsRes.data ?? [];
+  const wallets = walletsRes.data ?? [];
 
   const stats = new Map<string, { count: number; spent: number }>();
   for (const p of payments) {
@@ -338,12 +340,22 @@ export async function getCustomersWithStats(): Promise<CustomerProfile[]> {
     stats.set(p.user_id, cur);
   }
 
+  const walletsByUser = new Map<string, { balance: number; currency: string | null }>();
+  for (const wallet of wallets) {
+    walletsByUser.set(wallet.user_id, {
+      balance: Number(wallet.balance ?? 0),
+      currency: wallet.currency ?? null,
+    });
+  }
+
   return profiles
     .filter((p) => p.role === "user")
     .map((p) => ({
       ...p,
       orders_count: stats.get(p.id)?.count ?? 0,
       total_spent: stats.get(p.id)?.spent ?? 0,
+      wallet_balance: walletsByUser.get(p.id)?.balance ?? 0,
+      wallet_currency: walletsByUser.get(p.id)?.currency ?? p.display_currency ?? null,
     }));
 }
 

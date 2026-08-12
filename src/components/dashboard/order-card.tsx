@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Check, CheckCircle, Copy, KeyRound, Loader2, Wallet } from "lucide-react";
+import { Check, Copy, KeyRound, Loader2, Wallet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { OrderDetailModal } from "@/components/dashboard/order-detail-modal";
 import { ReceiptDownloadButton } from "@/components/dashboard/receipt-download-button";
 import { CheckoutFieldsDisplay } from "@/components/orders/checkout-fields-display";
 import { formatOrderNumber } from "@/lib/order-number";
@@ -40,6 +41,7 @@ function orderStatus(payment: Payment): {
 
 export function OrderCard({ payment, activation }: OrderCardProps) {
   const [copied, setCopied] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
   const status = orderStatus(payment);
   const isWallet = payment.provider === "wallet";
   const totalPaid = Number(payment.amount) + Number(payment.platform_fee ?? 0);
@@ -47,6 +49,8 @@ export function OrderCard({ payment, activation }: OrderCardProps) {
   const isAwaiting = payment.fulfillment_status === "awaiting";
   const hasKey = Boolean(activation?.activation_code);
   const isRefunded = payment.status === "refunded";
+  const successNote = payment.admin_note?.trim() || null;
+  const successThumbnailUrl = payment.success_thumbnail_url?.trim() || null;
 
   function copyCode() {
     if (!activation?.activation_code) return;
@@ -124,23 +128,40 @@ export function OrderCard({ payment, activation }: OrderCardProps) {
       )}
 
       {payment.status === "completed" && payment.fulfillment_status === "fulfilled" && !isRefunded && (
-        <div className="mt-4 rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-4">
-          <div className="flex items-start gap-3">
-            <Check className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-medium text-emerald-200">Order completed successfully</p>
-              <p className="text-sm text-zinc-400 mt-1">
-                Your order has been processed and delivered.
-              </p>
-              {payment.admin_note && (
-                <p className="text-sm text-zinc-400 mt-2 rounded-lg bg-black/30 border border-white/5 px-3 py-2 leading-relaxed">
-                  <span className="text-zinc-600 text-xs uppercase tracking-wide block mb-1">
-                    Note from admin
-                  </span>
-                  {payment.admin_note}
+        <div className="mt-4 overflow-hidden rounded-2xl border border-emerald-500/25 bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-cyan-500/5 shadow-lg shadow-emerald-500/5">
+          <div className="border-b border-emerald-500/15 px-4 py-3">
+            <div className="flex items-center gap-2">
+              <Check className="h-5 w-5 text-emerald-400 shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-emerald-200">Order completed successfully</p>
+                <p className="text-xs text-emerald-100/70 mt-0.5">
+                  Your order has been processed and delivered.
                 </p>
-              )}
+              </div>
             </div>
+          </div>
+
+          <div className="p-4">
+            {(successThumbnailUrl || successNote) && (
+              <div className="rounded-xl border border-white/8 bg-[#111827]/45 p-3 sm:p-4">
+                {successThumbnailUrl && (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={successThumbnailUrl}
+                    alt={`${payment.tool?.name ?? "Order"} preview`}
+                    className="mb-3 max-h-72 w-full rounded-xl border border-white/10 bg-black/20 object-cover"
+                  />
+                )}
+                {successNote && (
+                  <div className="rounded-lg border border-white/5 bg-black/20 px-3 py-3">
+                    <span className="text-zinc-500 text-[10px] uppercase tracking-[0.18em] block mb-2">
+                      Note from admin
+                    </span>
+                    <p className="whitespace-pre-line text-sm leading-6 text-zinc-200">{successNote}</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -198,7 +219,10 @@ export function OrderCard({ payment, activation }: OrderCardProps) {
       )}
 
       {payment.status === "completed" && (
-        <div className="mt-4 pt-4 border-t border-white/5">
+        <div className="mt-4 pt-4 border-t border-white/5 flex flex-wrap items-center gap-3">
+          <Button size="sm" variant="secondary" onClick={() => setDetailOpen(true)}>
+            View order
+          </Button>
           <ReceiptDownloadButton
             paymentId={payment.id}
             receiptNumber={formatOrderNumber(payment)}
@@ -224,6 +248,14 @@ export function OrderCard({ payment, activation }: OrderCardProps) {
           </span>
         )}
       </p>
+      <OrderDetailModal
+        payment={payment}
+        activation={activation}
+        open={detailOpen}
+        onClose={() => setDetailOpen(false)}
+        copied={copied}
+        onCopy={copyCode}
+      />
     </div>
   );
 }

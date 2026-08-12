@@ -52,11 +52,19 @@ export function PaymentOrderActions({ payment }: PaymentOrderActionsProps) {
           <Check className="h-3 w-3" />
           Delivered
         </span>
-        {payment.admin_note && (
-          <p className="text-[11px] text-zinc-500 leading-snug rounded-lg bg-black/30 border border-white/5 px-2.5 py-2">
-            <span className="text-zinc-600 text-[10px] uppercase tracking-wide block mb-0.5">Note</span>
-            {payment.admin_note}
-          </p>
+        {(payment.admin_note || payment.success_thumbnail_url) && (
+          <div className="text-[11px] text-zinc-500 leading-snug rounded-lg bg-black/30 border border-white/5 px-2.5 py-2 space-y-2">
+            <span className="text-zinc-600 text-[10px] uppercase tracking-wide block mb-0.5">Delivery details</span>
+            {payment.success_thumbnail_url && (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={payment.success_thumbnail_url}
+                alt="Successful order thumbnail"
+                className="w-full rounded-lg border border-white/10 object-cover"
+              />
+            )}
+            {payment.admin_note && <p className="whitespace-pre-line">{payment.admin_note}</p>}
+          </div>
         )}
         <AdminNoteButton payment={payment} />
         {canRejectOrder(payment) && (

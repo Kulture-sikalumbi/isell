@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { KeyRound, Loader2, Mail, Send, X } from "lucide-react";
+import { ImagePlus, KeyRound, Loader2, Mail, Send, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CopyableValue } from "@/components/ui/copyable-value";
 import {
@@ -13,6 +13,7 @@ import {
 import { CheckoutFieldsDisplay } from "@/components/orders/checkout-fields-display";
 import { useNavigationLoading } from "@/components/layout/navigation-progress";
 import { acquireBodyScrollLock } from "@/lib/body-scroll-lock";
+import { uploadCompressedOrderSuccessImage } from "@/lib/image-upload";
 
 interface PaymentFulfillActionProps {
   payment: AdminPaymentRow;
@@ -25,6 +26,8 @@ export function PaymentFulfillAction({ payment }: PaymentFulfillActionProps) {
   const [mounted, setMounted] = useState(false);
   const [code, setCode] = useState("");
   const [adminNote, setAdminNote] = useState("");
+  const [successThumbnailUrl, setSuccessThumbnailUrl] = useState("");
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [whitelistOnly, setWhitelistOnly] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -46,6 +49,23 @@ export function PaymentFulfillAction({ payment }: PaymentFulfillActionProps) {
     return <span className="text-xs text-zinc-500">Delivered</span>;
   }
 
+  async function handleImageChange(file: File | null) {
+    if (!file) return;
+    setUploadingImage(true);
+    setError("");
+    try {
+      const uploaded = await uploadCompressedOrderSuccessImage({
+        paymentId: payment.id,
+        file,
+      });
+      setSuccessThumbnailUrl(uploaded.publicUrl);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Image upload failed");
+    } finally {
+      setUploadingImage(false);
+    }
+  }
+
   async function handleFulfill(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -58,13 +78,17 @@ export function PaymentFulfillAction({ payment }: PaymentFulfillActionProps) {
         body: JSON.stringify({
           activation_code: code,
           whitelist_only: whitelistOnly,
-          admin_note: adminNote.trim() || undefined,
+          admin_note: adminNote,
+          success_thumbnail_url: successThumbnailUrl.trim() || undefined,
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
       setOpen(false);
       setCode("");
+      setAdminNote("");
+      setSuccessThumbnailUrl("");
+      setWhitelistOnly(false);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed");
@@ -195,12 +219,53 @@ export function PaymentFulfillAction({ payment }: PaymentFulfillActionProps) {
                   <textarea
                     value={adminNote}
                     onChange={(e) => setAdminNote(e.target.value)}
-                    placeholder="Instructions, comments, or guidelines for the customer…"
+                    placeholder={"Example:\nYour device has been unlocked\nLocation: ON\nIMEI: 234843444675"}
                     disabled={loading}
-                    rows={3}
+                    rows={5}
                     maxLength={1000}
-                    className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-zinc-500 focus:border-amber-500/50 focus:outline-none resize-none"
+                    className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-zinc-500 focus:border-amber-500/50 focus:outline-none resize-y whitespace-pre-wrap"
                   />
+                  <p className="mt-1.5 text-[11px] text-zinc-500">
+                    Line breaks are preserved exactly as typed on both admin and customer views.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs text-zinc-400 mb-1.5">
+                    Success thumbnail image (optional)
+                  </label>
+                  <div className="space-y-3">
+                    <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 bg-black/30 px-4 py-3 text-sm text-zinc-300 hover:border-amber-500/30 hover:text-white">
+                      <ImagePlus className="h-4 w-4" />
+                      {uploadingImage ? "Compressing & uploading…" : "Choose image"}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        disabled={loading || uploadingImage}
+                        onChange={(e) => handleImageChange(e.target.files?.[0] ?? null)}
+                        className="hidden"
+                      />
+                    </label>
+                    <input
+                      type="url"
+                      value={successThumbnailUrl}
+                      onChange={(e) => setSuccessThumbnailUrl(e.target.value)}
+                      placeholder="Or paste an image URL"
+                      disabled={loading || uploadingImage}
+                      className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-zinc-500 focus:border-amber-500/50 focus:outline-none"
+                    />
+                    {successThumbnailUrl && (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={successThumbnailUrl}
+                        alt="Success thumbnail preview"
+                        className="max-h-44 w-full rounded-xl border border-white/10 object-cover"
+                      />
+                    )}
+                  </div>
+                  <p className="mt-1.5 text-[11px] text-zinc-500">
+                    Images are compressed before upload and appear on both admin and customer sides.
+                  </p>
                 </div>
 
                 {error && (
