@@ -3,9 +3,11 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import {
   Check,
   Image as ImageIcon,
@@ -38,8 +40,7 @@ interface SupportChatProps {
 
 interface ContextMenuState {
   messageId: string;
-  x: number;
-  y: number;
+  anchorRect: { top: number; bottom: number; left: number; right: number };
   isMine: boolean;
   isDeleted: boolean;
   canEdit: boolean;
@@ -164,19 +165,36 @@ function ContextMenu({
   onClose: () => void;
 }) {
   const menuRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
 
-  const calculatePosition = () => {
-    let left = ctx.x;
-    let top = ctx.y;
-    const menuWidth = 200;
-    const menuHeight = 150;
-    if (top + menuHeight > window.innerHeight - 10) top = Math.max(10, ctx.y - menuHeight - 10);
-    if (top < 10) top = Math.max(10, ctx.y + 40);
-    if (left + menuWidth > window.innerWidth - 10) left = Math.max(10, left - menuWidth - 10);
-    return { left: Math.max(10, left), top: Math.max(10, top) };
-  };
+  // Position the menu using its *actual* measured size, anchored to the
+  // button/message that triggered it. We only flip sides when there isn't
+  // enough room, and always measure real dimensions instead of guessing a
+  // fixed offset, so the menu can never detach from the message.
+  useLayoutEffect(() => {
+    const el = menuRef.current;
+    if (!el) return;
+    const { top: aTop, bottom: aBottom, right: aRight } = ctx.anchorRect;
+    const menuWidth = el.offsetWidth;
+    const menuHeight = el.offsetHeight;
+    const margin = 8;
 
-  const { left, top } = calculatePosition();
+    // Horizontal: align the menu's right edge with the anchor's right edge,
+    // clamped so it never runs off either side of the viewport.
+    let left = aRight - menuWidth;
+    left = Math.min(left, window.innerWidth - menuWidth - margin);
+    left = Math.max(left, margin);
+
+    // Vertical: prefer placing the menu just below the anchor. If there
+    // isn't enough room below, place it just above the anchor instead.
+    let top = aBottom + margin;
+    if (top + menuHeight > window.innerHeight - margin) {
+      top = aTop - menuHeight - margin;
+    }
+    top = Math.max(margin, Math.min(top, window.innerHeight - menuHeight - margin));
+
+    setPos({ left, top });
+  }, [ctx.anchorRect]);
 
   useEffect(() => {
     const handler = (e: MouseEvent | KeyboardEvent) => {
@@ -196,10 +214,23 @@ function ContextMenu({
     };
   }, [onClose]);
 
-  return (
+  if (typeof document === "undefined") return null;
+
+  // Rendered via a portal into document.body so the fixed-position menu is
+  // always positioned relative to the real viewport, not some ancestor that
+  // happens to have a transform/filter/backdrop-filter (which would
+  // otherwise create a new containing block and detach the menu from the
+  // message that opened it).
+  return createPortal(
     <div
       ref={menuRef}
-      style={{ position: "fixed", left: `${left}px`, top: `${top}px`, zIndex: 9999 }}
+      style={{
+        position: "fixed",
+        left: pos ? `${pos.left}px` : 0,
+        top: pos ? `${pos.top}px` : 0,
+        visibility: pos ? "visible" : "hidden",
+        zIndex: 9999,
+      }}
       className="bg-zinc-900 border border-zinc-700 backdrop-blur-sm rounded-xl shadow-2xl overflow-hidden min-w-40 w-max animate-in fade-in zoom-in-95 duration-150 max-w-xs"
     >
       <button
@@ -240,11 +271,12 @@ function ContextMenu({
           </button>
         </>
       )}
-    </div>
+    </div>,
+    document.body
   );
 }
 
-// ─────────────────────────────────────────────
+// ─────────────────────────────────
 // Tool Picker Modal
 // ─────────────────────────────────────────────
 function ToolPicker({
@@ -280,7 +312,12 @@ function ToolPicker({
     searchTimeout.current = setTimeout(() => fetchTools(val), 300);
   };
 
-  return (
+  if (typeof document === "undefined") return null;
+
+  // Portal into document.body for the same reason as ContextMenu: a
+  // transformed/animated ancestor would otherwise turn this "fixed" overlay
+  // into something anchored to that ancestor instead of the viewport.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div className="glass rounded-2xl w-full max-w-sm max-h-[70vh] flex flex-col border border-white/10 shadow-2xl">
         <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
@@ -339,11 +376,12 @@ function ToolPicker({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
-// ─────────────────────────────────────────────
+// ─────────────────────────────────
 // Voice recording helpers
 // ─────────────────────────────────────────────
 function formatRecordingTime(secs: number) {
@@ -699,21 +737,19 @@ export function SupportChat({
       viewerRole === "user" ? msg.sender_role === "user" : msg.sender_role === "admin";
     const button = e.currentTarget as HTMLElement;
     const rect = button.getBoundingClientRect();
-    let x: number, y: number;
-    if (!isMine) {
-      x = rect.right + 8;
-      y = rect.top;
-    } else {
-      x = rect.right - 12;
-      y = rect.top - 150;
-    }
     const canEdit =
       isMine &&
       !msg.deleted_for_all &&
       !msg.delivered_at &&
       !!msg.body &&
       !msg.id.startsWith("temp-");
-    setCtxMenu({ messageId: msg.id, x, y, isMine, isDeleted: msg.deleted_for_all, canEdit });
+    setCtxMenu({
+      messageId: msg.id,
+      anchorRect: { top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right },
+      isMine,
+      isDeleted: msg.deleted_for_all,
+      canEdit,
+    });
   }
 
   function handleReplyFromMenu() {
@@ -884,8 +920,10 @@ export function SupportChat({
       if (blob.size < 500 || durationSecs < 1) return;
 
       const reader = new FileReader();
+      const savedReplyTo = replyTo;
+      setReplyTo(null);
       reader.onloadend = () => {
-        doSendAudio(reader.result as string, mimeType);
+        doSendAudio(reader.result as string, mimeType, savedReplyTo);
       };
       reader.readAsDataURL(blob);
     };
@@ -893,7 +931,7 @@ export function SupportChat({
     try { mr.stop(); } catch { /* ok */ }
   }
 
-  function doSendAudio(dataUrl: string, mimeType: string) {
+  function doSendAudio(dataUrl: string, mimeType: string, savedReplyTo: SupportMessage | null) {
     const tempId = `temp-audio-${Date.now()}`;
 
     const optimisticMsg: SupportMessage = {
@@ -905,8 +943,16 @@ export function SupportChat({
       audio_url: dataUrl, // local blob URL for instant playback
       tool_id: null,
       tool: null,
-      reply_to_id: null,
-      reply_to: null,
+      reply_to_id: savedReplyTo?.id || null,
+      reply_to: savedReplyTo
+        ? {
+            id: savedReplyTo.id,
+            sender_role: savedReplyTo.sender_role,
+            body: savedReplyTo.body,
+            image_url: savedReplyTo.image_url,
+            audio_url: savedReplyTo.audio_url,
+          }
+        : null,
       deleted_for_all: false,
       deleted_by_sender: false,
       delivered_at: null,
@@ -922,12 +968,33 @@ export function SupportChat({
     fetch(apiBase, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ audio_data: dataUrl, audio_content_type: mimeType }),
+      body: JSON.stringify({
+        audio_data: dataUrl,
+        audio_content_type: mimeType,
+        ...(savedReplyTo ? { reply_to_id: savedReplyTo.id } : {}),
+      }),
     })
       .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
       .then(({ ok, data }) => {
         if (ok && data.message) {
-          setMessages((prev) => prev.map((m) => (m.id === tempId ? data.message : m)));
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === tempId
+                ? {
+                    ...data.message,
+                    reply_to: savedReplyTo
+                      ? {
+                          id: savedReplyTo.id,
+                          sender_role: savedReplyTo.sender_role,
+                          body: savedReplyTo.body,
+                          image_url: savedReplyTo.image_url,
+                          audio_url: savedReplyTo.audio_url,
+                        }
+                      : data.message.reply_to ?? null,
+                  }
+                : m
+            )
+          );
           setSendingStatus((prev) => { const { [tempId]: _, ...rest } = prev; return rest; });
           if (data.warning) {
             setErrorMessage(data.warning);
