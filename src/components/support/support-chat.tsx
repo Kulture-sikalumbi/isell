@@ -36,6 +36,9 @@ interface SupportChatProps {
   viewerRole?: "user" | "admin";
   userId?: string;
   customerName?: string;
+  /** When true, removes the glass border/rounding and fills the container.
+   *  Use for full-screen chat layouts (e.g., admin messages page). */
+  fullscreen?: boolean;
 }
 
 interface ContextMenuState {
@@ -411,6 +414,7 @@ export function SupportChat({
   viewerRole = "user",
   userId,
   customerName,
+  fullscreen = false,
 }: SupportChatProps) {
   const [messages, setMessages] = useState<SupportMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1038,9 +1042,16 @@ export function SupportChat({
 
   return (
     <>
-      <div className="glass rounded-2xl flex flex-col border border-white/10 w-full h-full overflow-hidden">
+      {/* Root: flex column that NEVER overflows its container.
+          Messages scroll inside; input stays pinned at the bottom. */}
+      <div className={`flex flex-col w-full h-full min-h-0 overflow-hidden ${
+        fullscreen
+          ? "rounded-none border-none bg-transparent"
+          : "glass rounded-2xl border border-white/10"
+      }`}>
 
-        {/* ── Header ── */}
+          {/* ── Header (only show in non-fullscreen mode) ── */}
+        {!fullscreen && (
         <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-white/10 shrink-0 md:px-6 md:py-4 lg:px-8 lg:py-5">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <div className="h-10 w-10 rounded-full bg-gradient-to-br from-cyan-500/30 to-purple-500/30 flex items-center justify-center text-sm font-bold text-cyan-300 border border-white/10 shrink-0">
@@ -1073,9 +1084,10 @@ export function SupportChat({
             </button>
           )}
         </div>
+        )}
 
-        {/* ── Messages ── */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2.5 scroll-smooth md:px-6 md:py-6 lg:px-8 lg:py-8">
+        {/* ── Messages: the only scrollable region ── */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-2.5 scroll-smooth md:px-6 md:py-6 lg:px-8 lg:py-8">
           {visibleMessages.length === 0 ? (
             <p className="text-center text-sm text-zinc-500 py-10">{emptyHint}</p>
           ) : (

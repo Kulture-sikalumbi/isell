@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   Layers,
   MessageCircle,
@@ -222,7 +222,13 @@ function SidebarContent({
 
 function MobileBottomNav({ onMore }: { onMore: () => void }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const selectedUser = searchParams.get("user");
+  // Hide nav when viewing a support chat on the messages page
+  const isChatOpen = pathname === "/admin/messages" && !!selectedUser;
   const counts = useAdminAttentionCounts();
+
+  if (isChatOpen) return null;
 
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-[#06070b]/95 backdrop-blur-xl pb-[env(safe-area-inset-bottom)]">
@@ -340,24 +346,50 @@ interface AdminShellProps {
   description?: string;
   action?: React.ReactNode;
   children: React.ReactNode;
+  /** When true the content area becomes a flex column so children can fill
+   *  remaining viewport height (e.g. full-height chat pages). */
+  stretchContent?: boolean;
 }
 
-export function AdminShell({ title, description, action, children }: AdminShellProps) {
+export function AdminShell({ title, description, action, children, stretchContent }: AdminShellProps) {
+  // stretchContent: lock the shell to the exact viewport height and prevent
+  // any page-level scroll. Each inner panel scrolls independently.
+  const rootCls = stretchContent ? "flex h-screen overflow-hidden" : "flex min-h-screen";
+
   return (
-    <div className="flex min-h-screen">
+    <div className={rootCls}>
       <AdminSidebar />
-      <div className="flex-1 flex flex-col min-w-0 lg:ml-[72px] pb-[4.5rem] lg:pb-0">
+      <div className={cn(
+        "flex-1 flex flex-col min-w-0 lg:ml-[72px] overflow-hidden",
+        stretchContent ? "lg:pb-0" : "pb-[4.5rem] lg:pb-0"
+      )}>
         <AdminHeader />
-        <div className="flex-1 p-4 sm:p-6 lg:p-8">
-          <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold mb-1">{title}</h1>
-              {description && <p className="text-sm text-zinc-400">{description}</p>}
+        {stretchContent ? (
+          // Full-height mode: title row is fixed, children fill the rest
+          <div className="flex-1 flex flex-col overflow-hidden min-h-0 p-4 sm:p-6 lg:p-8">
+            <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shrink-0">
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold mb-1">{title}</h1>
+                {description && <p className="text-sm text-zinc-400">{description}</p>}
+              </div>
+              {action && <div className="shrink-0">{action}</div>}
             </div>
-            {action && <div className="shrink-0">{action}</div>}
+            <div className="flex-1 min-h-0 overflow-hidden">
+              {children}
+            </div>
           </div>
-          {children}
-        </div>
+        ) : (
+          <div className="flex-1 p-4 sm:p-6 lg:p-8">
+            <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold mb-1">{title}</h1>
+                {description && <p className="text-sm text-zinc-400">{description}</p>}
+              </div>
+              {action && <div className="shrink-0">{action}</div>}
+            </div>
+            {children}
+          </div>
+        )}
       </div>
     </div>
   );

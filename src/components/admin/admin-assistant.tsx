@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Send, X, Loader2, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -53,6 +54,12 @@ function renderMessageContent(text: string) {
 }
 
 export function AdminAssistant() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const selectedUser = searchParams.get("user");
+  // Hide the button when viewing a support chat (on /admin/messages with a user selected)
+  const isChatOpen = pathname === "/admin/messages" && !!selectedUser;
+
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([WELCOME]);
   const [input, setInput] = useState("");
@@ -107,19 +114,23 @@ export function AdminAssistant() {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className={cn(
-          "fixed bottom-24 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-all",
-          "bg-gradient-to-br from-amber-500 to-orange-600 text-white hover:scale-105 hover:shadow-amber-500/30"
-        )}
-        aria-label={open ? "Close admin copilot" : "Open admin copilot"}
-      >
-        {open ? <X className="h-6 w-6" /> : <Shield className="h-6 w-6" />}
-      </button>
+      {/* Button hidden when a support chat is open */}
+      {!isChatOpen && (
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className={cn(
+            "fixed bottom-24 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-all",
+            "bg-gradient-to-br from-amber-500 to-orange-600 text-white hover:scale-105 hover:shadow-amber-500/30"
+          )}
+          aria-label={open ? "Close admin copilot" : "Open admin copilot"}
+        >
+          {open ? <X className="h-6 w-6" /> : <Shield className="h-6 w-6" />}
+        </button>
+      )}
 
-      {open && (
+      {/* Modal can still be open when on other pages */}
+      {open && !isChatOpen && (
         <div className="fixed bottom-24 right-6 z-50 flex w-[min(100vw-2rem,400px)] flex-col rounded-2xl border border-amber-500/20 bg-[#0a0b10]/95 shadow-2xl backdrop-blur-xl overflow-hidden">
           <div className="border-b border-white/10 px-4 py-3 bg-amber-500/5">
             <p className="font-semibold text-white text-sm flex items-center gap-2">

@@ -9,6 +9,7 @@ export default function AdminMessagesPage() {
     <AdminShell
       title="Customer messages"
       description="Chat with customers who need help"
+      stretchContent
     >
       <Suspense fallback={<div className="text-zinc-500">Loading…</div>}>
         <AdminSupportInbox />
