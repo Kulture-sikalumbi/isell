@@ -178,6 +178,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               apiBase="/api/support/messages"
               emptyHint="Ask about your order, activation status, or request a tool."
               viewerRole="user"
+              userId={user.id}
             />
           </div>
         ) : tab === "activations" ? (

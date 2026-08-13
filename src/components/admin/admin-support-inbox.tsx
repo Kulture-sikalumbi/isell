@@ -90,6 +90,8 @@ export function AdminSupportInbox() {
               apiBase={`/api/admin/support/${selectedUser}/messages`}
               emptyHint="Reply to this customer below."
               viewerRole="admin"
+              userId={selectedUser ?? undefined}
+              customerName={selected?.full_name || selected?.email || undefined}
             />
           </>
         ) : (

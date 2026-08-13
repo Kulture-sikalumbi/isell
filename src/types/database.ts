@@ -234,11 +234,36 @@ export interface ToolRequest {
   created_at: string;
 }
 
+export interface SupportMessageTool {
+  id: string;
+  name: string;
+  slug: string;
+  icon_url: string | null;
+  description: string | null;
+  retail_price: number;
+  price_currency: string;
+}
+
+export interface SupportMessageReplyTo {
+  id: string;
+  sender_role: "user" | "admin";
+  body: string | null;
+  image_url: string | null;
+}
+
 export interface SupportMessage {
   id: string;
   user_id: string;
   sender_role: "user" | "admin";
-  body: string;
+  body: string | null;
+  image_url: string | null;
+  tool_id: string | null;
+  tool?: SupportMessageTool | null;
+  reply_to_id: string | null;
+  reply_to?: SupportMessageReplyTo | null;
+  deleted_for_all: boolean;
+  deleted_by_sender: boolean;
+  delivered_at: string | null;
   read_by_user_at: string | null;
   read_by_admin_at: string | null;
   created_at: string;
@@ -347,11 +372,11 @@ export interface Database {
       >;
       support_messages: TableDef<
         SupportMessage,
-        Omit<SupportMessage, "id" | "created_at"> & {
+        Omit<SupportMessage, "id" | "created_at" | "tool" | "reply_to"> & {
           id?: string;
           created_at?: string;
         },
-        Partial<SupportMessage>
+        Partial<Omit<SupportMessage, "tool" | "reply_to">>
       >;
       ledger_entries: TableDef<
         LedgerEntry,
