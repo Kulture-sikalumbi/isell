@@ -1,0 +1,43 @@
+-- Support chat: WhatsApp-style storage hygiene
+--
+-- Messages are cleaned up by the application layer (lib/support.ts → cleanupMessages)
+-- which fires on every message fetch (fire-and-forget, no latency impact).
+--
+-- Rules applied:
+--   1. Both-read messages older than 24 h → hard-deleted (deliver-and-drop)
+--   2. Any message older than 30 days     → hard-deleted (absolute TTL)
+--   3. Storage objects (images, audio)    → deleted before the row is removed
+--
+-- This keeps Postgres rows and Supabase Storage bounded with zero extra infra.
+--
+-- ─── Optional: database-level scheduled job ───────────────────────────────────
+-- If you want a daily sweep independent of traffic (recommended for production),
+-- enable pg_cron in Supabase dashboard → Extensions, then run:
+--
+-- SELECT cron.schedule(
+--   'support-chat-daily-cleanup',
+--   '0 3 * * *',          -- 03:00 UTC every day
+--   $$
+--     DELETE FROM support_messages
+--     WHERE
+--       -- deliver-and-drop: both sides have read, message is more than 24 h old
+--       (
+--         read_by_user_at  IS NOT NULL AND
+--         read_by_admin_at IS NOT NULL AND
+--         created_at < NOW() - INTERVAL '24 hours'
+--       )
+--       OR
+--       -- hard TTL: anything older than 30 days
+--       created_at < NOW() - INTERVAL '30 days';
+--   $$
+-- );
+--
+-- Note: the pg_cron job cannot clean up Supabase Storage objects — that part
+-- is handled exclusively by the application layer.  The cron job is a safety net
+-- for rows whose storage was already cleared by the app.
+
+-- Index to make the cleanup query fast (created_at is already indexed,
+-- but this composite index covers the common "both-read" filter in one pass).
+CREATE INDEX IF NOT EXISTS idx_support_messages_cleanup
+  ON support_messages (user_id, created_at)
+  WHERE read_by_user_at IS NOT NULL AND read_by_admin_at IS NOT NULL;

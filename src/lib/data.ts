@@ -317,13 +317,13 @@ export async function getResellerCredits(): Promise<ResellerCredit[]> {
   return data ?? [];
 }
 
-export async function getCustomersWithStats(): Promise<CustomerProfile[]> {
+export async function getCustomersWithStats(displayCurrency?: string): Promise<CustomerProfile[]> {
   const supabase = getClient();
   if (!supabase) return [];
 
   const [profilesRes, paymentsRes, walletsRes] = await Promise.all([
     supabase.from("profiles").select("*").order("created_at", { ascending: false }),
-    supabase.from("payments").select("user_id, amount, status").eq("status", "completed"),
+    supabase.from("payments").select("user_id, amount, currency, status").eq("status", "completed"),
     supabase.from("user_wallets").select("user_id, balance, currency"),
   ]);
 
@@ -331,12 +331,24 @@ export async function getCustomersWithStats(): Promise<CustomerProfile[]> {
   const payments = paymentsRes.data ?? [];
   const wallets = walletsRes.data ?? [];
 
+  // Get current FX rate for conversions
+  const { getUsdToZmwRate } = await import("@/lib/currency-rates");
+  const { convertCurrency } = await import("@/lib/format-currency");
+  const fxRate = await getUsdToZmwRate();
+
   const stats = new Map<string, { count: number; spent: number }>();
   for (const p of payments) {
     if (!p.user_id) continue;
     const cur = stats.get(p.user_id) ?? { count: 0, spent: 0 };
     cur.count += 1;
-    cur.spent += Number(p.amount);
+    
+    // Convert payment amount to display currency if specified
+    const amount = Number(p.amount);
+    const convertedAmount = displayCurrency
+      ? convertCurrency(amount, p.currency, displayCurrency, fxRate)
+      : amount;
+    
+    cur.spent += convertedAmount;
     stats.set(p.user_id, cur);
   }
 

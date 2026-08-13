@@ -164,7 +164,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             <UserNotificationsInbox notifications={notifications} />
           </div>
         ) : tab === "messages" ? (
-          <div>
+          <div className="flex flex-col h-full">
             <div className="flex items-center gap-2 mb-4">
               <MessageCircle className="h-5 w-5 text-cyan-400" />
               <div>
@@ -174,12 +174,14 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 </p>
               </div>
             </div>
-            <SupportChat
-              apiBase="/api/support/messages"
-              emptyHint="Ask about your order, activation status, or request a tool."
-              viewerRole="user"
-              userId={user.id}
-            />
+            <div className="flex-1 min-h-0">
+              <SupportChat
+                apiBase="/api/support/messages"
+                emptyHint="Ask about your order, activation status, or request a tool."
+                viewerRole="user"
+                userId={user.id}
+              />
+            </div>
           </div>
         ) : tab === "activations" ? (
           params.wait ? (

@@ -4,6 +4,7 @@ import {
   getCustomerSignupStats,
   getCustomersWithStats,
 } from "@/lib/data";
+import { getAdminDisplayCurrency } from "@/lib/display-currency-preference";
 import { AdminShell } from "@/components/admin/admin-sidebar";
 import { CustomersTable } from "@/components/admin/customers-table";
 import { StatCard } from "@/components/admin/stat-card";
@@ -13,8 +14,10 @@ export const metadata = { title: "Customers — Admin" };
 
 export default async function AdminUsersPage() {
   const { user } = await requireAdmin();
+  const adminDisplayCurrency = await getAdminDisplayCurrency();
+  
   const [customers, allUsers, signupStats] = await Promise.all([
-    getCustomersWithStats(),
+    getCustomersWithStats(adminDisplayCurrency),
     getAllProfiles(),
     getCustomerSignupStats(),
   ]);
@@ -55,6 +58,7 @@ export default async function AdminUsersPage() {
           customers={customers}
           allUsers={allUsers}
           currentUserId={user.id}
+          displayCurrency={adminDisplayCurrency}
         />
       </div>
     </AdminShell>

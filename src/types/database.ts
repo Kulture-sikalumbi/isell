@@ -249,6 +249,7 @@ export interface SupportMessageReplyTo {
   sender_role: "user" | "admin";
   body: string | null;
   image_url: string | null;
+  audio_url: string | null;
 }
 
 export interface SupportMessage {
@@ -257,6 +258,7 @@ export interface SupportMessage {
   sender_role: "user" | "admin";
   body: string | null;
   image_url: string | null;
+  audio_url: string | null;
   tool_id: string | null;
   tool?: SupportMessageTool | null;
   reply_to_id: string | null;
@@ -264,6 +266,7 @@ export interface SupportMessage {
   deleted_for_all: boolean;
   deleted_by_sender: boolean;
   delivered_at: string | null;
+  edited_at: string | null;
   read_by_user_at: string | null;
   read_by_admin_at: string | null;
   created_at: string;

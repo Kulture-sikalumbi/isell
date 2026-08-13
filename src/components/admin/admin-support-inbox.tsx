@@ -33,7 +33,7 @@ export function AdminSupportInbox() {
   const selected = conversations.find((c) => c.user_id === selectedUser);
 
   return (
-    <div className="grid lg:grid-cols-[280px_1fr] gap-6 min-h-[500px]">
+    <div className="grid lg:grid-cols-[280px_1fr] gap-6 h-full min-h-[500px]">
       <div className="glass rounded-2xl overflow-hidden">
         <div className="px-4 py-3 border-b border-white/5 text-sm font-medium text-zinc-400">
           Customers
@@ -74,9 +74,9 @@ export function AdminSupportInbox() {
         </div>
       </div>
 
-      <div>
+      <div className="flex flex-col h-full lg:h-auto">
         {selectedUser ? (
-          <>
+          <div className="flex flex-col h-full min-h-0">
             <div className="mb-4 flex items-center gap-2">
               <MessageCircle className="h-4 w-4 text-cyan-400" />
               <span className="font-medium text-white">
@@ -86,14 +86,16 @@ export function AdminSupportInbox() {
                 <span className="text-xs text-zinc-500">{selected.email}</span>
               )}
             </div>
-            <SupportChat
+            <div className="flex-1 min-h-0">
+              <SupportChat
               apiBase={`/api/admin/support/${selectedUser}/messages`}
               emptyHint="Reply to this customer below."
               viewerRole="admin"
               userId={selectedUser ?? undefined}
               customerName={selected?.full_name || selected?.email || undefined}
-            />
-          </>
+              />
+            </div>
+          </div>
         ) : (
           <div className="glass rounded-2xl p-12 text-center text-zinc-500">
             Select a customer to view the conversation

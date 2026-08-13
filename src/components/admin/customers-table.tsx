@@ -13,12 +13,14 @@ interface CustomersTableProps {
   customers: CustomerProfile[];
   allUsers: Profile[];
   currentUserId: string;
+  displayCurrency: string;
 }
 
 export function CustomersTable({
   customers,
   allUsers,
   currentUserId,
+  displayCurrency,
 }: CustomersTableProps) {
   const [customerSearchQuery, setCustomerSearchQuery] = useState("");
   const [userSearchQuery, setUserSearchQuery] = useState("");
@@ -89,7 +91,7 @@ export function CustomersTable({
                   <td className="px-4 sm:px-6 py-4 text-zinc-400">{c.email}</td>
                   <td className="px-4 sm:px-6 py-4 text-zinc-300">{c.orders_count}</td>
                   <td className="px-4 sm:px-6 py-4 text-emerald-400">
-                    {formatCurrency(c.total_spent)}
+                    {formatCurrency(c.total_spent, displayCurrency)}
                   </td>
                   <td className="px-4 sm:px-6 py-4 text-cyan-300">
                     {formatCurrency(c.wallet_balance ?? 0, c.wallet_currency ?? undefined)}

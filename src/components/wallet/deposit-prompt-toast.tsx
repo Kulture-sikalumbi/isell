@@ -35,6 +35,8 @@ export function DepositPromptToast({
 
   const onWalletTab =
     pathname.startsWith("/dashboard") && searchParams.get("tab") === "wallet";
+  const onMessagesTab =
+    pathname.startsWith("/dashboard") && searchParams.get("tab") === "messages";
 
   useEffect(() => {
     setDismissed(false);
@@ -44,7 +46,7 @@ export function DepositPromptToast({
     setDismissed(true);
   }
 
-  if (onWalletTab || dismissed) return null;
+  if (onWalletTab || onMessagesTab || dismissed) return null;
 
   return (
     <div

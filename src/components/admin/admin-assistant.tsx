@@ -111,7 +111,7 @@ export function AdminAssistant() {
         type="button"
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          "fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-all",
+          "fixed bottom-24 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-all",
           "bg-gradient-to-br from-amber-500 to-orange-600 text-white hover:scale-105 hover:shadow-amber-500/30"
         )}
         aria-label={open ? "Close admin copilot" : "Open admin copilot"}

@@ -7,10 +7,11 @@ import {
   useState,
 } from "react";
 import {
-  Eye,
+  Check,
   Image as ImageIcon,
   Loader2,
-  MoreVertical,
+  Mic,
+  Pencil,
   Reply,
   Search,
   Send,
@@ -21,6 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
+import { MessageBubble } from "./message-bubble";
 import type { SupportMessage, SupportMessageTool } from "@/types/database";
 
 // ─────────────────────────────────────────────
@@ -40,6 +42,7 @@ interface ContextMenuState {
   y: number;
   isMine: boolean;
   isDeleted: boolean;
+  canEdit: boolean;
 }
 
 interface ToolPickerTool {
@@ -76,30 +79,6 @@ async function compressToDataUrl(file: File): Promise<string> {
     img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Load failed")); };
     img.src = url;
   });
-}
-
-// ─────────────────────────────────────────────
-// Eye status indicator
-// ─────────────────────────────────────────────
-function EyeStatus({ msg, viewerRole }: { msg: SupportMessage; viewerRole: "user" | "admin" }) {
-  const seenAt = viewerRole === "admin" ? msg.read_by_user_at : msg.read_by_admin_at;
-  if (seenAt) {
-    return (
-      <span className="inline-flex items-center gap-0.5 ml-1 shrink-0">
-        <Eye className="h-3 w-3 text-cyan-400 drop-shadow-[0_0_5px_rgba(34,211,238,0.9)]" />
-        <Eye className="h-3 w-3 text-cyan-400 drop-shadow-[0_0_5px_rgba(34,211,238,0.9)]" />
-      </span>
-    );
-  }
-  if (msg.delivered_at) {
-    return (
-      <span className="inline-flex items-center gap-0.5 ml-1 shrink-0">
-        <Eye className="h-3 w-3 text-zinc-500" />
-        <Eye className="h-3 w-3 text-zinc-500" />
-      </span>
-    );
-  }
-  return <Eye className="h-3 w-3 text-zinc-600 ml-1 shrink-0" />;
 }
 
 // ─────────────────────────────────────────────
@@ -153,109 +132,15 @@ function ReplyPreviewBubble({
       : viewerRole === "admin"
       ? "Customer"
       : "Support";
+  const preview =
+    replyTo.body ||
+    (replyTo.image_url ? "📷 Photo" : replyTo.audio_url ? "🎤 Voice message" : "Attachment");
   return (
     <div className="flex gap-1.5 rounded-lg border-l-2 border-cyan-400/60 bg-white/5 px-2 py-1.5 mb-2">
       <div className="min-w-0">
         <p className="text-[10px] font-semibold text-cyan-300 mb-0.5">{label}</p>
-        <p className="text-[11px] text-zinc-400 truncate">
-          {replyTo.body || (replyTo.image_url ? "📷 Photo" : "Attachment")}
-        </p>
+        <p className="text-[11px] text-zinc-400 truncate">{preview}</p>
       </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────
-// Single message bubble
-// ─────────────────────────────────────────────
-function MessageBubble({
-  msg,
-  isMine,
-  viewerRole,
-  onContextMenu,
-}: {
-  msg: SupportMessage;
-  isMine: boolean;
-  viewerRole: "user" | "admin";
-  onContextMenu: (e: React.MouseEvent | React.TouchEvent, msg: SupportMessage) => void;
-}) {
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    longPressTimer.current = setTimeout(() => {
-      onContextMenu(e, msg);
-    }, 500);
-  };
-  const cancelLongPress = () => {
-    if (longPressTimer.current) clearTimeout(longPressTimer.current);
-  };
-
-  if (msg.deleted_for_all) {
-    return (
-      <div className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
-        <div className="max-w-[75%] rounded-2xl px-3.5 py-2 bg-white/5 border border-white/10 italic text-zinc-500 text-xs flex items-center gap-1.5">
-          🚫 This message was deleted
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className={`flex ${isMine ? "justify-end" : "justify-start"} group`}
-      onContextMenu={(e) => { e.preventDefault(); onContextMenu(e, msg); }}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={cancelLongPress}
-      onTouchMove={cancelLongPress}
-    >
-      <div
-        className={`max-w-[78%] rounded-2xl px-3.5 py-2.5 text-sm shadow-lg relative ${
-          isMine
-            ? "bg-gradient-to-br from-cyan-600/30 to-cyan-500/20 text-cyan-50 rounded-br-sm border border-cyan-500/20"
-            : "bg-white/10 text-zinc-100 rounded-bl-sm border border-white/10"
-        }`}
-      >
-        {/* Reply preview */}
-        {msg.reply_to && (
-          <ReplyPreviewBubble replyTo={msg.reply_to} viewerRole={viewerRole} />
-        )}
-
-        {/* Image */}
-        {msg.image_url && (
-          <a href={msg.image_url} target="_blank" rel="noopener noreferrer" className="block mb-2">
-            <img
-              src={msg.image_url}
-              alt="attachment"
-              className="rounded-xl max-h-64 w-full object-cover border border-white/10 hover:opacity-90 transition-opacity"
-            />
-          </a>
-        )}
-
-        {/* Tool card */}
-        {msg.tool && <ToolCard tool={msg.tool} />}
-
-        {/* Body text */}
-        {msg.body && (
-          <p className="whitespace-pre-wrap break-words leading-relaxed text-sm">
-            {msg.body}
-          </p>
-        )}
-
-        {/* Footer: time + eye status */}
-        <div className={`flex items-center gap-1 mt-1.5 ${isMine ? "justify-end" : "justify-start"}`}>
-          <span className="text-[10px] text-zinc-500">{formatDate(msg.created_at)}</span>
-          {isMine && <EyeStatus msg={msg} viewerRole={viewerRole} />}
-        </div>
-      </div>
-
-      {/* Three-dot menu button (visible on hover or always on mobile) */}
-      <button
-        onClick={(e) => onContextMenu(e, msg)}
-        className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 h-8 w-8 rounded-lg flex items-center justify-center hover:bg-white/10 text-zinc-500 hover:text-white"
-        title="Message options"
-      >
-        <MoreVertical className="h-4 w-4" />
-      </button>
     </div>
   );
 }
@@ -266,24 +151,37 @@ function MessageBubble({
 function ContextMenu({
   ctx,
   onReply,
+  onEdit,
   onDeleteSelf,
   onDeleteAll,
   onClose,
 }: {
   ctx: ContextMenuState;
   onReply: () => void;
+  onEdit: () => void;
   onDeleteSelf: () => void;
   onDeleteAll: () => void;
   onClose: () => void;
 }) {
   const menuRef = useRef<HTMLDivElement>(null);
 
+  const calculatePosition = () => {
+    let left = ctx.x;
+    let top = ctx.y;
+    const menuWidth = 200;
+    const menuHeight = 150;
+    if (top + menuHeight > window.innerHeight - 10) top = Math.max(10, ctx.y - menuHeight - 10);
+    if (top < 10) top = Math.max(10, ctx.y + 40);
+    if (left + menuWidth > window.innerWidth - 10) left = Math.max(10, left - menuWidth - 10);
+    return { left: Math.max(10, left), top: Math.max(10, top) };
+  };
+
+  const { left, top } = calculatePosition();
+
   useEffect(() => {
     const handler = (e: MouseEvent | KeyboardEvent) => {
       if (menuRef.current && e instanceof MouseEvent) {
-        if (!menuRef.current.contains(e.target as Node)) {
-          onClose();
-        }
+        if (!menuRef.current.contains(e.target as Node)) onClose();
       } else if (e instanceof KeyboardEvent && e.key === "Escape") {
         onClose();
       }
@@ -301,37 +199,44 @@ function ContextMenu({
   return (
     <div
       ref={menuRef}
-      style={{
-        position: "fixed",
-        left: `${ctx.x}px`,
-        top: `${ctx.y}px`,
-        zIndex: 9999,
-      }}
-      className="glass rounded-xl border border-white/10 shadow-2xl overflow-hidden min-w-[180px] animate-in fade-in zoom-in-95 duration-100"
+      style={{ position: "fixed", left: `${left}px`, top: `${top}px`, zIndex: 9999 }}
+      className="bg-zinc-900 border border-zinc-700 backdrop-blur-sm rounded-xl shadow-2xl overflow-hidden min-w-40 w-max animate-in fade-in zoom-in-95 duration-150 max-w-xs"
     >
       <button
         onClick={() => { onReply(); onClose(); }}
-        className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-zinc-200 hover:bg-white/10 transition-colors"
+        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs sm:text-sm text-zinc-100 hover:bg-cyan-500/20 transition-colors whitespace-nowrap active:bg-cyan-500/30"
       >
-        <Reply className="h-3.5 w-3.5 text-cyan-400" />
-        Reply
+        <Reply className="h-4 w-4 text-cyan-400 shrink-0" />
+        <span>Reply</span>
       </button>
+      {ctx.canEdit && (
+        <>
+          <div className="border-t border-zinc-700" />
+          <button
+            onClick={() => { onEdit(); onClose(); }}
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs sm:text-sm text-zinc-100 hover:bg-cyan-500/20 transition-colors whitespace-nowrap active:bg-cyan-500/30"
+          >
+            <Pencil className="h-4 w-4 text-cyan-400 shrink-0" />
+            <span>Edit</span>
+          </button>
+        </>
+      )}
       {ctx.isMine && !ctx.isDeleted && (
         <>
-          <div className="border-t border-white/5" />
+          <div className="border-t border-zinc-700" />
           <button
             onClick={() => { onDeleteSelf(); onClose(); }}
-            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-zinc-400 hover:bg-white/10 transition-colors"
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs sm:text-sm text-zinc-300 hover:bg-zinc-800/80 transition-colors whitespace-nowrap active:bg-zinc-800"
           >
-            <Trash2 className="h-3.5 w-3.5 text-zinc-500" />
-            Delete for me
+            <Trash2 className="h-4 w-4 text-zinc-500 shrink-0" />
+            <span>Delete for me</span>
           </button>
           <button
             onClick={() => { onDeleteAll(); onClose(); }}
-            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs sm:text-sm text-red-300 hover:bg-red-500/20 transition-colors whitespace-nowrap"
           >
-            <Trash2 className="h-3.5 w-3.5 text-red-400" />
-            Delete for everyone
+            <Trash2 className="h-4 w-4 text-red-500 shrink-0" />
+            <span>Delete for all</span>
           </button>
         </>
       )}
@@ -367,9 +272,7 @@ function ToolPicker({
     [toolsApiUrl]
   );
 
-  useEffect(() => {
-    fetchTools("");
-  }, [fetchTools]);
+  useEffect(() => { fetchTools(""); }, [fetchTools]);
 
   const handleSearch = (val: string) => {
     setQuery(val);
@@ -380,7 +283,6 @@ function ToolPicker({
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div className="glass rounded-2xl w-full max-w-sm max-h-[70vh] flex flex-col border border-white/10 shadow-2xl">
-        {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
           <div className="flex items-center gap-2">
             <Wrench className="h-4 w-4 text-cyan-400" />
@@ -390,8 +292,6 @@ function ToolPicker({
             <X className="h-4 w-4" />
           </button>
         </div>
-
-        {/* Search */}
         <div className="px-3 py-2 border-b border-white/5">
           <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-black/30 px-3 py-1.5">
             <Search className="h-3.5 w-3.5 text-zinc-500 shrink-0" />
@@ -404,8 +304,6 @@ function ToolPicker({
             />
           </div>
         </div>
-
-        {/* Results */}
         <div className="flex-1 overflow-y-auto divide-y divide-white/5">
           {loading ? (
             <div className="flex justify-center py-8">
@@ -446,6 +344,27 @@ function ToolPicker({
 }
 
 // ─────────────────────────────────────────────
+// Voice recording helpers
+// ─────────────────────────────────────────────
+function formatRecordingTime(secs: number) {
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+const PREFERRED_MIME_TYPES = [
+  "audio/webm;codecs=opus",
+  "audio/webm",
+  "audio/ogg;codecs=opus",
+  "audio/ogg",
+];
+
+function bestMimeType(): string {
+  if (typeof MediaRecorder === "undefined") return "";
+  return PREFERRED_MIME_TYPES.find((t) => MediaRecorder.isTypeSupported(t)) ?? "";
+}
+
+// ─────────────────────────────────────────────
 // Main SupportChat component
 // ─────────────────────────────────────────────
 export function SupportChat({
@@ -459,15 +378,19 @@ export function SupportChat({
   const [loading, setLoading] = useState(true);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [sendingStatus, setSendingStatus] = useState<Record<string, { pending: boolean; error?: string }>>({});
 
   // Attachments
-  const [pendingImage, setPendingImage] = useState<string | null>(null); // data URL
+  const [pendingImage, setPendingImage] = useState<string | null>(null);
   const [pendingTool, setPendingTool] = useState<ToolPickerTool | null>(null);
   const [showToolPicker, setShowToolPicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Reply
   const [replyTo, setReplyTo] = useState<SupportMessage | null>(null);
+
+  // Editing
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
 
   // Context menu
   const [ctxMenu, setCtxMenu] = useState<ContextMenuState | null>(null);
@@ -478,8 +401,32 @@ export function SupportChat({
   // Clearing chat (admin)
   const [clearing, setClearing] = useState(false);
 
+  // Error message
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // ── Voice recording ──────────────────────────
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [hasMicSupport, setHasMicSupport] = useState(false);
+  const micButtonRef = useRef<HTMLButtonElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const recordingStartXRef = useRef(0);
+  const recordingCancelledRef = useRef(false);
+  const permissionGrantedRef = useRef(false);
+
+  useEffect(() => {
+    setHasMicSupport(
+      typeof navigator !== "undefined" &&
+      typeof navigator.mediaDevices !== "undefined" &&
+      typeof MediaRecorder !== "undefined"
+    );
+  }, []);
+
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const sendTimeoutsRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   // Derived URLs
   const toolsApiUrl =
@@ -487,10 +434,7 @@ export function SupportChat({
       ? "/api/admin/support/tools"
       : "/api/support/tools";
 
-  const deleteUrl = (msgId: string) =>
-    viewerRole === "admin"
-      ? `${apiBase}/${msgId}`
-      : `${apiBase}/${msgId}`;
+  const deleteUrl = (msgId: string) => `${apiBase}/${msgId}`;
 
   const clearUrl =
     viewerRole === "admin"
@@ -515,27 +459,19 @@ export function SupportChat({
 
     const supabase = createClient();
     if (!supabase || !userId) {
-      // Fall back to polling
       const interval = setInterval(loadMessages, 15000);
       return () => clearInterval(interval);
     }
 
-    // Messages realtime
     const msgChannel = supabase
       .channel(`support-messages-${userId}`)
       .on(
         "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "support_messages",
-          filter: `user_id=eq.${userId}`,
-        },
+        { event: "*", schema: "public", table: "support_messages", filter: `user_id=eq.${userId}` },
         () => { loadMessages(); }
       )
       .subscribe();
 
-    // Presence for online status
     const presenceChannel = supabase.channel(`support-presence-${userId}`);
     const myRole = viewerRole;
 
@@ -543,10 +479,9 @@ export function SupportChat({
       .on("presence", { event: "sync" }, () => {
         const state = presenceChannel.presenceState<{ role: string }>();
         const otherRole = myRole === "admin" ? "user" : "admin";
-        const isOtherOnline = Object.values(state).some((presences) =>
+        setOtherOnline(Object.values(state).some((presences) =>
           presences.some((p) => p.role === otherRole)
-        );
-        setOtherOnline(isOtherOnline);
+        ));
       })
       .subscribe(async (status) => {
         if (status === "SUBSCRIBED") {
@@ -565,81 +500,174 @@ export function SupportChat({
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // ── Send ──────────────────────────────────
-  async function handleSend(e?: React.FormEvent) {
-    e?.preventDefault();
+  // ── Send text/image/tool ──────────────────
+  // ── Edit an existing message ────────────
+  async function handleSaveEdit(id: string) {
     const text = input.trim();
-    if ((!text && !pendingImage && !pendingTool) || sending) return;
+    if (!text || sending) return;
 
     setSending(true);
-    const savedInput = input;
-    setInput("");
-
+    setErrorMessage(null);
     try {
-      const body: Record<string, unknown> = {};
-      if (text) body.body = text;
-      if (replyTo) body.reply_to_id = replyTo.id;
-      if (pendingTool) body.tool_id = pendingTool.id;
-      if (pendingImage) {
-        body.image_data = pendingImage;
-        body.image_content_type = "image/jpeg";
-      }
-
-      console.log("[Chat] Sending:", body);
-      const res = await fetch(apiBase, {
-        method: "POST",
+      const res = await fetch(`${apiBase}/${id}`, {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ body: text }),
       });
       const data = await res.json();
-
-      console.log("[Chat] Response:", res.status, data);
-
       if (res.ok && data.message) {
-        setMessages((prev) => {
-          // Resolve reply_to inline if we have it
-          const newMsg: SupportMessage = {
-            ...data.message,
-            reply_to: replyTo
-              ? {
-                  id: replyTo.id,
-                  sender_role: replyTo.sender_role,
-                  body: replyTo.body,
-                  image_url: replyTo.image_url,
-                }
-              : null,
-            tool: pendingTool
-              ? {
-                  id: pendingTool.id,
-                  name: pendingTool.name,
-                  slug: pendingTool.slug,
-                  icon_url: pendingTool.icon_url,
-                  description: pendingTool.description,
-                  retail_price: pendingTool.retail_price,
-                  price_currency: pendingTool.price_currency,
-                }
-              : data.message.tool ?? null,
-          };
-          console.log("[Chat] Added message:", newMsg);
-          return [...prev, newMsg];
-        });
-        setPendingImage(null);
-        setPendingTool(null);
-        setReplyTo(null);
+        setMessages((prev) =>
+          prev.map((m) => (m.id === id ? { ...m, ...data.message } : m))
+        );
+        setEditingMessageId(null);
+        setInput("");
       } else {
-        console.error("[Chat] Send error:", data);
-        setInput(savedInput);
+        setErrorMessage(data.error || "Could not save edit");
+        setTimeout(() => setErrorMessage(null), 5000);
       }
     } catch (err) {
-      console.error("[Chat] Send caught error:", err);
-      setInput(savedInput);
+      setErrorMessage(err instanceof Error ? err.message : "Network error");
+      setTimeout(() => setErrorMessage(null), 5000);
     } finally {
       setSending(false);
-      inputRef.current?.focus();
     }
   }
 
-  // ── Handle Enter to send ──────────────────
+  // ── Send text/image/tool ────────────
+  async function handleSend(e?: React.FormEvent) {
+    e?.preventDefault();
+    if (editingMessageId) {
+      await handleSaveEdit(editingMessageId);
+      return;
+    }
+    const text = input.trim();
+    if ((!text && !pendingImage && !pendingTool) || sending) return;
+
+    const tempId = `temp-${Date.now()}`;
+    const savedInput = input;
+    const savedReplyTo = replyTo;
+    const savedPendingImage = pendingImage;
+    const savedPendingTool = pendingTool;
+
+    setInput("");
+    setPendingImage(null);
+    setPendingTool(null);
+    setReplyTo(null);
+    setErrorMessage(null);
+    setSending(true);
+
+    const optimisticMsg: SupportMessage = {
+      id: tempId,
+      user_id: userId || "",
+      sender_role: viewerRole as "user" | "admin",
+      body: text || null,
+      image_url: savedPendingImage ?? null,
+      audio_url: null,
+      tool_id: savedPendingTool?.id || null,
+      tool: savedPendingTool
+        ? {
+            id: savedPendingTool.id,
+            name: savedPendingTool.name,
+            slug: savedPendingTool.slug,
+            icon_url: savedPendingTool.icon_url,
+            description: savedPendingTool.description,
+            retail_price: savedPendingTool.retail_price,
+            price_currency: savedPendingTool.price_currency,
+          }
+        : null,
+      reply_to_id: savedReplyTo?.id || null,
+      reply_to: savedReplyTo
+        ? {
+            id: savedReplyTo.id,
+            sender_role: savedReplyTo.sender_role,
+            body: savedReplyTo.body,
+            image_url: savedReplyTo.image_url,
+            audio_url: savedReplyTo.audio_url,
+          }
+        : null,
+      deleted_for_all: false,
+      deleted_by_sender: false,
+      delivered_at: null,
+      edited_at: null,
+      read_by_user_at: null,
+      read_by_admin_at: null,
+      created_at: new Date().toISOString(),
+    };
+
+    setMessages((prev) => [...prev, optimisticMsg]);
+    setSendingStatus((prev) => ({ ...prev, [tempId]: { pending: true } }));
+
+    (async () => {
+      try {
+        const body: Record<string, unknown> = {};
+        if (text) body.body = text;
+        if (savedReplyTo) body.reply_to_id = savedReplyTo.id;
+        if (savedPendingTool) body.tool_id = savedPendingTool.id;
+        if (savedPendingImage) {
+          body.image_data = savedPendingImage;
+          body.image_content_type = "image/jpeg";
+        }
+
+        const res = await fetch(apiBase, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+
+        if (res.ok && data.message) {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === tempId
+                ? {
+                    ...data.message,
+                    reply_to: savedReplyTo
+                      ? {
+                          id: savedReplyTo.id,
+                          sender_role: savedReplyTo.sender_role,
+                          body: savedReplyTo.body,
+                          image_url: savedReplyTo.image_url,
+                          audio_url: savedReplyTo.audio_url,
+                        }
+                      : null,
+                    tool: savedPendingTool
+                      ? {
+                          id: savedPendingTool.id,
+                          name: savedPendingTool.name,
+                          slug: savedPendingTool.slug,
+                          icon_url: savedPendingTool.icon_url,
+                          description: savedPendingTool.description,
+                          retail_price: savedPendingTool.retail_price,
+                          price_currency: savedPendingTool.price_currency,
+                        }
+                      : data.message.tool ?? null,
+                  }
+                : m
+            )
+          );
+          setSendingStatus((prev) => {
+            const { [tempId]: _, ...rest } = prev;
+            return rest;
+          });
+          if (data.warning) {
+            setErrorMessage(data.warning);
+            setTimeout(() => setErrorMessage(null), 5000);
+          }
+        } else {
+          const errorMsg = data.error || "Failed to send message";
+          setErrorMessage(errorMsg);
+          setSendingStatus((prev) => ({ ...prev, [tempId]: { pending: false, error: errorMsg } }));
+        }
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : "Network error";
+        setErrorMessage(errorMsg);
+        setSendingStatus((prev) => ({ ...prev, [tempId]: { pending: false, error: errorMsg } }));
+      } finally {
+        setSending(false);
+      }
+    })();
+  }
+
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -647,7 +675,6 @@ export function SupportChat({
     }
   }
 
-  // ── Image pick ────────────────────────────
   async function handleImagePick(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -668,22 +695,25 @@ export function SupportChat({
 
   // ── Context menu ──────────────────────────
   function openContextMenu(e: React.MouseEvent | React.TouchEvent, msg: SupportMessage) {
-    e.stopPropagation();
     const isMine =
       viewerRole === "user" ? msg.sender_role === "user" : msg.sender_role === "admin";
-    let x: number;
-    let y: number;
-    if ("touches" in e) {
-      x = e.touches[0]?.clientX ?? 0;
-      y = e.touches[0]?.clientY ?? 0;
+    const button = e.currentTarget as HTMLElement;
+    const rect = button.getBoundingClientRect();
+    let x: number, y: number;
+    if (!isMine) {
+      x = rect.right + 8;
+      y = rect.top;
     } else {
-      x = (e as React.MouseEvent).clientX;
-      y = (e as React.MouseEvent).clientY;
+      x = rect.right - 12;
+      y = rect.top - 150;
     }
-    // Keep menu in bounds
-    x = Math.min(x, window.innerWidth - 220);
-    y = Math.min(y, window.innerHeight - 200);
-    setCtxMenu({ messageId: msg.id, x, y, isMine, isDeleted: msg.deleted_for_all });
+    const canEdit =
+      isMine &&
+      !msg.deleted_for_all &&
+      !msg.delivered_at &&
+      !!msg.body &&
+      !msg.id.startsWith("temp-");
+    setCtxMenu({ messageId: msg.id, x, y, isMine, isDeleted: msg.deleted_for_all, canEdit });
   }
 
   function handleReplyFromMenu() {
@@ -694,33 +724,40 @@ export function SupportChat({
     }
   }
 
+  function handleEditFromMenu() {
+    const msg = messages.find((m) => m.id === ctxMenu?.messageId);
+    if (msg && msg.body) {
+      setEditingMessageId(msg.id);
+      setInput(msg.body);
+      setReplyTo(null);
+      setPendingImage(null);
+      setPendingTool(null);
+      inputRef.current?.focus();
+    }
+  }
+
+  function cancelEditing() {
+    setEditingMessageId(null);
+    setInput("");
+  }
+
   async function handleDeleteSelf() {
     const id = ctxMenu?.messageId;
     if (!id) return;
-    const url = `${deleteUrl(id)}?type=self`;
-    console.log("[Delete] Self:", url);
-    const res = await fetch(url, { method: "DELETE" });
-    const data = await res.json();
-    console.log("[Delete] Response:", res.status, data);
-    if (res.ok) {
-      setMessages((prev) => prev.filter((m) => m.id !== id));
-    } else {
-      console.error("[Delete] Failed:", data);
-    }
+    const res = await fetch(`${deleteUrl(id)}?type=self`, { method: "DELETE" });
+    if (res.ok) setMessages((prev) => prev.filter((m) => m.id !== id));
   }
 
   async function handleDeleteAll() {
     const id = ctxMenu?.messageId;
     if (!id) return;
-    const url = `${deleteUrl(id)}?type=all`;
-    console.log("[Delete] For all:", url);
-    const res = await fetch(url, { method: "DELETE" });
-    const data = await res.json();
-    console.log("[Delete] Response:", res.status, data);
+    const res = await fetch(`${deleteUrl(id)}?type=all`, { method: "DELETE" });
     if (res.ok) {
       setMessages((prev) =>
         prev.map((m) =>
-          m.id === id ? { ...m, deleted_for_all: true, body: null, image_url: null, tool: null } : m
+          m.id === id
+            ? { ...m, deleted_for_all: true, body: null, image_url: null, audio_url: null, tool: null }
+            : m
         )
       );
     }
@@ -732,83 +769,253 @@ export function SupportChat({
     const res = await fetch(clearUrl, { method: "DELETE" });
     if (res.ok) {
       setMessages((prev) =>
-        prev.map((m) => ({ ...m, deleted_for_all: true, body: null, image_url: null, tool: null }))
+        prev.map((m) => ({ ...m, deleted_for_all: true, body: null, image_url: null, audio_url: null, tool: null }))
       );
     }
     setClearing(false);
   }
 
-  // ── Visible messages (filter deleted_by_sender for own messages) ───────
+  // ── Voice recording ───────────────────────
+  async function handleMicPointerDown(e: React.PointerEvent<HTMLButtonElement>) {
+    if (isRecording) return;
+    recordingStartXRef.current = e.clientX;
+    recordingCancelledRef.current = false;
+    permissionGrantedRef.current = false;
+
+    const button = e.currentTarget;
+    const pointerId = e.pointerId;
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+      // If user released pointer or slid away before permission resolved, abort
+      if (recordingCancelledRef.current) {
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
+
+      permissionGrantedRef.current = true;
+      try { button.setPointerCapture(pointerId); } catch { /* ok */ }
+
+      const mimeType = bestMimeType();
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      mediaRecorderRef.current = recorder;
+      audioChunksRef.current = [];
+
+      recorder.ondataavailable = (ev) => {
+        if (ev.data.size > 0) audioChunksRef.current.push(ev.data);
+      };
+
+      recorder.start(100);
+      setIsRecording(true);
+      setRecordingSeconds(0);
+
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingSeconds((s) => {
+          if (s >= 599) {
+            // Auto-send at 10 minutes
+            stopAndSendRecording();
+            return s;
+          }
+          return s + 1;
+        });
+      }, 1000);
+    } catch {
+      setErrorMessage("Microphone access denied. Please allow microphone in your browser settings.");
+      setTimeout(() => setErrorMessage(null), 5000);
+    }
+  }
+
+  function handleMicPointerMove(e: React.PointerEvent) {
+    const dx = e.clientX - recordingStartXRef.current;
+    if (dx < -60) recordingCancelledRef.current = true;
+  }
+
+  function handleMicPointerUp() {
+    if (!isRecording) {
+      // Permission still pending — user released early, mark cancelled so start aborts
+      recordingCancelledRef.current = true;
+      return;
+    }
+    if (recordingCancelledRef.current) {
+      cancelRecording();
+    } else {
+      stopAndSendRecording();
+    }
+  }
+
+  function cancelRecording() {
+    if (recordingTimerRef.current) { clearInterval(recordingTimerRef.current); recordingTimerRef.current = null; }
+    const mr = mediaRecorderRef.current;
+    if (mr) {
+      mr.ondataavailable = null;
+      mr.onstop = null;
+      try { mr.stop(); } catch { /* ok */ }
+      try { mr.stream.getTracks().forEach((t) => t.stop()); } catch { /* ok */ }
+      mediaRecorderRef.current = null;
+    }
+    audioChunksRef.current = [];
+    setIsRecording(false);
+    setRecordingSeconds(0);
+    recordingCancelledRef.current = false;
+    permissionGrantedRef.current = false;
+  }
+
+  function stopAndSendRecording() {
+    if (recordingTimerRef.current) { clearInterval(recordingTimerRef.current); recordingTimerRef.current = null; }
+    const mr = mediaRecorderRef.current;
+    if (!mr) return;
+
+    const durationSecs = recordingSeconds;
+
+    mr.onstop = () => {
+      const mimeType = mr.mimeType || "audio/webm";
+      const blob = new Blob(audioChunksRef.current, { type: mimeType });
+
+      try { mr.stream.getTracks().forEach((t) => t.stop()); } catch { /* ok */ }
+      mediaRecorderRef.current = null;
+      audioChunksRef.current = [];
+      setIsRecording(false);
+      setRecordingSeconds(0);
+      recordingCancelledRef.current = false;
+      permissionGrantedRef.current = false;
+
+      // Discard if too short (tiny tap or near-silent)
+      if (blob.size < 500 || durationSecs < 1) return;
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        doSendAudio(reader.result as string, mimeType);
+      };
+      reader.readAsDataURL(blob);
+    };
+
+    try { mr.stop(); } catch { /* ok */ }
+  }
+
+  function doSendAudio(dataUrl: string, mimeType: string) {
+    const tempId = `temp-audio-${Date.now()}`;
+
+    const optimisticMsg: SupportMessage = {
+      id: tempId,
+      user_id: userId || "",
+      sender_role: viewerRole as "user" | "admin",
+      body: null,
+      image_url: null,
+      audio_url: dataUrl, // local blob URL for instant playback
+      tool_id: null,
+      tool: null,
+      reply_to_id: null,
+      reply_to: null,
+      deleted_for_all: false,
+      deleted_by_sender: false,
+      delivered_at: null,
+      edited_at: null,
+      read_by_user_at: null,
+      read_by_admin_at: null,
+      created_at: new Date().toISOString(),
+    };
+
+    setMessages((prev) => [...prev, optimisticMsg]);
+    setSendingStatus((prev) => ({ ...prev, [tempId]: { pending: true } }));
+
+    fetch(apiBase, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ audio_data: dataUrl, audio_content_type: mimeType }),
+    })
+      .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
+      .then(({ ok, data }) => {
+        if (ok && data.message) {
+          setMessages((prev) => prev.map((m) => (m.id === tempId ? data.message : m)));
+          setSendingStatus((prev) => { const { [tempId]: _, ...rest } = prev; return rest; });
+          if (data.warning) {
+            setErrorMessage(data.warning);
+            setTimeout(() => setErrorMessage(null), 5000);
+          }
+        } else {
+          const errorMsg = data.error || "Failed to send voice note";
+          setErrorMessage(errorMsg);
+          setSendingStatus((prev) => ({ ...prev, [tempId]: { pending: false, error: errorMsg } }));
+        }
+      })
+      .catch((err) => {
+        const errorMsg = err instanceof Error ? err.message : "Network error";
+        setErrorMessage(errorMsg);
+        setSendingStatus((prev) => ({ ...prev, [tempId]: { pending: false, error: errorMsg } }));
+      });
+  }
+
+  // ── Visible messages ──────────────────────
   const visibleMessages = messages.filter((m) => {
-    if (m.deleted_for_all) return true; // show as "deleted" bubble
+    if (m.deleted_for_all) return true;
     const isMine =
       viewerRole === "user" ? m.sender_role === "user" : m.sender_role === "admin";
     if (isMine && m.deleted_by_sender) return false;
     return true;
   });
 
+  const showMicButton = !editingMessageId && hasMicSupport && !input.trim() && !pendingImage && !pendingTool;
+  const canSend = editingMessageId
+    ? !!input.trim() && !sending
+    : !!(input.trim() || pendingImage || pendingTool) && !sending;
+
   // ── Render ────────────────────────────────
   if (loading) {
     return (
-      <div className="glass rounded-2xl flex items-center justify-center h-64">
+      <div className="glass rounded-2xl flex items-center justify-center h-96 sm:h-[500px] md:h-[600px] w-full">
         <Loader2 className="h-6 w-6 animate-spin text-zinc-500" />
       </div>
     );
   }
 
-  const canSend = !!(input.trim() || pendingImage || pendingTool);
-
   return (
     <>
-      <div className="glass rounded-2xl flex flex-col h-[min(70vh,580px)] border border-white/10">
+      <div className="glass rounded-2xl flex flex-col border border-white/10 w-full h-full overflow-hidden">
+
         {/* ── Header ── */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 shrink-0">
-          <div className="flex items-center gap-2.5">
-            {/* Avatar placeholder */}
-            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-cyan-500/30 to-purple-500/30 flex items-center justify-center text-xs font-bold text-cyan-300 border border-white/10">
+        <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-white/10 shrink-0 md:px-6 md:py-4 lg:px-8 lg:py-5">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-cyan-500/30 to-purple-500/30 flex items-center justify-center text-sm font-bold text-cyan-300 border border-white/10 shrink-0">
               {(customerName || (viewerRole === "user" ? "S" : "C"))[0].toUpperCase()}
             </div>
-            <div>
-              <p className="text-sm font-semibold text-white leading-tight">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-white truncate">
                 {customerName || (viewerRole === "user" ? "Support" : "Customer")}
               </p>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 text-xs text-zinc-500">
                 <span
                   className={`h-1.5 w-1.5 rounded-full ${
                     otherOnline ? "bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.8)]" : "bg-zinc-600"
                   }`}
                 />
-                <span className="text-[10px] text-zinc-500">
-                  {otherOnline ? "Online" : "Offline"}
-                </span>
+                {otherOnline ? "Online" : "Offline"}
               </div>
             </div>
           </div>
 
-          {/* Admin: clear chat */}
           {viewerRole === "admin" && clearUrl && (
             <button
               onClick={handleClearChat}
               disabled={clearing}
-              className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0"
               title="Clear chat"
             >
-              {clearing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-              Clear chat
+              {clearing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+              <span className="hidden sm:inline">Clear</span>
             </button>
           )}
         </div>
 
         {/* ── Messages ── */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2.5 scroll-smooth">
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2.5 scroll-smooth md:px-6 md:py-6 lg:px-8 lg:py-8">
           {visibleMessages.length === 0 ? (
             <p className="text-center text-sm text-zinc-500 py-10">{emptyHint}</p>
           ) : (
             visibleMessages.map((m) => {
               const isMine =
-                viewerRole === "user"
-                  ? m.sender_role === "user"
-                  : m.sender_role === "admin";
+                viewerRole === "user" ? m.sender_role === "user" : m.sender_role === "admin";
+              const status = sendingStatus[m.id];
               return (
                 <MessageBubble
                   key={m.id}
@@ -816,6 +1023,14 @@ export function SupportChat({
                   isMine={isMine}
                   viewerRole={viewerRole}
                   onContextMenu={openContextMenu}
+                  isSending={status?.pending}
+                  sendError={status?.error}
+                  onReplyPreview={
+                    m.reply_to ? (
+                      <ReplyPreviewBubble replyTo={m.reply_to} viewerRole={viewerRole} />
+                    ) : undefined
+                  }
+                  onToolCard={m.tool ? <ToolCard tool={m.tool} /> : undefined}
                 />
               );
             })
@@ -823,15 +1038,28 @@ export function SupportChat({
           <div ref={bottomRef} />
         </div>
 
-        {/* ── Reply bar ── */}
-        {replyTo && (
-          <div className="flex items-center gap-2 px-3 py-2 border-t border-white/10 bg-white/5 shrink-0">
+        {/* ── Editing banner ── */}
+        {editingMessageId && (
+          <div className="flex items-center gap-2 px-4 py-2.5 border-t border-white/10 bg-cyan-500/10 shrink-0 md:px-6 lg:px-8">
             <div className="flex-1 min-w-0 border-l-2 border-cyan-400 pl-2">
-              <p className="text-[10px] font-semibold text-cyan-400 mb-0.5">
+              <p className="text-[10px] sm:text-xs font-semibold text-cyan-400 mb-0.5">Editing message</p>
+              <p className="text-xs text-zinc-400 truncate">Only unread messages can be edited</p>
+            </div>
+            <button onClick={cancelEditing} className="text-zinc-500 hover:text-white transition-colors shrink-0">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
+        {/* ── Reply bar ── */}
+        {!editingMessageId && replyTo && (
+          <div className="flex items-center gap-2 px-4 py-2.5 border-t border-white/10 bg-white/5 shrink-0 md:px-6 lg:px-8">
+            <div className="flex-1 min-w-0 border-l-2 border-cyan-400 pl-2">
+              <p className="text-[10px] sm:text-xs font-semibold text-cyan-400 mb-0.5">
                 {replyTo.sender_role === viewerRole ? "You" : (viewerRole === "admin" ? "Customer" : "Support")}
               </p>
               <p className="text-xs text-zinc-400 truncate">
-                {replyTo.body || (replyTo.image_url ? "📷 Photo" : "Attachment")}
+                {replyTo.body || (replyTo.image_url ? "📷 Photo" : replyTo.audio_url ? "🎤 Voice message" : "Attachment")}
               </p>
             </div>
             <button onClick={() => setReplyTo(null)} className="text-zinc-500 hover:text-white transition-colors shrink-0">
@@ -842,7 +1070,7 @@ export function SupportChat({
 
         {/* ── Pending image preview ── */}
         {pendingImage && (
-          <div className="relative px-3 pt-2 shrink-0">
+          <div className="relative px-4 pt-2 shrink-0 md:px-6 lg:px-8">
             <div className="relative inline-block">
               <img src={pendingImage} alt="Preview" className="h-20 w-20 rounded-xl object-cover border border-white/10" />
               <button
@@ -857,7 +1085,7 @@ export function SupportChat({
 
         {/* ── Pending tool preview ── */}
         {pendingTool && (
-          <div className="flex items-center gap-2 px-3 pt-2 shrink-0">
+          <div className="flex items-center gap-2 px-4 pt-2 shrink-0 md:px-6 lg:px-8">
             <div className="flex-1 flex items-center gap-2 rounded-xl border border-cyan-500/25 bg-black/40 px-3 py-2">
               {pendingTool.icon_url && (
                 <img src={pendingTool.icon_url} alt="" className="h-7 w-7 rounded-lg object-contain bg-white/5" />
@@ -873,76 +1101,133 @@ export function SupportChat({
           </div>
         )}
 
+        {/* ── Error message ── */}
+        {errorMessage && (
+          <div className="px-4 py-2 bg-red-500/20 border-t border-red-500/50 text-sm text-red-300 flex items-center justify-between gap-2 shrink-0 md:px-6 lg:px-8">
+            <span className="flex-1">{errorMessage}</span>
+            <button onClick={() => setErrorMessage(null)} className="text-red-400 hover:text-red-300 transition-colors shrink-0">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
         {/* ── Input bar ── */}
-        <form onSubmit={handleSend} className="flex items-end gap-2 px-3 py-3 border-t border-white/10 shrink-0">
-          {/* Image attach */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleImagePick}
-          />
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            title="Attach image"
-            className={`shrink-0 h-9 w-9 rounded-xl flex items-center justify-center transition-colors ${
-              pendingImage
-                ? "bg-cyan-500/30 text-cyan-300"
-                : "bg-white/5 text-zinc-500 hover:text-zinc-300 hover:bg-white/10"
-            }`}
-          >
-            <ImageIcon className="h-4 w-4" />
-          </button>
+        <form
+          onSubmit={handleSend}
+          className="flex items-end gap-2 px-4 py-3 border-t border-white/10 shrink-0 md:px-6 md:py-4 lg:px-8 lg:py-5"
+        >
+          {/* Image + tool buttons — hidden while recording or editing */}
+          {!isRecording && !editingMessageId && (
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImagePick}
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                title="Attach image"
+                className={`shrink-0 h-10 w-10 rounded-xl flex items-center justify-center transition-colors ${
+                  pendingImage
+                    ? "bg-cyan-500/30 text-cyan-300"
+                    : "bg-white/5 text-zinc-500 hover:text-zinc-300 hover:bg-white/10"
+                }`}
+              >
+                <ImageIcon className="h-5 w-5" />
+              </button>
 
-          {/* Tool attach */}
-          <button
-            type="button"
-            onClick={() => setShowToolPicker(true)}
-            title="Attach tool"
-            className={`shrink-0 h-9 w-9 rounded-xl flex items-center justify-center transition-colors ${
-              pendingTool
-                ? "bg-cyan-500/30 text-cyan-300"
-                : "bg-white/5 text-zinc-500 hover:text-zinc-300 hover:bg-white/10"
-            }`}
-          >
-            <Wrench className="h-4 w-4" />
-          </button>
+              <button
+                type="button"
+                onClick={() => setShowToolPicker(true)}
+                title="Attach tool"
+                className={`shrink-0 h-10 w-10 rounded-xl flex items-center justify-center transition-colors ${
+                  pendingTool
+                    ? "bg-cyan-500/30 text-cyan-300"
+                    : "bg-white/5 text-zinc-500 hover:text-zinc-300 hover:bg-white/10"
+                }`}
+              >
+                <Wrench className="h-5 w-5" />
+              </button>
+            </>
+          )}
 
-          {/* Text input */}
-          <textarea
-            ref={inputRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Type a message…"
-            rows={1}
-            className="flex-1 resize-none rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-cyan-500/40 transition-colors max-h-32 overflow-y-auto leading-relaxed"
-            style={{ minHeight: "36px" }}
-          />
+          {/* Text input OR recording indicator */}
+          {isRecording ? (
+            <div className="flex-1 flex items-center gap-2 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-2.5">
+              {/* Cancel button */}
+              <button
+                type="button"
+                onClick={cancelRecording}
+                className="shrink-0 text-red-400 hover:text-red-300 transition-colors"
+                title="Cancel recording"
+              >
+                <X className="h-4 w-4" />
+              </button>
+              {/* Slide hint */}
+              <span className="flex-1 text-xs text-zinc-500 text-center select-none">
+                ← slide to cancel
+              </span>
+              {/* Pulsing dot + timer */}
+              <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse shrink-0" />
+              <span className="text-sm font-mono text-zinc-200 shrink-0 tabular-nums">
+                {formatRecordingTime(recordingSeconds)}
+              </span>
+            </div>
+          ) : (
+            <textarea
+              ref={inputRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Type a message…"
+              rows={1}
+              className="flex-1 resize-none rounded-xl border border-white/10 bg-black/30 px-4 py-2.5 text-base text-white placeholder:text-zinc-500 focus:outline-none focus:border-cyan-500/40 transition-colors max-h-32 overflow-y-auto leading-relaxed"
+              style={{ minHeight: "44px" }}
+            />
+          )}
 
-          {/* Send */}
-          <Button
-            type="submit"
-            size="sm"
-            disabled={!canSend || sending}
-            className="shrink-0 h-9 w-9 p-0 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black disabled:opacity-40 transition-colors"
-          >
-            {sending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </Button>
+          {/* Send button OR mic button */}
+          {showMicButton ? (
+            <button
+              ref={micButtonRef}
+              type="button"
+              onPointerDown={handleMicPointerDown}
+              onPointerMove={handleMicPointerMove}
+              onPointerUp={handleMicPointerUp}
+              onPointerCancel={cancelRecording}
+              style={{ touchAction: "none" }}
+              title={isRecording ? "Release to send" : "Hold to record voice note"}
+              className={`shrink-0 h-10 w-10 rounded-xl flex items-center justify-center transition-all select-none ${
+                isRecording
+                  ? "bg-red-500 text-white shadow-lg shadow-red-500/40 scale-110"
+                  : "bg-white/5 text-zinc-400 hover:text-zinc-200 hover:bg-white/10 active:scale-95"
+              }`}
+            >
+              <Mic className={`h-5 w-5 ${isRecording ? "animate-pulse" : ""}`} />
+            </button>
+          ) : (
+            <Button
+              type="submit"
+              size="sm"
+              disabled={!canSend}
+              title={editingMessageId ? "Save edit" : "Send"}
+              className="shrink-0 h-10 w-10 p-0 rounded-xl bg-cyan-500 hover:bg-cyan-400 active:scale-95 text-black disabled:opacity-40 transition-all"
+            >
+              {editingMessageId ? <Check className="h-4 w-4" /> : <Send className="h-4 w-4" />}
+            </Button>
+          )}
         </form>
       </div>
 
-      {/* Context menu (portal-style fixed overlay) */}
+      {/* Context menu */}
       {ctxMenu && (
         <ContextMenu
           ctx={ctxMenu}
           onReply={handleReplyFromMenu}
+          onEdit={handleEditFromMenu}
           onDeleteSelf={handleDeleteSelf}
           onDeleteAll={handleDeleteAll}
           onClose={() => setCtxMenu(null)}
