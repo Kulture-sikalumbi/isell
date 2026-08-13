@@ -154,9 +154,6 @@ export function OrderCard({ payment, activation }: OrderCardProps) {
                 )}
                 {successNote && (
                   <div className="rounded-lg border border-white/5 bg-black/20 px-3 py-3">
-                    <span className="text-zinc-500 text-[10px] uppercase tracking-[0.18em] block mb-2">
-                      Note from admin
-                    </span>
                     <p className="whitespace-pre-line text-sm leading-6 text-zinc-200">{successNote}</p>
                   </div>
                 )}

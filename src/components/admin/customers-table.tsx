@@ -1,7 +1,11 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
-import { MessageCircle } from "lucide-react";
+import { MessageCircle, Search, X } from "lucide-react";
 import { RoleToggle } from "@/components/admin/role-toggle";
 import { AdminWalletCreditModal } from "@/components/admin/admin-wallet-credit-modal";
+import { AdminWalletDeductModal } from "@/components/admin/admin-wallet-deduct-modal";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { CustomerProfile, Profile } from "@/types/database";
 
@@ -16,10 +20,50 @@ export function CustomersTable({
   allUsers,
   currentUserId,
 }: CustomersTableProps) {
+  const [customerSearchQuery, setCustomerSearchQuery] = useState("");
+  const [userSearchQuery, setUserSearchQuery] = useState("");
+
+  // Filter customers by name or email
+  const filteredCustomers = customers.filter((c) => {
+    const query = customerSearchQuery.toLowerCase();
+    return (
+      c.full_name?.toLowerCase().includes(query) ||
+      c.email.toLowerCase().includes(query)
+    );
+  });
+
+  // Filter users by name or email
+  const filteredUsers = allUsers.filter((u) => {
+    const query = userSearchQuery.toLowerCase();
+    return (
+      u.full_name?.toLowerCase().includes(query) ||
+      u.email.toLowerCase().includes(query)
+    );
+  });
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-lg font-semibold mb-4">Customers</h2>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+          <h2 className="text-lg font-semibold">Customers</h2>
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+            <input
+              type="text"
+              placeholder="Search by name or email..."
+              value={customerSearchQuery}
+              onChange={(e) => setCustomerSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20"
+            />
+            {customerSearchQuery && (
+              <button
+                onClick={() => setCustomerSearchQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        </div>
         <div className="glass rounded-2xl overflow-x-auto">
           <table className="w-full text-sm min-w-[700px]">
             <thead>
@@ -34,7 +78,7 @@ export function CustomersTable({
               </tr>
             </thead>
             <tbody>
-              {customers.map((c) => (
+              {filteredCustomers.map((c) => (
                 <tr
                   key={c.id}
                   className="border-b border-white/5 last:border-0 hover:bg-white/[0.02]"
@@ -69,20 +113,49 @@ export function CustomersTable({
                         walletCurrency={c.wallet_currency ?? c.display_currency}
                         walletBalance={c.wallet_balance ?? 0}
                       />
+                      <AdminWalletDeductModal
+                        userId={c.id}
+                        email={c.email}
+                        fullName={c.full_name}
+                        walletCurrency={c.wallet_currency ?? c.display_currency}
+                        walletBalance={c.wallet_balance ?? 0}
+                      />
                     </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-          {customers.length === 0 && (
-            <div className="p-12 text-center text-zinc-500">No customers yet</div>
+          {filteredCustomers.length === 0 && (
+            <div className="p-12 text-center text-zinc-500">
+              {customerSearchQuery ? "No customers match your search" : "No customers yet"}
+            </div>
           )}
         </div>
       </div>
 
       <div>
-        <h2 className="text-lg font-semibold mb-4">All accounts & roles</h2>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+          <h2 className="text-lg font-semibold">All accounts & roles</h2>
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+            <input
+              type="text"
+              placeholder="Search by name or email..."
+              value={userSearchQuery}
+              onChange={(e) => setUserSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20"
+            />
+            {userSearchQuery && (
+              <button
+                onClick={() => setUserSearchQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        </div>
         <div className="glass rounded-2xl overflow-x-auto">
           <table className="w-full text-sm min-w-[600px]">
             <thead>
@@ -94,7 +167,7 @@ export function CustomersTable({
               </tr>
             </thead>
             <tbody>
-              {allUsers.map((user) => (
+              {filteredUsers.map((user) => (
                 <tr
                   key={user.id}
                   className="border-b border-white/5 last:border-0 hover:bg-white/[0.02]"
@@ -121,6 +194,11 @@ export function CustomersTable({
               ))}
             </tbody>
           </table>
+          {filteredUsers.length === 0 && (
+            <div className="p-12 text-center text-zinc-500">
+              {userSearchQuery ? "No users match your search" : "No users found"}
+            </div>
+          )}
         </div>
       </div>
     </div>
