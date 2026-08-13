@@ -10,6 +10,7 @@ import {
   Eye,
   Image as ImageIcon,
   Loader2,
+  MoreVertical,
   Reply,
   Search,
   Send,
@@ -246,6 +247,15 @@ function MessageBubble({
           {isMine && <EyeStatus msg={msg} viewerRole={viewerRole} />}
         </div>
       </div>
+
+      {/* Three-dot menu button (visible on hover or always on mobile) */}
+      <button
+        onClick={(e) => onContextMenu(e, msg)}
+        className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 h-8 w-8 rounded-lg flex items-center justify-center hover:bg-white/10 text-zinc-500 hover:text-white"
+        title="Message options"
+      >
+        <MoreVertical className="h-4 w-4" />
+      </button>
     </div>
   );
 }
@@ -270,31 +280,34 @@ function ContextMenu({
 
   useEffect(() => {
     const handler = (e: MouseEvent | KeyboardEvent) => {
-      if (
-        e instanceof KeyboardEvent
-          ? e.key === "Escape"
-          : !menuRef.current?.contains(e.target as Node)
-      ) {
+      if (menuRef.current && e instanceof MouseEvent) {
+        if (!menuRef.current.contains(e.target as Node)) {
+          onClose();
+        }
+      } else if (e instanceof KeyboardEvent && e.key === "Escape") {
         onClose();
       }
     };
-    document.addEventListener("mousedown", handler);
-    document.addEventListener("keydown", handler);
+    setTimeout(() => {
+      document.addEventListener("mousedown", handler);
+      document.addEventListener("keydown", handler);
+    }, 50);
     return () => {
       document.removeEventListener("mousedown", handler);
       document.removeEventListener("keydown", handler);
     };
   }, [onClose]);
 
-  // Keep menu within viewport
-  const left = Math.min(ctx.x, window.innerWidth - 200);
-  const top = Math.min(ctx.y, window.innerHeight - 160);
-
   return (
     <div
       ref={menuRef}
-      style={{ position: "fixed", left, top, zIndex: 1000 }}
-      className="glass rounded-xl border border-white/10 shadow-2xl overflow-hidden min-w-[160px] animate-in fade-in zoom-in-95 duration-100"
+      style={{
+        position: "fixed",
+        left: `${ctx.x}px`,
+        top: `${ctx.y}px`,
+        zIndex: 9999,
+      }}
+      className="glass rounded-xl border border-white/10 shadow-2xl overflow-hidden min-w-[180px] animate-in fade-in zoom-in-95 duration-100"
     >
       <button
         onClick={() => { onReply(); onClose(); }}
@@ -572,12 +585,15 @@ export function SupportChat({
         body.image_content_type = "image/jpeg";
       }
 
+      console.log("[Chat] Sending:", body);
       const res = await fetch(apiBase, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
       const data = await res.json();
+
+      console.log("[Chat] Response:", res.status, data);
 
       if (res.ok && data.message) {
         setMessages((prev) => {
@@ -604,15 +620,18 @@ export function SupportChat({
                 }
               : data.message.tool ?? null,
           };
+          console.log("[Chat] Added message:", newMsg);
           return [...prev, newMsg];
         });
         setPendingImage(null);
         setPendingTool(null);
         setReplyTo(null);
       } else {
+        console.error("[Chat] Send error:", data);
         setInput(savedInput);
       }
-    } catch {
+    } catch (err) {
+      console.error("[Chat] Send caught error:", err);
       setInput(savedInput);
     } finally {
       setSending(false);
@@ -632,10 +651,16 @@ export function SupportChat({
   async function handleImagePick(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image is too large. Max 5 MB.");
+      e.target.value = "";
+      return;
+    }
     try {
       const dataUrl = await compressToDataUrl(file);
       setPendingImage(dataUrl);
-    } catch {
+    } catch (err) {
+      console.error("Image compression failed:", err);
       alert("Could not process image. Try a different file.");
     }
     e.target.value = "";
@@ -643,6 +668,7 @@ export function SupportChat({
 
   // ── Context menu ──────────────────────────
   function openContextMenu(e: React.MouseEvent | React.TouchEvent, msg: SupportMessage) {
+    e.stopPropagation();
     const isMine =
       viewerRole === "user" ? msg.sender_role === "user" : msg.sender_role === "admin";
     let x: number;
@@ -654,6 +680,9 @@ export function SupportChat({
       x = (e as React.MouseEvent).clientX;
       y = (e as React.MouseEvent).clientY;
     }
+    // Keep menu in bounds
+    x = Math.min(x, window.innerWidth - 220);
+    y = Math.min(y, window.innerHeight - 200);
     setCtxMenu({ messageId: msg.id, x, y, isMine, isDeleted: msg.deleted_for_all });
   }
 
@@ -668,16 +697,26 @@ export function SupportChat({
   async function handleDeleteSelf() {
     const id = ctxMenu?.messageId;
     if (!id) return;
-    const res = await fetch(`${deleteUrl(id)}?type=self`, { method: "DELETE" });
+    const url = `${deleteUrl(id)}?type=self`;
+    console.log("[Delete] Self:", url);
+    const res = await fetch(url, { method: "DELETE" });
+    const data = await res.json();
+    console.log("[Delete] Response:", res.status, data);
     if (res.ok) {
       setMessages((prev) => prev.filter((m) => m.id !== id));
+    } else {
+      console.error("[Delete] Failed:", data);
     }
   }
 
   async function handleDeleteAll() {
     const id = ctxMenu?.messageId;
     if (!id) return;
-    const res = await fetch(`${deleteUrl(id)}?type=all`, { method: "DELETE" });
+    const url = `${deleteUrl(id)}?type=all`;
+    console.log("[Delete] For all:", url);
+    const res = await fetch(url, { method: "DELETE" });
+    const data = await res.json();
+    console.log("[Delete] Response:", res.status, data);
     if (res.ok) {
       setMessages((prev) =>
         prev.map((m) =>
