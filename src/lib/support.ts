@@ -267,17 +267,34 @@ export async function uploadSupportChatImage(
   contentType: string
 ): Promise<string | null> {
   const supabase = createServiceClient();
-  if (!supabase) return null;
+  if (!supabase) {
+    console.error("[Upload] No Supabase client");
+    return null;
+  }
 
-  const filePath = `chat/${userId}/${Date.now()}.jpg`;
-  const buffer = Buffer.from(base64Data, "base64");
+  try {
+    const filePath = `chat/${userId}/${Date.now()}.jpg`;
+    const buffer = Buffer.from(base64Data, "base64");
 
-  const { error } = await supabase.storage
-    .from("support-chat-images")
-    .upload(filePath, buffer, { contentType, upsert: false });
+    console.log("[Upload] Starting...", { userId, filePath, size: buffer.length, contentType });
 
-  if (error) return null;
+    const { data, error } = await supabase.storage
+      .from("support-chat-images")
+      .upload(filePath, buffer, { contentType, upsert: false });
 
-  const { data } = supabase.storage.from("support-chat-images").getPublicUrl(filePath);
-  return data.publicUrl;
+    if (error) {
+      console.error("[Upload] Failed:", error.message);
+      return null;
+    }
+
+    console.log("[Upload] Success:", data);
+
+    const { data: urlData } = supabase.storage.from("support-chat-images").getPublicUrl(filePath);
+    const publicUrl = urlData.publicUrl;
+    console.log("[Upload] Public URL:", publicUrl);
+    return publicUrl;
+  } catch (err) {
+    console.error("[Upload] Exception:", err);
+    return null;
+  }
 }

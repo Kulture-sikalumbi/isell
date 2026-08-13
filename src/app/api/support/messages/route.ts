@@ -27,10 +27,15 @@ export async function POST(request: Request) {
 
   let imageUrl: string | undefined;
   if (body.image_data && body.image_content_type) {
+    console.log("[API] Image data received, size:", (body.image_data as string).length);
     const match = (body.image_data as string).match(/^data:(.+);base64,(.+)$/);
     if (match) {
+      console.log("[API] Regex matched, uploading...", { contentType: match[1], base64Size: match[2].length });
       const uploaded = await uploadSupportChatImage(user.id, match[2], match[1]);
-      if (uploaded) imageUrl = uploaded;
+      if (uploaded) {
+        imageUrl = uploaded;
+        console.log("[API] Image uploaded:", imageUrl);
+      }
     }
   }
 
