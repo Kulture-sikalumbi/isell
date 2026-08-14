@@ -80,6 +80,14 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       .map((a) => [a.payment_id as string, a])
   );
 
+  const paymentByActivationId = new Map<string, typeof orders[number]>();
+  for (const order of orders) {
+    const activation = activationByPaymentId.get(order.id);
+    if (activation?.id) {
+      paymentByActivationId.set(activation.id, order);
+    }
+  }
+
   const displayName =
     user.user_metadata?.full_name ||
     user.user_metadata?.name ||
@@ -196,7 +204,11 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         ) : (
           <div className="space-y-4">
             {activations.map((activation) => (
-              <ActivationCard key={activation.id} activation={activation} />
+              <ActivationCard
+                key={activation.id}
+                activation={activation}
+                payment={paymentByActivationId.get(activation.id)}
+              />
             ))}
           </div>
         )

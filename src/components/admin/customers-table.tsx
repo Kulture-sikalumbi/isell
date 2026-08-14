@@ -94,7 +94,7 @@ export function CustomersTable({
                     {formatCurrency(c.total_spent, displayCurrency)}
                   </td>
                   <td className="px-4 sm:px-6 py-4 text-cyan-300">
-                    {formatCurrency(c.wallet_balance ?? 0, c.wallet_currency ?? undefined)}
+                    {formatCurrency(c.wallet_balance ?? 0, displayCurrency)}
                   </td>
                   <td className="px-4 sm:px-6 py-4 text-zinc-500">
                     {formatDate(c.created_at)}

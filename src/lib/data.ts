@@ -354,9 +354,17 @@ export async function getCustomersWithStats(displayCurrency?: string): Promise<C
 
   const walletsByUser = new Map<string, { balance: number; currency: string | null }>();
   for (const wallet of wallets) {
+    const walletCurrency = wallet.currency ?? null;
+    const walletBalance = Number(wallet.balance ?? 0);
+    
+    // Convert wallet balance to display currency if specified
+    const convertedBalance = displayCurrency && walletCurrency
+      ? convertCurrency(walletBalance, walletCurrency, displayCurrency, fxRate)
+      : walletBalance;
+    
     walletsByUser.set(wallet.user_id, {
-      balance: Number(wallet.balance ?? 0),
-      currency: wallet.currency ?? null,
+      balance: convertedBalance,
+      currency: displayCurrency ?? walletCurrency,
     });
   }
 
