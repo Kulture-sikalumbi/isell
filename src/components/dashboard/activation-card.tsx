@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Copy, ChevronRight } from "lucide-react";
+import { Check, Copy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ActivationDetailsModal } from "@/components/dashboard/activation-details-modal";
+import { OrderDetailModal } from "@/components/dashboard/order-detail-modal";
+import { ReceiptDownloadButton } from "@/components/dashboard/receipt-download-button";
 import { getCustomerIdentifierLabel } from "@/lib/identifier-label";
+import { formatOrderNumber } from "@/lib/order-number";
 import { parseToolApiConfig } from "@/lib/tool-api-config";
 import { formatDate } from "@/lib/utils";
 import type { Activation, Payment } from "@/types/database";
@@ -17,7 +19,7 @@ interface ActivationCardProps {
 
 export function ActivationCard({ activation, payment }: ActivationCardProps) {
   const [copied, setCopied] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
   const [loadingPayment, setLoadingPayment] = useState(false);
   const [paymentData, setPaymentData] = useState<Payment | null>(payment || null);
 
@@ -26,23 +28,22 @@ export function ActivationCard({ activation, payment }: ActivationCardProps) {
     activation.activation_code === "DEVICE_REGISTERED" ||
     config.delivery_type === "whitelist";
 
-  const handleViewDetails = async () => {
-    // If payment is already provided, just open modal
+  const successNote = paymentData?.admin_note?.trim() || null;
+  const successThumbnailUrl = paymentData?.success_thumbnail_url?.trim() || null;
+
+  const handleViewOrder = async () => {
     if (paymentData) {
-      setModalOpen(true);
+      setDetailOpen(true);
       return;
     }
 
-    // Otherwise fetch payment details
     setLoadingPayment(true);
     try {
-      const response = await fetch(
-        `/api/payments/${activation.payment_id}`
-      );
+      const response = await fetch(`/api/payments/${activation.payment_id}`);
       if (response.ok) {
         const data = await response.json();
         setPaymentData(data.payment);
-        setModalOpen(true);
+        setDetailOpen(true);
       }
     } catch (error) {
       console.error("Failed to fetch payment details:", error);
@@ -95,28 +96,54 @@ export function ActivationCard({ activation, payment }: ActivationCardProps) {
         </div>
       )}
 
+      {(successThumbnailUrl || successNote) && (
+        <div className="mt-4 rounded-xl border border-white/8 bg-[#111827]/45 p-3 sm:p-4">
+          {successThumbnailUrl && (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={successThumbnailUrl}
+              alt={`${activation.tool?.name ?? "Order"} preview`}
+              className="mb-3 max-h-72 w-full rounded-xl border border-white/10 bg-black/20 object-cover"
+            />
+          )}
+          {successNote && (
+            <div className="rounded-lg border border-white/5 bg-black/20 px-3 py-3">
+              <p className="whitespace-pre-line text-sm leading-6 text-zinc-200">{successNote}</p>
+            </div>
+          )}
+        </div>
+      )}
+
       <p className="text-xs text-zinc-500 mt-3">
         Activated {formatDate(activation.created_at)}
       </p>
 
-      <Button
-        onClick={handleViewDetails}
-        disabled={loadingPayment}
-        variant="secondary"
-        size="sm"
-        className="w-full mt-4 gap-2"
-      >
-        {loadingPayment ? "Loading..." : "View Details"}
-        <ChevronRight className="h-4 w-4" />
-      </Button>
+      <div className="mt-4 pt-4 border-t border-white/5 flex flex-wrap items-center gap-3">
+        <Button
+          onClick={handleViewOrder}
+          disabled={loadingPayment}
+          variant="secondary"
+          size="sm"
+        >
+          {loadingPayment ? "Loading..." : "View order"}
+        </Button>
+        {paymentData && (
+          <ReceiptDownloadButton
+            paymentId={paymentData.id}
+            receiptNumber={formatOrderNumber(paymentData)}
+          />
+        )}
+      </div>
     </div>
 
     {paymentData && (
-      <ActivationDetailsModal
-        activation={activation}
+      <OrderDetailModal
         payment={paymentData}
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
+        activation={activation}
+        open={detailOpen}
+        onClose={() => setDetailOpen(false)}
+        copied={copied}
+        onCopy={copyCode}
       />
     )}
   </>
